@@ -42,5 +42,6 @@ of these files, never the place where edits happen. If the artifact and the repo
 | `mission_leave` | `stopGame()` | + status (play / over / clear) |
 | `quit` | tab hidden mid-mission | + state (play / pause) |
 
-Every event also carries `build`. Share links per channel as `?utm_source=whatsapp` etc. so PostHog can tell
+Every event also carries `build`. Opening the game once with `?internal=1` marks that browser as internal (nothing sent;
+`?internal=0` undoes it) — Khaled uses this on his own devices so test runs stay out of the numbers. Share links per channel as `?utm_source=whatsapp` etc. so PostHog can tell
 channels apart (messaging apps strip the referrer).
