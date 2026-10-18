@@ -20,14 +20,20 @@
   if (internal) { window.HM = { track: function () {}, where: function () { return {}; }, sim: function () {}, boot: function () {}, internal: true }; return; }
 
   var T0 = Date.now();
+  // Gameplay in session replay: the small 468x216 picture (not the screen-sized copy), one frame a second, for one
+  // session in four. Each recorded minute costs a player about 1 MB (3 MB on iPhones, which cannot compress the frames).
+  // ?replay=1 forces it on for a test session; every other session still gets the light, menus-only recording.
+  var canvasOn = /[?&]replay=1/.test(window.location.search) || Math.random() < 0.25;
   try {
     posthog.init(KEY, {
+      session_recording: { captureCanvas: { recordCanvas: canvasOn, canvasFps: 1, canvasQuality: '0.4' } },
       api_host: HOST,
       person_profiles: 'identified_only', // players stay anonymous: cheaper events, no profiles
       autocapture: false,                 // a canvas game: clicks on it are noise
       capture_pageview: true,
       capture_pageleave: true
     });
+    posthog.register({ replay_canvas: canvasOn });   // on every event, so the sessions with gameplay are easy to find
   } catch (e) {}
 
   // one attempt at a mission, from its start to the moment the player leaves it (a continue stays in the same run)

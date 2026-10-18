@@ -54,6 +54,11 @@ analytics.js reads instead of the debug handle. `life_lost` in the simulation ca
 Every event also carries: `build`, `run_id` and `run_continues` (while in a run), `lang`, `input` (touch / keyboard),
 `fire_mode` (hold / auto), `orientation`, `dev` (filter `dev = true` out of real numbers) and `muted`.
 
+Session replay records gameplay from the small `lo` canvas only, at 1 frame a second, in one session out of four
+(`?replay=1` forces it; events carry `replay_canvas`). `lo` therefore stays shown underneath `hi` and comes first in the
+markup, and `hi` carries `class="ph-no-capture"`; keep both when editing the canvases. Canvas capture is set in
+analytics.js, not in PostHog's project settings (leave "record canvas" off there).
+
 Opening the game once with `?internal=1` marks that browser as internal (nothing sent; `?internal=0` undoes it) —
 Khaled uses this on his own devices so test runs stay out of the numbers. Share links per channel as
 `?utm_source=whatsapp` etc. so PostHog can tell channels apart (messaging apps strip the referrer).
