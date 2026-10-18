@@ -17,8 +17,9 @@
     if (q) localStorage.setItem('hm_internal', q[1]);
     internal = localStorage.getItem('hm_internal') === '1';
   } catch (e) {}
-  if (internal) { window.HM = { track: function () {}, where: function () { return {}; }, sim: function () {}, internal: true }; return; }
+  if (internal) { window.HM = { track: function () {}, where: function () { return {}; }, sim: function () {}, boot: function () {}, internal: true }; return; }
 
+  var T0 = Date.now();
   try {
     posthog.init(KEY, {
       api_host: HOST,
@@ -29,10 +30,25 @@
     });
   } catch (e) {}
 
+  // one attempt at a mission, from its start to the moment the player leaves it (a continue stays in the same run)
+  var run = null;
+  function newRun(mission) {
+    var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    run = { id: id, mission: mission, t0: Date.now(), continues: 0 };
+  }
+  // what the player is set up with, read fresh for every event (the game owns it; this only reads)
+  function ctx() {
+    var c = {};
+    try { if (window.HMgame) c = window.HMgame.ctx(); } catch (e) {}
+    return { lang: c.lang || window.LANG, input: c.touch ? 'touch' : 'keyboard', fire_mode: c.scheme, dev: !!c.dev, muted: !!c.muted,
+             orientation: window.innerHeight > window.innerWidth ? 'portrait' : 'landscape' };
+  }
   function track(name, props) {
     try {
-      var p = props || {};
+      var p = props || {}, c = ctx();
+      for (var k in c) if (p[k] === undefined) p[k] = c[k];
       if (window.BUILD) p.build = window.BUILD;
+      if (run) { p.run_id = run.id; p.run_continues = run.continues; }
       if (window.posthog && posthog.capture) posthog.capture(name, p);
     } catch (e) {}
   }
@@ -50,15 +66,34 @@
     };
   }
 
-  var bossT0 = 0;
+  var bossT0 = 0, booted = false;
 
   window.HM = {
-    track: track,
     where: where,
+    track: function (name, props) {
+      if (name === 'mission_start') newRun(props && props.mission);
+      if (name === 'continue' && run) run.continues++;
+      track(name, props);
+      // the run is over once the player is out of it
+      if (name === 'mission_leave') run = null;
+    },
+    // the game is on screen: how long that took, and (a little later) whether its sound arrived
+    boot: function () {
+      if (booted) return; booted = true;
+      var nav = 0;
+      try { nav = Math.round(performance.now()); } catch (e) {}
+      track('boot', { load_ms: nav, since_script_ms: Date.now() - T0 });
+      setTimeout(function () {
+        try {
+          var i = window.Sound && Sound.info ? Sound.info() : null;
+          if (i && (i.failed || (i.state !== 'not started' && !i.ready))) track('audio_problem', { audio_state: i.state, decoded: i.decoded, how: i.how });
+        } catch (e) {}
+      }, 20000);
+    },
     // one tap on the simulation's own event stream (called from react() in the game loop)
     sim: function (e, sim, cur) {
       switch (e.t) {
-        case 'life_lost': track('life_lost', where(sim, cur)); break;
+        case 'life_lost': var pl = where(sim, cur); pl.cause = e.why || 'unknown'; track('life_lost', pl); break;
         case 'checkpoint': track('checkpoint', where(sim, cur)); break;
         case 'boss_intro':
           bossT0 = sim.time;
@@ -69,14 +104,15 @@
     }
   };
 
-  // Abandonment: the tab hidden or closed mid-mission is the only reliable signal on mobile.
+  // Abandonment: the tab hidden or closed is the only reliable signal on mobile. Fired from any screen, with where it was.
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState !== 'hidden') return;
     try {
-      var m = window.__m1; if (!m) return;
-      var st = m.state();
-      if (st !== 'play' && st !== 'pause') return;
-      var p = where(m.sim(), m.cur()); p.state = st;
+      var g = window.HMgame && window.HMgame.now ? window.HMgame.now() : null;
+      var st = g ? g.state : 'unknown', inRun = st === 'play' || st === 'pause' || st === 'over';
+      var p = inRun ? where(g.sim, g.mission) : { mission: g ? g.mission : undefined };
+      p.state = st;
+      if (run) p.run_seconds = Math.round((Date.now() - run.t0) / 1000);
       track('quit', p);
     } catch (e) {}
   });
