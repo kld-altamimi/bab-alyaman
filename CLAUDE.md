@@ -50,6 +50,7 @@ analytics.js reads instead of the debug handle. `life_lost` in the simulation ca
 | `mission_complete` | `showResults()` | time, par, score, total, ace, liberator, practice, deaths |
 | `mission_leave` | `stopGame()` | + status (play / over / clear) — ends the run |
 | `quit` | tab hidden, on any screen | + state (home / map / play / pause / over …), run_seconds if mid-run |
+| `share_click` | Share button (home screen, results) | from (home / results), mission (results only), how (sheet = the phone's share menu, copy = link copied) |
 
 Every event also carries: `build`, `run_id` and `run_continues` (while in a run), `lang`, `input` (touch / keyboard),
 `fire_mode` (hold / auto), `orientation`, `dev` (filter `dev = true` out of real numbers) and `muted`.
@@ -57,3 +58,7 @@ Every event also carries: `build`, `run_id` and `run_continues` (while in a run)
 Opening the game once with `?internal=1` marks that browser as internal (nothing sent; `?internal=0` undoes it) —
 Khaled uses this on his own devices so test runs stay out of the numbers. Share links per channel as
 `?utm_source=whatsapp` etc. so PostHog can tell channels apart (messaging apps strip the referrer).
+
+`?play` (the ad link) takes someone with no saved progress straight into Mission 1 after one tap, with the touch
+controls already on screen; anyone with progress goes to the map. The in-game Share button sends
+`?play&utm_source=share&utm_medium=home|results` (plus `utm_content=<mission>` from the results screen).
