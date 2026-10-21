@@ -9,6 +9,10 @@ of these files, never the place where edits happen. If the artifact and the repo
   Edit it in place; do not split it into modules or move the art out.
 - `audio/` — ten MP3s the game fetches at runtime by relative path (`audio/<name>.mp3`). Keep the folder beside
   `index.html`; file names are referenced from the `AUDIO` manifest inside `index.html`.
+- `icon-180.png`, `icon-192.png`, `icon-512.png`, `manifest.webmanifest`, `manifest-ar.webmanifest` — the home screen
+  icon (Yazeed from the lives counter) and the web app manifests (English and Arabic names). The game adds the manifest
+  link itself on Android touch screens only; an iPhone gets `apple-touch-icon` and no manifest, so its icon opens the
+  address of the moment, which carries the save (see the home screen tip in `index.html`).
 - `analytics.js` — PostHog tracking. **Gameplay edits must not touch this file.** The game calls `window.HM` at a handful of
   points (`mission_start`, the simulation event tap in `react()`, `game_over`, `mission_complete`, `mission_leave`,
   and `quit` on tab-hide, plus `continue`, `skip_ahead` and `boot`). If a mission id, zone name or boss key is renamed, the event properties follow
@@ -51,6 +55,7 @@ analytics.js reads instead of the debug handle. `life_lost` in the simulation ca
 | `mission_leave` | `stopGame()` | + status (play / over / clear) — ends the run |
 | `quit` | tab hidden, on any screen | + state (home / map / play / pause / over …), run_seconds if mid-run |
 | `share_click` | Share button (home screen, results) | from (home / results), mission (results only), how (sheet = the phone's share menu, copy = link copied) |
+| `home_tip` | the Add to Home Screen tip (once per device, on the map after a clear, phones' own browsers only) | step (shown / closed / added / declined / carried), how (ios / android_prompt / android_menu) |
 
 Every event also carries: `build`, `run_id` and `run_continues` (while in a run), `lang`, `input` (touch / keyboard),
 `fire_mode` (hold / auto), `orientation`, `dev` (filter `dev = true` out of real numbers) and `muted`.
@@ -62,3 +67,8 @@ Khaled uses this on his own devices so test runs stay out of the numbers. Share 
 `?play` (the ad link) takes someone with no saved progress straight into Mission 1 after one tap, with the touch
 controls already on screen; anyone with progress goes to the map. The in-game Share button sends
 `?play&utm_source=share&utm_medium=home|results` (plus `utm_content=<mission>` from the results screen).
+
+The game opened from a home screen icon arrives with `utm_source=homescreen` (Android: the manifest's `start_url`;
+iPhone: the address the tip writes, `?utm_source=homescreen[&internal=1]&hs=<save>`). On an iPhone the icon's copy of
+the game has its own storage, so its first launch takes the save from `hs` if it has no progress of its own
+(`home_tip` step `carried`), and the address drops `hs` straight away.
