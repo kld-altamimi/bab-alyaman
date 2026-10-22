@@ -578,7 +578,7 @@ html[lang="ar"] .fbq,html[lang="ar"] .fbthanks{text-transform:none}
 </div>
 
 <script>
-var BUILD = "0.13.74";
+var BUILD = "0.13.75";
 // the Radio meter: hidden until spending it is built (it still fills underneath; Khaled, 19 Oct)
 var RADIO_ON = false;
 // the two badges, Ace and Liberator, drawn here in pixels (Khaled, 19 Oct). Ace: a gold medal with a jambiya struck on
@@ -1670,6 +1670,10 @@ var Sim = (function () {
     e.slot = s.slotN * 12;
     if (sp.covered) e.cd += Math.round(60 * T.FIRST);
     if (sp.k === 'rifle') e.band = 96 + s.rand() * 78;
+    // his first attack gets made: once he has begun to aim (or to wind up) the first time, nothing stops him until it's
+    // made, and he flashes meanwhile, as at the edge (Khaled, 23 Oct: "still feels no one is trying to shoot me": most
+    // of them died the moment they stepped in, before they could aim)
+    if (sp.k === 'rifle' || sp.k === 'bomber') e.first = true;
     if (sp.k === 'bomber') e.band = 150 + s.rand() * 60;
     if (sp.k === 'door') { e.band = 8; e.cd = Math.round((60 + Math.floor(s.rand() * 30)) * T.FIRST); e.door = T.DOOR_HITS; e.bashCd = 0; }
     if (sp.k === 'cook') { e.band = 70 + s.rand() * 40; e.cd = Math.round((40 + Math.floor(s.rand() * 30)) * T.FIRST); e.swingCd = 0; }
@@ -2038,7 +2042,8 @@ var Sim = (function () {
   // anywhere in the middle, a walker only once he is properly in.
   function inMiddle(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
   function inReach(s, x) { return inMiddle(s, x); }
-  function guarded(s, e) { return !!e && e.alive && e.hostile && !e.ext && (!inMiddle(s, e.x) || e.emerge > 0); }
+  // (and a man making his first attack: see spawnEnemy)
+  function guarded(s, e) { return !!e && e.alive && e.hostile && ((!e.ext && (!inMiddle(s, e.x) || e.emerge > 0)) || (e.first && (e.st === 'aim' || e.st === 'wind'))); }
   function staged(s, e) { return e.post ? inMiddle(s, e.x) : (e.x >= s.cam + s.viewW * s.laneL - 1 && e.x <= s.cam + s.viewW * (1 - s.laneR) + 1); }
 
   function enemyFire(s, e, aimed, yOff) {
@@ -2078,7 +2083,7 @@ var Sim = (function () {
     // the two edges of the screen are for walking through, not for standing in
     var inL = s.cam + s.viewW * s.laneL + e.slot, inR = s.cam + s.viewW * (1 - s.laneR) - e.slot;
     if (e.x > inR) { moved = -1; speed = KIND[e.k].lane; } else if (e.x < inL) { moved = 1; speed = KIND[e.k].lane; }
-    else if (!e.arrived) { e.arrived = true; e.cd = Math.max(e.cd, Math.round((T.SETTLE + Math.floor(s.rand() * 20)) * T.FIRST)); }
+    else if (!e.arrived) { e.arrived = true; e.cd = Math.min(e.cd, 4 + Math.floor(s.rand() * 10)); }
     // nor is the far side of somebody else's sandbags: only the man posted there may use them. A walker who finds them
     // between himself and Yazeed keeps coming until he is through.
     // (it only matters while Yazeed is on the outside of them: once he is in among the bags they stop nothing of his)
@@ -2204,10 +2209,10 @@ var Sim = (function () {
         e.moving = mv;
         e.moveT = mv ? (e.moveT || 0) + 1 : 0;
         if (e.cd > 0) e.cd--;
-        if (e.cd <= 0 && ad < T.SIGHT && staged(s, e) && (!mv || e.moveT > 80 || Math.abs(p.y - e.y) > 22)) { e.st = 'aim'; e.stT = 0; e.moveT = 0; e.moving = 0; ev(s, { t: 'tell', k: 'rifle', x: e.x, y: e.y }); }
+        if (e.cd <= 0 && ad < T.SIGHT && staged(s, e) && (!mv || e.first || e.moveT > 80 || Math.abs(p.y - e.y) > 22)) { e.st = 'aim'; e.stT = 0; e.moveT = 0; e.moving = 0; ev(s, { t: 'tell', k: 'rifle', x: e.x, y: e.y }); }
       } else if (e.st === 'aim') {
         if (e.covered) upFromCover(s, e);
-        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; }
+        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {
         if (e.covered) upFromCover(s, e);
         if (e.stT % 8 === 1) {
@@ -2228,6 +2233,7 @@ var Sim = (function () {
         if (!mv2 && e.cd <= 0 && ad < T.SIGHT && ad > 26 && staged(s, e)) { e.st = 'wind'; e.stT = 0; e.lit = true; ev(s, { t: 'tell', k: 'bomber', x: e.x, y: e.y }); }
       } else if (e.st === 'wind') {
         if (e.stT >= 38) {
+          e.first = false;
           var Tf = 0.86 + ad / 640, tx = p.x + p.vx * 0.22, sy = e.y - 40, ty = p.y - 2;
           var vx = (tx - (e.x - e.face * 4)) / Tf, vy = (ty - sy - 0.5 * T.DYN_G * Tf * Tf) / Tf;
           if (vx > 270) vx = 270; if (vx < -270) vx = -270;
@@ -3082,7 +3088,7 @@ var Sim = Sim || require('./sim.js');
         x = it.x + i * (it.gap || 24);
         var kind = (it.kinds && it.kinds[i % it.kinds.length]) || 'rifle';
         var e = I.spawnEnemy(s, { g: 'ROAD', k: kind, post: 1, look: ['worried', 'youth', 'angry', 'qat'][(i + (it.x >> 3)) % 4] }, x);
-        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : Math.round((10 + Math.floor(s.rand() * 40) + i * 6) * T.FIRST));          // (R5: T.FIRST, T.GAP, sim.js) e.noKnife = true;
+        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : Math.round((10 + Math.floor(s.rand() * 40) + i * 6) * T.FIRST)); e.noKnife = true; e.first = false;      // (R5: T.FIRST, T.GAP, sim.js; no guarded first aim on the road)
         if (it.march) { e.march = true; e.cd = 9999; }
       }
       if (!s.hinted.ram) { s.hinted.ram = 1; ev(s, { t: 'hint', k: 'ram' }); }
@@ -4266,8 +4272,8 @@ var Sim = Sim || require('./sim.js');
     e.ext = 'fly'; e.air = false;
     if (!q.plat) { e.y = q.y != null ? q.y : Sim.groundY(L, x); e.plat = -1; }          // (in the street, or on the road)
     e.px = e.x; e.py = e.y;
-    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
-    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 === 0;
+    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = (q.k === 'rifle' ? 4 + Math.floor(s.rand() * 10) : Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST)) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
+    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; the first burst gets made, as on foot)
     if (q.k === 'sam') e.cd = Math.round((8 + Math.floor(s.rand() * 16)) * T.FIRST) + (q.cd || 0);          // (the missile man does not hang about)
     if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
     if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = Math.round((30 + Math.floor(s.rand() * 30)) * T.FIRST); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
@@ -4341,7 +4347,7 @@ var Sim = Sim || require('./sim.js');
     for (k = 0; k < Q.men.length; k++) {
       var mx = Q.men[k], e = I.spawnEnemy(s, { g: 'Z0', k: 'rifle', post: 1, look: looks[k % looks.length] }, mx), best = Q.doors[0];
       for (var d = 0; d < Q.doors.length; d++) if (Math.abs(Q.doors[d] - mx - 10) < Math.abs(best - mx - 10)) best = Q.doors[d];
-      e.ext = 'fly'; e.intro = true; e.plat = -1; e.y = Q.street; e.st = 'aim'; e.stT = 0; e.face = -1; e.px = e.x; e.py = e.y; e.u = 0; e.exitX = best; e.brave = false;
+      e.ext = 'fly'; e.intro = true; e.first = false; e.plat = -1; e.y = Q.street; e.st = 'aim'; e.stT = 0; e.face = -1; e.px = e.x; e.py = e.y; e.u = 0; e.exitX = best; e.brave = false;
     }
   }
   function introMan(s, e) {
@@ -4724,7 +4730,9 @@ var Sim = Sim || require('./sim.js');
     if (e.k === 'launcher') { launcher(s, e, G); return; }
     if (e.k === 'light') { light(s, e, G); return; }
     if (e.st === 'panic') { flee(s, e); return; }
-    if (!G.awake || !e.seen) return;
+    // (a man at his post acts once he is in the picture, without waiting for his fight to wake: the chin gun was killing
+    // most of them before it did; 23 Oct)
+    if (!e.seen || (!G.awake && !e.post)) return;
     var dx = h.x - e.x, dy = h.y - e.y, d = Math.sqrt(dx * dx + dy * dy);
     if (e.k !== 'aa') e.face = dx >= 0 ? 1 : -1;
     // the first of them to see it says what it is: «قنية سودا!», the black jinn (and if he is not one of the brave ones, he
@@ -4750,7 +4758,7 @@ var Sim = Sim || require('./sim.js');
         if (e.cd > 0) e.cd--;
         else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { e.st = 'aim'; e.stT = 0; }
       } else if (e.st === 'aim') {
-        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; }
+        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {
         if (e.stT % 8 === 1) {
           var mx = e.x + e.face * 14, my = e.y - 26, tx = h.x - mx, ty = h.y - my, tl = Math.sqrt(tx * tx + ty * ty) || 1, sp = (s.rand() - 0.5) * 0.08;
