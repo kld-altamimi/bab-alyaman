@@ -1,0 +1,544 @@
+<title>Bab al-Yemen Prototype · باب اليمن</title>
+<meta name="description" content="Yazeed and Salem against the Zanabeel: a run-and-gun on the road to Sana'a, in your browser, in English and Arabic. يزيد وسالم ضد الزنابيل: لعبة أكشن على الطريق إلى صنعاء في متصفحك، بالعربية والإنجليزية.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bab al-Yemen · باب اليمن">
+<meta property="og:title" content="Bab al-Yemen · باب اليمن">
+<meta property="og:description" content="Yazeed and Salem against the Zanabeel: a run-and-gun on the road to Sana'a, in your browser, in English and Arabic. يزيد وسالم ضد الزنابيل: لعبة أكشن على الطريق إلى صنعاء في متصفحك، بالعربية والإنجليزية.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ar_AR">
+<meta property="og:image" content="https://kld-altamimi.github.io/bab-alyaman/share.png?v=2">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title screen: «باب اليمن» and BAB AL-YEMEN in gold over a beach on the Red Sea, with Yazeed and his crate">
+<meta property="og:url" content="https://kld-altamimi.github.io/bab-alyaman/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bab al-Yemen · باب اليمن">
+<meta name="twitter:description" content="Yazeed and Salem against the Zanabeel: a run-and-gun on the road to Sana'a, in your browser, in English and Arabic. يزيد وسالم ضد الزنابيل: لعبة أكشن على الطريق إلى صنعاء في متصفحك، بالعربية والإنجليزية.">
+<meta name="twitter:image" content="https://kld-altamimi.github.io/bab-alyaman/share.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Noto+Kufi+Arabic:wght@500;700&display=swap" rel="stylesheet">
+<script src="analytics.js"></script>
+<style>
+/* Layout: one screen and no scrolling, always on its side. The picture fills the height and the thumbs lie over its
+   corners; a phone held upright gets the whole game turned a quarter (main.js layout). One look in every theme: the
+   night-blue and lavender of the game's own HUD. */
+:root{
+  color-scheme:dark;
+  --night:#090b16;      /* around the picture */
+  --navy:#10142c;       /* panels, as on the HUD */
+  --rule:#96a0dc;       /* the HUD's lavender line */
+  --rule-dim:#3c4278;
+  --ink:#e8ecff;
+  --muted:#aab1d8;
+  --gold:#ffc22e;       /* the one loud colour: the trigger and the way forward */
+  --gold-ink:#1b1406;
+  --f-head:'Barlow Condensed','Avenir Next Condensed','Roboto Condensed',sans-serif-condensed,'Arial Narrow',Arial,sans-serif;
+  --f-body:'Barlow','Segoe UI',system-ui,-apple-system,sans-serif;
+}
+html{box-sizing:border-box;height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--night);color:var(--ink);font:400 15px/1.35 var(--f-body);overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;border-radius:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#app{position:relative;height:100%;min-height:220px;overflow:hidden;background:var(--night);
+  padding:0 env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#rot{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:50% 50%}
+#hi,#lo{position:absolute;left:0;top:0;display:block;max-width:none;background:#0d2233;box-shadow:0 0 0 1px var(--rule-dim)}
+#lo{image-rendering:crisp-edges;image-rendering:pixelated}
+
+/* thumbs */
+#pad{position:absolute;left:0;top:0;right:0;bottom:0;touch-action:none}
+.tb,#stick,#aim{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none}
+.tb{display:flex;align-items:center;justify-content:center;border:2px solid rgba(232,236,255,.62);background:rgba(16,20,44,.5);color:#f2f4ff;
+  font:700 14px/1 var(--f-head);letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 0 rgba(4,5,12,.9)}
+.tb.on{background:rgba(232,236,255,.3);border-color:#fff}
+#bFire{border-color:rgba(255,194,46,.85);color:var(--gold)}
+#bFire.on{background:rgba(255,194,46,.3);border-color:var(--gold)}
+#bFire.auto{border-style:dashed}
+#bFire.locked{background:rgba(255,194,46,.6);color:var(--gold-ink);text-shadow:none;box-shadow:0 0 0 4px rgba(255,194,46,.35)}
+#bFire::after{content:'Fire'}
+#bFire.locked::after{content:'Locked'}
+#bJump::after{content:'Jump'}
+#bBomb::after{content:'Bomb'}
+#app.is-fly #bJump::after{content:'Flares'}
+#app.is-fly #bBomb::after{content:'Rockets'}
+#stick{border:2px solid rgba(232,236,255,.34);background:rgba(16,20,44,.2);opacity:.6}
+#stick.on{border-color:rgba(232,236,255,.7);opacity:1}
+#knob{position:absolute;left:27%;top:27%;width:46%;height:46%;border-radius:50%;background:rgba(232,236,255,.36);border:2px solid rgba(232,236,255,.75)}
+/* the Apache (Taiz): an aim stick in FIRE's place, gold like FIRE, with a cross on its knob; FLARES pulses at a lock-on */
+#aim{display:none;border:2px solid rgba(255,194,46,.5);background:rgba(16,20,44,.2);opacity:.7}
+#aim.on{border-color:rgba(255,194,46,.85);opacity:1}
+#aim.firing{background:rgba(255,194,46,.14)}
+#aimKnob{position:absolute;left:27%;top:27%;width:46%;height:46%;border-radius:50%;background:rgba(255,194,46,.3);border:2px solid rgba(255,214,110,.85)}
+#aimKnob::before,#aimKnob::after{content:'';position:absolute;left:50%;top:50%;background:rgba(255,236,170,.9)}
+#aimKnob::before{width:2px;height:56%;transform:translate(-50%,-50%)}
+#aimKnob::after{width:56%;height:2px;transform:translate(-50%,-50%)}
+#app.is-fly #aim{display:block}
+#app.is-fly #bFire{display:none}
+#app.is-fly #bJump.alert{animation:flarePulse .3s steps(1,end) infinite;border-color:#ffc22e;color:#ffe680}
+@keyframes flarePulse{0%{background:rgba(255,120,40,.62);box-shadow:0 0 0 5px rgba(255,140,40,.45)}50%{background:rgba(16,20,44,.5);box-shadow:0 0 0 2px rgba(255,140,40,.25)}}
+@media (prefers-reduced-motion:reduce){#app.is-fly #bJump.alert{animation:none;background:rgba(255,120,40,.55);box-shadow:0 0 0 4px rgba(255,140,40,.4)}}
+#app:not(.has-touch) .tb,#app:not(.has-touch) #stick,#app:not(.has-touch) #aim{display:none}
+#app.has-panel .tb,#app.has-panel #stick,#app.has-panel #aim{visibility:hidden}
+
+/* menus */
+#ui{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;padding-block:8px;pointer-events:none}
+.panel{pointer-events:auto;touch-action:pan-y;display:grid;gap:10px 20px;width:100%;max-width:620px;max-height:100%;overflow:auto;padding:14px 16px;
+  background:rgba(16,20,44,.95);border:2px solid var(--rule);box-shadow:inset -2px -2px 0 var(--rule-dim),0 0 0 2px #04050c}
+.panel > *{min-width:0}
+.eyebrow{margin:0 0 3px;font:600 13px/1.2 var(--f-head);letter-spacing:.16em;text-transform:uppercase;color:var(--rule)}
+h1,h2{margin:0;font-family:var(--f-head);font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--gold);text-shadow:2px 2px 0 #5a2c00;text-wrap:balance}
+h1{font-size:clamp(34px,9vmin,50px);line-height:.92}
+h2{font-size:clamp(26px,7vmin,36px);line-height:.95}
+h2 small{font-size:.5em;letter-spacing:.1em;color:var(--muted);text-shadow:none;margin-left:.4em}
+.tagline{margin:3px 0 0;font:600 15px/1.2 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.tagline::before,.brief-item .btag::before{content:'';display:inline-block;width:6px;height:6px;margin:0 7px 0 1px;background:var(--gold);transform:translateY(-2px) rotate(45deg)}
+.lede{margin:5px 0 0;color:var(--ink)}
+.fine{margin:0;color:var(--muted);font-size:14px}
+.label{margin:0 0 5px;font:600 13px/1.2 var(--f-head);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border:2px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer;
+  font:700 16px/1.05 var(--f-head);letter-spacing:.09em;text-transform:uppercase}
+.btn.go{min-height:50px;background:var(--gold);border-color:var(--gold);color:var(--gold-ink);font-size:20px;letter-spacing:.12em}
+.btn[aria-busy="true"]{opacity:.6}
+.btn[aria-pressed="false"]{color:var(--muted);border-color:var(--rule-dim)}
+button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media (hover:hover){.btn:hover{background:var(--rule);border-color:var(--rule);color:var(--navy)}.btn.go:hover{background:#ffd872;border-color:#ffd872;color:var(--gold-ink)}}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 18px}
+.meter{display:grid;grid-template-columns:minmax(0,1fr)}
+.meter .label{display:flex;justify-content:space-between;gap:6px;margin:0;font-size:12px;letter-spacing:.08em}
+.meter output{font:600 12px/1.2 var(--f-head);letter-spacing:.04em;color:var(--muted);text-transform:none}
+.meter input{-webkit-appearance:none;appearance:none;width:100%;height:34px;margin:0;background:transparent;cursor:pointer}
+.meter input::-webkit-slider-runnable-track{height:6px;background:var(--rule-dim);border-radius:3px}
+.meter input::-moz-range-track{height:6px;background:var(--rule-dim);border-radius:3px}
+.meter input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;margin-top:-8px;border-radius:50%;background:var(--gold);border:2px solid var(--navy)}
+.meter input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--gold);border:2px solid var(--navy)}
+@media (max-width:540px){.meters{grid-template-columns:minmax(0,1fr)}}
+.meter input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* Arabic: the Kufi face for everything, no spacing between letters (they join), and the panels read right to left */
+html[lang="ar"]{--f-head:'Noto Kufi Arabic','DejaVu Sans',Arial,sans-serif;--f-body:'Noto Kufi Arabic','DejaVu Sans',Arial,sans-serif}
+html[lang="ar"] #ui *,html[lang="ar"] .tb{letter-spacing:0!important}
+html[lang="ar"] h2{font-size:28px}
+html[lang="ar"] #bFire::after{content:'نار'}
+html[lang="ar"] #bFire.locked::after{content:'مثبّت'}
+html[lang="ar"] #bJump::after{content:'قفز'}
+html[lang="ar"] #bBomb::after{content:'قنبلة'}
+html[lang="ar"] #app.is-fly #bJump::after{content:'مشاعل'}
+html[lang="ar"] #app.is-fly #bBomb::after{content:'صواريخ'}
+html[lang="ar"] .brief-item .bboss::before{content:'في النهاية: '}
+@media (max-width:700px){html[lang="ar"] .meter .label{display:grid;grid-template-columns:minmax(0,1fr);gap:0}}
+[dir="rtl"] .seg button + button{border-left:0;border-right:2px solid var(--rule)}
+/* the mission card keeps the right-hand side either way: the map is panned to leave the left clear for the current mission */
+.is-land[data-state="map"] #ui[dir="rtl"]{justify-content:flex-start}
+[dir="rtl"] .tagline::before,[dir="rtl"] .brief-item .btag::before{margin:0 1px 0 7px}
+[dir="rtl"] h2 small{margin-left:0;margin-right:.4em}
+[dir="rtl"] .medal{margin-left:0;margin-right:6px}
+[dir="rtl"] .tally dd{padding-left:0;padding-right:14px;text-align:left;direction:ltr;unicode-bidi:isolate}
+.is-land #ui[dir="rtl"] #pMap .boss .label{margin-right:0;margin-left:6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--rule)}
+.seg button{min-height:44px;padding:0 8px;border:0;background:transparent;color:var(--ink);cursor:pointer;font:700 16px/1.05 var(--f-head);letter-spacing:.08em;text-transform:uppercase}
+.seg button + button{border-left:2px solid var(--rule)}
+.seg button[aria-checked="true"]{background:var(--rule);color:var(--navy)}
+.scheme-note{margin:6px 0 0;min-height:2.7em;color:var(--ink);font-size:14px}
+.acts[hidden]{display:none}
+#app:not(.is-dev) .dev{display:none!important}
+/* the game's X account: the picture draws the credit in its own lettering (Menu.home); this is only where it is tapped */
+.social{position:absolute;display:block;-webkit-tap-highlight-color:transparent}
+#app:not([data-state="home"]) .social{display:none}
+#app.is-quick .social{display:none}
+/* the ad's ?play link with the phone held upright: the one thing to do, the right way up, over the picture on its side */
+.turn{position:absolute;left:50%;bottom:calc(12% + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;pointer-events:none;
+  display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100% - 32px);padding:10px 16px 10px 12px;
+  background:rgba(9,11,22,.84);border:1px solid var(--rule-dim);color:var(--ink)}
+.turn[hidden]{display:none}
+.turn svg{flex:none;width:40px;height:40px;color:var(--gold);animation:turnit 2.4s ease-in-out infinite}
+.turn p{margin:0;display:flex;flex-direction:column;gap:2px}
+.turn b{font:700 20px/1.15 var(--f-head);letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
+.turn span{font:600 15px/1.2 var(--f-head);letter-spacing:.04em;text-transform:uppercase}
+html[lang="ar"] .turn b,html[lang="ar"] .turn span{letter-spacing:0;text-transform:none}
+@keyframes turnit{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.turn svg{animation:none}}
+.turn.mid{bottom:auto;transform:translate(-50%,-50%)}
+/* ...and the thumbs already where they will be, so the picture reads as a game ready to play (Khaled, 21 Oct) */
+#app.is-quick[data-state="home"] .tb,#app.is-quick[data-state="home"] #stick{visibility:visible}
+#app.is-quick[data-state="home"] #stick{opacity:.9}
+#app.is-quick[data-state="home"] #bFire{animation:ready 1.3s ease-in-out infinite}
+@keyframes ready{0%,100%{box-shadow:0 0 0 0 rgba(255,194,46,0)}50%{box-shadow:0 0 0 6px rgba(255,194,46,.3),0 0 18px rgba(255,194,46,.45)}}
+#stick::after{content:'Move';display:none;position:absolute;left:50%;top:100%;margin-top:5px;transform:translateX(-50%);white-space:nowrap;
+  font:700 13px/1 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:#f2f4ff;text-shadow:0 1px 0 rgba(4,5,12,.9)}
+html[lang="ar"] #stick::after{content:'حركة';letter-spacing:0}
+#app.is-quick[data-state="home"] #stick::after{display:block}
+@media (prefers-reduced-motion:reduce){#app.is-quick[data-state="home"] #bFire{animation:none}}
+/* Share (home screen and results): an arrow out of a box, before the word */
+.btn .ico{flex:none;width:18px;height:18px;margin-inline-end:8px}
+.social:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.acts .btn{flex:1 1 auto}
+.acts .btn.go{flex:1 1 100%}
+.is-land .acts .btn.go{flex:1 1 150px}
+
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* home: the picture is the title; the buttons sit along its foot */
+#pHome{gap:10px}
+.is-land[data-state="home"] #ui{align-items:flex-end;padding-block:0}
+.is-land #pHome{background:transparent;border:0;box-shadow:none;max-width:400px;padding:0 0 10px;overflow:visible}
+.is-land #pHome .acts .btn.go{flex:2 1 160px}
+.is-land #pHome .acts .btn:not(.go){background:rgba(16,20,44,.9)}
+
+/* the campaign map's card: beside the map, the buttons keep to the foot of the card and the reading between them
+   scrolls if it must. */
+#pMap{display:flex;flex-direction:column;gap:8px}
+#pMap .mhead{order:1}
+#pMap .play{order:2;display:grid;gap:6px;grid-template-columns:minmax(0,1fr)}
+/* where the mission starts: any checkpoint, for trying a part again without the rest */
+.from{display:flex;align-items:center;gap:10px;margin:0}
+.from[hidden]{display:none}
+.from .label{margin:0;flex:none}
+.from select{flex:1 1 auto;min-width:0;min-height:40px;margin:0;padding:0 28px 0 9px;border:2px solid var(--rule);border-radius:0;cursor:pointer;
+  background-color:var(--navy);color:var(--ink);font:700 16px/1.1 var(--f-head);letter-spacing:.05em;text-transform:uppercase;text-overflow:ellipsis;
+  background-image:linear-gradient(45deg,transparent 50%,var(--rule) 50%),linear-gradient(135deg,var(--rule) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 55%,calc(100% - 10px) 55%;background-size:6px 6px;background-repeat:no-repeat;
+  -webkit-appearance:none;appearance:none}
+.from select option{text-transform:none;background:var(--navy);color:var(--ink)}
+.from select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media (hover:hover){.from select:hover{border-color:var(--ink)}}
+#pMap .mbody{order:3;display:grid;gap:8px;align-content:start;flex:1 1 auto;min-height:0;overflow:auto}
+#pMap .acts{order:4}
+#pMap .nav{order:5}
+.is-land[data-state="map"] #ui{justify-content:flex-end;align-items:stretch;padding-block:6px}
+.is-land #pMap{width:min(42%,340px);margin-right:6px;padding:10px 12px;overflow:hidden}
+.is-land #pMap .mbody{order:2;flex:1 1 auto;min-height:0;overflow:auto;padding-right:2px}
+.is-land #pMap .play{order:3}
+.brief{margin:0;color:var(--ink);max-width:60ch}
+.ahead{margin:0;color:var(--gold);font:600 15px/1.3 var(--f-head);letter-spacing:.03em}
+.boss{margin:0;display:grid;gap:2px;color:var(--ink);font-size:14px;line-height:1.35}
+.boss .label{margin:0}
+.cps{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px;font:600 13px/1.15 var(--f-head);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cps li{display:inline-flex;align-items:center;gap:5px;padding:3px 7px 3px 5px;border:1px solid var(--rule-dim)}
+.cps li::before{content:'';width:7px;height:7px;border:1px solid var(--rule-dim)}
+.cps li.done{color:var(--ink);border-color:var(--rule)}
+.cps li.done::before{background:var(--gold);border-color:var(--gold)}
+.best b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.medal{display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid var(--rule-dim);font:700 12px/1.3 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.medal.on{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.go:disabled{background:transparent;color:var(--gold);border-style:dashed}
+.btn.warn{border-color:#ff5a3c;color:#ffb09a}
+.nav{font-size:13px}
+#pMap .acts .btn{flex:1 1 80px;padding:0 8px}
+.is-land #pMap .acts .btn{min-height:40px}
+.is-land #pMap .play .btn{min-height:46px}
+.is-land #pMap h2{font-size:clamp(24px,6.4vh,32px)}
+.is-land #pMap .tagline{font-size:13px;margin-top:2px}
+.is-land #pMap .brief{font-size:14px;line-height:1.3}
+.is-land #pMap .ahead{font-size:14px}
+.is-land #pMap .boss{font-size:13px}
+.is-land #pMap .cps{font-size:11.5px;gap:2px 10px}
+.is-land #pMap .cps li{padding:0;border:0;gap:4px}
+.is-land #pMap .cps li::before{width:5px;height:5px}
+.is-land #pMap .boss{display:block}
+.is-land #pMap .boss .label{display:inline;margin-right:6px}
+#pMap .mbody.more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent)}
+.is-land #pMap .best{font-size:13px}
+@media (max-height:520px){.is-land #pMap .nav{display:none}}
+@media (min-width:1100px) and (min-height:600px){.is-land #pMap{width:min(36%,440px);padding:14px 16px}.is-land #pMap .brief{font-size:16px}.is-land #pMap .cps{font-size:13px}.is-land #pMap .best,.is-land #pMap .boss{font-size:14px}}
+
+/* every briefing on one list */
+#pBrief{display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.is-land[data-state="brief"] #ui{align-items:stretch;padding-block:6px}
+.is-land #pBrief{max-width:640px}
+.bhead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+.bhead .btn.go{min-height:44px;font-size:17px}
+.blist{margin:0;padding:0 2px 0 0;list-style:none;display:grid;gap:8px;overflow:auto;min-height:0;flex:1 1 auto}
+.brief-item{display:grid;gap:3px;width:100%;padding:9px 11px;border:1px solid var(--rule-dim);border-inline-start:4px solid var(--rule-dim);background:transparent;color:var(--ink);text-align:start;cursor:pointer;font:400 14px/1.35 var(--f-body)}
+.brief-item .eyebrow{margin:0}
+.brief-item .bname{font:700 21px/1.05 var(--f-head);text-transform:uppercase;letter-spacing:.02em;color:var(--gold)}
+.brief-item .btag{margin-top:-1px;font:600 13px/1.2 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.brief-item .bparts{font:600 12px/1.3 var(--f-head);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brief-item .bboss{color:var(--ink)}
+.brief-item .bboss::before{content:'At the end: ';color:var(--muted);font:600 12px/1 var(--f-head);letter-spacing:.12em;text-transform:uppercase}
+.brief-item .bahead{color:var(--gold);font:600 14px/1.3 var(--f-head);letter-spacing:.03em}
+.brief-item.st-cleared{border-inline-start-color:#7ccf62}
+.brief-item.st-open{border-inline-start-color:var(--gold)}
+.brief-item.st-soon{border-inline-start-color:var(--rule)}
+.brief-item.st-locked .bname,.brief-item.st-secret .bname{color:#d8b860}
+.brief-item.here{border-color:var(--rule);background:rgba(150,160,220,.08)}
+@media (hover:hover){.brief-item:hover{border-color:var(--rule);background:rgba(150,160,220,.12)}}
+
+/* options */
+#pOpts{grid-template-areas:"h" "pick" "row" "vol" "how" "acts"}
+#pOpts h2{grid-area:h}
+#pOpts .pick{grid-area:pick}
+#pOpts .row{grid-area:row}
+#pOpts .meters{grid-area:vol}
+#pOpts .how{grid-area:how}
+#pOpts .acts{grid-area:acts}
+.is-land #pOpts{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"h h" "pick row" "how vol" "how acts";align-items:start}
+
+#pPause{grid-template-areas:"h" "acts" "opts" "rep"}
+#pPause h2{grid-area:h}
+#pPause .acts{grid-area:acts}
+#pPause .opts{grid-area:opts;display:grid;gap:8px}
+#pPause .rep{grid-area:rep}
+.is-land #pPause{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-areas:"h opts" "acts opts" "rep rep";align-items:start}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.row .btn{flex:1 1 130px}
+
+.rep summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font:600 14px/1.2 var(--f-head);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.rep pre{margin:0 0 8px;padding:8px 10px;border:1px solid var(--rule-dim);white-space:pre-wrap;overflow-wrap:anywhere;font:400 12.5px/1.4 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--ink);
+  -webkit-user-select:text;user-select:text}
+
+/* the end of a mission: the time, the total and the two badges; everything else is in the developer's run details */
+#pDone{max-width:560px;grid-template-areas:"h" "total" "badges" "acts" "facts" "rep"}
+#pDone .h{grid-area:h}
+#pDone .total{grid-area:total}
+#pDone .badges{grid-area:badges}
+#pDone .acts{grid-area:acts}
+#pDone .facts-box{grid-area:facts}
+#pDone .rep:not(.facts-box){grid-area:rep}
+.is-land #pDone{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"h badges" "total badges" "acts acts" "facts rep";align-items:center}
+#pDone .total .label{margin:0}
+#pDone .total .big{margin:0;font:700 clamp(34px,10vmin,48px)/1 var(--f-head);color:var(--gold);text-shadow:2px 2px 0 #5a2c00;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+#pDone .total .fine{margin-top:4px;font-size:13px}
+#pDone .acts .btn.go{font-size:22px;letter-spacing:.16em}
+#pDone .acts .btn.go::after{content:'';display:inline-block;width:0;height:0;margin-inline-start:12px;border-block:7px solid transparent;border-inline-start:10px solid currentColor}
+.badges{display:flex;gap:14px;justify-content:center}
+.badge{position:relative;display:grid;justify-items:center;gap:2px;width:104px;text-align:center}
+.badge canvas{display:block;width:84px;height:90px;image-rendering:crisp-edges;image-rendering:pixelated}
+.badge .bname{margin:0;font:700 15px/1.1 var(--f-head);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.badge .bnote{margin:0;font-size:12px;line-height:1.25;color:var(--muted);min-height:2.5em}
+.badge.won .bname{color:var(--gold)}
+.badge.won .bnote{color:var(--ink)}
+.badge::before{content:'';position:absolute;left:50%;top:44px;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;pointer-events:none;opacity:0;
+  background:repeating-conic-gradient(rgba(255,194,46,.38) 0 10deg,transparent 10deg 30deg);-webkit-mask:radial-gradient(circle,#000 18%,transparent 66%);mask:radial-gradient(circle,#000 18%,transparent 66%)}
+.badge.wait canvas{opacity:0}
+.badge.earn canvas{animation:earn .62s cubic-bezier(.2,1.5,.35,1) both}
+.badge.earn::before{animation:rays 1.6s ease-out both}
+.badge.earn .bname{animation:pop .4s .45s ease-out both}
+.badge.dim canvas{animation:fadein .4s ease-out both}
+@keyframes earn{0%{opacity:0;transform:scale(3.2) rotate(-28deg)}55%{opacity:1;transform:scale(.88) rotate(4deg)}75%{transform:scale(1.08) rotate(-2deg)}100%{opacity:1;transform:none}}
+@keyframes rays{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:0;transform:scale(1.15) rotate(70deg)}}
+@keyframes pop{0%{transform:scale(1.6);color:#fff}100%{transform:none}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.badge.earn canvas,.badge.earn::before,.badge.earn .bname,.badge.dim canvas{animation:none}}
+@media (max-height:300px){.badge canvas{width:56px;height:60px}.badge .bnote{display:none}}
+/* the mission card's two badges, beside the best */
+.cardbadges{display:inline-flex;gap:6px;vertical-align:middle;margin-inline-start:8px}
+.cardbadges canvas{width:28px;height:30px;image-rendering:crisp-edges;image-rendering:pixelated}
+.tally{margin:0;display:grid;grid-template-columns:1fr auto;gap:2px 0;font:600 17px/1.25 var(--f-head);letter-spacing:.06em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.tally dt{color:var(--muted)}
+.tally dd{margin:0;padding-left:14px;text-align:right}
+.tally .sum{color:var(--gold);border-top:2px solid var(--rule-dim);padding-top:3px;margin-top:2px;font-size:21px}
+.facts{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:3px 16px;font:600 15px/1.3 var(--f-head);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.facts b{color:var(--ink);font-weight:700}
+.medals{margin:0;font-size:14px}
+/* the continue screen, as on an arcade cabinet: a dial that drains from 9 to 0 beside the question, the picture dimmed
+   behind it, and red for the last three seconds */
+[data-state="over"] #ui{background:radial-gradient(ellipse at center,rgba(4,5,12,.45),rgba(4,5,12,.85))}
+#pOver{max-width:600px;justify-items:center;text-align:center;gap:10px 22px;
+  grid-template-areas:"dial" "words" "acts";transition:border-color .2s,box-shadow .2s}
+#pOver .dial{grid-area:dial}
+#pOver .words{grid-area:words;display:grid;gap:4px}
+#pOver .acts{grid-area:acts;width:100%}
+#pOver h2{font-size:clamp(34px,10vmin,52px)}
+#pOver .lede{margin:2px 0 0;color:var(--muted);font-size:14px}
+.is-land #pOver{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"dial words" "dial acts";justify-items:stretch;align-items:center;text-align:start}
+.kept{margin:2px 0 0;font:700 17px/1.2 var(--f-head);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);font-variant-numeric:tabular-nums}
+.kept b{color:var(--gold)}
+.dial{display:block;width:clamp(128px,48vh,192px);height:auto;aspect-ratio:1;image-rendering:crisp-edges;image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(255,194,46,.35))}
+#pOver.urgent .dial{filter:drop-shadow(0 0 12px rgba(255,90,60,.5));animation:shake .3s linear infinite}
+#pOver.ended .dial{filter:none}
+#pOver.urgent{border-color:#ff5a3c;box-shadow:inset -2px -2px 0 #5a1400,0 0 0 2px #04050c,0 0 26px rgba(255,90,60,.45)}
+#pOver:not(.ended):not(.paid) #bContinue{animation:glow 1s ease-in-out infinite alternate}
+#pOver.ended h2{color:#ff7a5c;text-shadow:2px 2px 0 #5a1400}
+#pOver.ended .acts,#pOver.paid .acts{visibility:hidden}
+@keyframes shake{0%,100%{translate:0}25%{translate:-2px}75%{translate:2px}}
+@keyframes glow{from{box-shadow:0 0 0 0 rgba(255,194,46,0)}to{box-shadow:0 0 0 5px rgba(255,194,46,.35),0 0 18px rgba(255,194,46,.5)}}
+@media (prefers-reduced-motion:reduce){#pOver.urgent .dial,#pOver:not(.ended):not(.paid) #bContinue{animation:none}}
+@media (max-height:300px){.dial{width:108px}#pOver .lede{display:none}}
+.boot{position:absolute;left:16px;right:16px;top:40%;margin:0;text-align:center;font:600 16px/1.3 var(--f-head);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@media (max-height:300px){.panel{padding:8px 14px;gap:6px 18px}.lede{margin-top:3px}h2{font-size:24px}.rep summary{min-height:36px}}
+</style>
+
+<div id="app">
+  <div id="rot">
+    <canvas id="hi" width="468" height="216" role="img" aria-label="The game picture: the home screen, the campaign map, or the coast of the Bab al-Mandab strait seen from the side"></canvas>
+    <canvas id="lo" width="468" height="216" aria-hidden="true" hidden></canvas>
+    <div id="pad" aria-hidden="true">
+      <div id="stick"><div id="knob"></div></div>
+      <div id="aim"><div id="aimKnob"></div></div>
+      <div class="tb" id="bFire"></div>
+      <div class="tb" id="bJump"></div>
+      <div class="tb" id="bBomb"></div>
+    </div>
+    <p class="boot" id="boot">Loading</p>
+    <div id="ui">
+      <section class="panel" id="pHome" aria-labelledby="hHome" hidden>
+        <h1 id="hHome" class="vh">Bab al-Yemen</h1>
+        <div class="acts">
+          <button type="button" class="btn go" id="bStart">Start</button>
+          <button type="button" class="btn" id="bOpts">Options</button>
+          <button type="button" class="btn" id="bShare"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 11v10h14V11"/></svg>Share</button>
+        </div>
+      </section>
+
+      <section class="panel" id="pMap" aria-labelledby="mName" hidden>
+        <div class="mhead">
+          <p class="eyebrow" id="mEye">Mission 1 · The landing · Ready</p>
+          <h2 id="mName">The Strait</h2>
+          <p class="tagline" id="mTag">Bab al-Mandab</p>
+        </div>
+        <div class="play">
+          <label class="from" id="mFromRow"><span class="label">From</span><select id="mFrom"></select></label>
+          <button type="button" class="btn go" id="bPlay">Start mission</button>
+        </div>
+        <div class="mbody">
+          <p class="brief" id="mBrief"></p>
+          <p class="ahead" id="mAhead"></p>
+          <ol class="cps" id="mCps" aria-label="Checkpoints"></ol>
+          <p class="boss"><span class="label">At the end</span><span id="mBoss"></span></p>
+          <p class="fine best" id="mBest"></p>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn" id="bHome">Home</button>
+          <button type="button" class="btn" id="bBriefs">Briefings</button>
+          <button type="button" class="btn" id="bOpts2">Options</button>
+        </div>
+        <p class="fine nav" id="mNav"></p>
+      </section>
+
+      <section class="panel" id="pBrief" aria-labelledby="hBrief" hidden>
+        <div class="bhead">
+          <div>
+            <p class="eyebrow">The whole campaign</p>
+            <h2 id="hBrief">Briefings</h2>
+          </div>
+          <button type="button" class="btn go" id="bBriefBack">Back to the map</button>
+        </div>
+        <ol class="blist" id="bList"></ol>
+      </section>
+
+      <section class="panel" id="pOpts" aria-labelledby="hOpts" hidden>
+        <h2 id="hOpts">Options</h2>
+        <div class="pick">
+          <p class="label" id="lblFire">How the gun fires</p>
+          <div class="seg" role="radiogroup" aria-labelledby="lblFire">
+            <button type="button" role="radio" id="segHold" data-scheme="hold" aria-checked="true">Hold to fire</button>
+            <button type="button" role="radio" id="segAuto" data-scheme="auto" aria-checked="false">Auto-fire</button>
+          </div>
+          <p class="scheme-note"></p>
+        </div>
+                <div class="row">
+          <button type="button" class="btn" id="bSound3" aria-pressed="true">Sound is on</button>
+          <button type="button" class="btn" id="bFull" hidden>Full screen</button>
+          <button type="button" class="btn" id="bErase">Erase progress</button>
+          <button type="button" class="btn" id="bDev" aria-pressed="false">Developer: off</button>
+        </div>
+        <div class="meters" role="group" aria-label="Volume">
+            <label class="meter"><span class="label">Music<output>100%</output></span><input type="range" id="vMusic" min="0" max="100" step="5" value="100"></label>
+            <label class="meter"><span class="label">Effects<output>100%</output></span><input type="range" id="vSfx" min="0" max="100" step="5" value="100"></label>
+            <label class="meter"><span class="label">Voices<output>100%</output></span><input type="range" id="vVoice" min="0" max="100" step="5" value="100"></label>
+          </div>
+        <p class="fine how" id="howTo"></p>
+        <div class="acts">
+          <div class="seg" role="radiogroup" aria-label="Language" data-fixed="" style="flex:1 1 200px">
+            <button type="button" role="radio" id="langEn" data-lang="en" aria-checked="true" lang="en">English</button>
+            <button type="button" role="radio" id="langAr" data-lang="ar" aria-checked="false" lang="ar">العربية</button>
+          </div>
+          <button type="button" class="btn go" id="bBack">Back</button>
+        </div>
+      </section>
+
+      <section class="panel" id="pPause" aria-labelledby="hPause" hidden>
+        <h2 id="hPause">Paused</h2>
+        <div class="acts">
+          <button type="button" class="btn go" id="bResume">Resume</button>
+          <button type="button" class="btn" id="bRestart">Start over</button>
+          <button type="button" class="btn" id="bSkip" hidden>Skip ahead</button>
+          <button type="button" class="btn" id="bQuit">Mission map</button>
+        </div>
+        <div class="opts">
+          <div>
+            <div class="seg" role="radiogroup" aria-label="How the gun fires">
+              <button type="button" role="radio" id="segHold2" data-scheme="hold" aria-checked="true">Hold to fire</button>
+              <button type="button" role="radio" id="segAuto2" data-scheme="auto" aria-checked="false">Auto-fire</button>
+            </div>
+            <p class="scheme-note"></p>
+          </div>
+          <div class="meters" role="group" aria-label="Volume">
+            <label class="meter"><span class="label">Music<output>100%</output></span><input type="range" id="vMusic2" min="0" max="100" step="5" value="100"></label>
+            <label class="meter"><span class="label">Effects<output>100%</output></span><input type="range" id="vSfx2" min="0" max="100" step="5" value="100"></label>
+            <label class="meter"><span class="label">Voices<output>100%</output></span><input type="range" id="vVoice2" min="0" max="100" step="5" value="100"></label>
+          </div>
+          <div class="row">
+            <button type="button" class="btn" id="bSound" aria-pressed="true">Sound is on</button>
+            <button type="button" class="btn dev" id="bBoxes" aria-pressed="false">Hit boxes are off</button>
+            <button type="button" class="btn" id="bFull2" hidden>Full screen</button>
+          </div>
+        </div>
+        <details class="rep dev">
+          <summary>Phone report</summary>
+          <pre id="report"></pre>
+          <button type="button" class="btn" id="bCopy">Copy the report</button>
+        </details>
+      </section>
+
+      <section class="panel" id="pOver" aria-labelledby="hOver" hidden>
+        <canvas class="dial" id="overDial" width="64" height="64" aria-hidden="true"></canvas>
+        <div class="words">
+          <p class="eyebrow">Out of lives</p>
+          <h2 id="hOver">Continue?</h2>
+          <p class="kept" id="overKept"></p>
+          <p class="lede"><span id="overZone">The zone</span> starts again with the score you had when you reached it. The Ace medal is gone for this run.</p>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn go" id="bContinue">Continue</button>
+          <button type="button" class="btn" id="bQuit2">Mission map</button>
+        </div>
+      </section>
+
+      <section class="panel" id="pDone" aria-labelledby="hDone" hidden>
+        <div class="h">
+          <p class="eyebrow">Mission complete</p>
+          <h2 id="hDone"><span id="rTime">0:00</span><small id="rPar">par 1:45</small></h2>
+        </div>
+        <div class="total">
+          <p class="label">Total</p>
+          <p class="big" id="rTotal">0</p>
+          <p class="fine" id="rBreak"></p>
+          <p class="fine" id="rBest"></p>
+        </div>
+        <div class="badges" id="rBadges">
+          <div class="badge" data-kind="ace"><canvas width="28" height="30" aria-hidden="true"></canvas><p class="bname">Ace</p><p class="bnote"></p></div>
+          <div class="badge" data-kind="lib"><canvas width="28" height="30" aria-hidden="true"></canvas><p class="bname">Liberator</p><p class="bnote"></p></div>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn go" id="bToMap">Advance</button>
+          <button type="button" class="btn" id="bAgain">Play again</button>
+          <button type="button" class="btn" id="bShare2"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 11v10h14V11"/></svg>Share</button>
+        </div>
+        <details class="rep dev facts-box">
+          <summary>Run details</summary>
+          <ul class="facts" id="rFacts"></ul>
+          <p class="fine" id="rMedals"></p>
+        </details>
+        <details class="rep dev">
+          <summary>Phone report</summary>
+          <pre id="report2"></pre>
+          <button type="button" class="btn" id="bCopy2">Copy the report</button>
+        </details>
+      </section>
+    </div>
+    <a class="social" id="aX" href="https://x.com/babalyemengame" target="_blank" rel="noopener noreferrer"><span class="vh">Follow us on X: @babalyemengame</span></a>
+  </div>
+  <div class="turn" id="turn" hidden>
+    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="5" width="16" height="28" rx="3"/><path d="M22 28h4"/><path d="M8 26a17 17 0 0 0 15 16"/><path d="M19 38l4 4-4 4"/></svg>
+    <p><b id="turnA">Turn your phone sideways</b><span id="turnB">then tap to play</span></p>
+  </div>
+</div>
+
+<script>
+/*__DATA__*/
+/*__CODE__*/
+</script>

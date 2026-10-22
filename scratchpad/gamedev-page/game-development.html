@@ -1,0 +1,378 @@
+<title>Bab al-Yemen Game Development</title>
+<meta name="bay-kit" content="v2">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--ink:#04050c;--bg:#10142c;--panel:#1e223c;--edge:#3c4278;--lav:#96a0dc;--text:#e8ecff;
+--gold:#ffc22e;--red:#ff4030;--blue:#8fc0ff;--green:#5cc85c;--orange:#ff9a3c;--sand:#f0d9a0;
+--f-pix:"Pixelify Sans","Courier New",monospace;--f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+html,body{background:var(--ink)}
+body{color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.frame{max-width:64rem;margin:0 auto;background:var(--bg);border:3px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding-bottom:20px}
+.banner{padding:18px;background:#0b3a6e;border-bottom:3px solid var(--ink);display:grid;gap:4px}
+.eyebrow{font-family:var(--f-pix);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+h1{font-family:var(--f-pix);font-weight:700;font-size:clamp(28px,5vw,40px);line-height:1;margin:0;color:var(--gold);text-shadow:3px 3px 0 var(--ink)}
+.syncline,.lead{font-size:12px;color:var(--lav)} .lead{font-size:13px;margin:0 0 10px}
+.body{padding:0 18px;display:grid;gap:24px;margin-top:18px}
+h2{font-family:var(--f-pix);font-weight:600;font-size:22px;margin:0 0 4px} h2 small{font-family:var(--f-body);font-size:12px;color:var(--lav);font-weight:500;margin-left:8px}
+.panel{background:var(--panel);border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding:12px 14px;min-width:0}
+.rows{display:grid;gap:6px}
+.rowbtn{width:100%;display:grid;grid-template-columns:auto auto auto 1fr auto auto;gap:10px;align-items:center;text-align:left;font:inherit;color:var(--text);background:var(--panel);border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding:9px 12px;cursor:pointer}
+.rowbtn:hover{box-shadow:inset 0 0 0 2px var(--lav)}
+.rank{font-family:var(--f-pix);font-size:16px;color:var(--lav);min-width:1.4em;text-align:right}
+.lv{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;white-space:nowrap;color:var(--ink)}
+.lv.critical{background:var(--red)} .lv.high{background:var(--orange)} .lv.medium{background:var(--gold)} .lv.low{background:var(--lav)}
+.st{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border:1px solid currentColor;white-space:nowrap}
+.st.you{color:var(--gold)} .st.warn{color:var(--orange)} .st.moving{color:var(--blue)} .st.done{color:var(--green)} .st.no{color:var(--red)} .st.muted{color:var(--lav)}
+.ctx{font-size:12px;color:var(--lav);white-space:nowrap} .tx{min-width:0;overflow-wrap:anywhere;font-weight:500} .car{color:var(--lav)}
+@media (max-width:600px){.rowbtn{grid-template-columns:auto auto 1fr auto}.ctx,.rank{display:none}}
+.box{background:var(--bg);border:2px solid var(--ink);border-top:0;box-shadow:inset 0 0 0 1px var(--edge);padding:10px 12px;display:grid;gap:6px;font-size:13px}
+.box p{margin:0;overflow-wrap:anywhere} .box b{color:var(--lav);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ib{font:inherit;font-size:14px;font-weight:700;line-height:1;min-width:30px;height:30px;padding:0 9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--ink);color:var(--ink);background:var(--gold);box-shadow:inset -2px -2px 0 #b86a00}
+.ib.no{background:var(--red);box-shadow:inset -2px -2px 0 #c8301a}
+.ib.ghost{background:var(--panel);color:var(--lav);box-shadow:inset 0 0 0 1px var(--edge)}
+.ib.opt{background:var(--panel);color:var(--text);box-shadow:inset 0 0 0 1px var(--edge);font-size:13px}
+.ib:focus-visible,.rowbtn:focus-visible,textarea:focus-visible,.tog:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+textarea{font:inherit;font-size:14px;width:100%;box-sizing:border-box;min-height:52px;border:2px solid var(--ink);box-shadow:inset 0 0 0 1px var(--edge);background:var(--panel);color:var(--text);padding:7px 9px}
+.done-line{font-weight:600;color:var(--green)} .done-line.no{color:var(--red)} .done-line span{color:var(--lav);font-weight:500}
+.pending{background:#3c2a08;border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--gold);color:var(--sand);padding:9px 12px;font-size:14px} .pending b{color:var(--gold)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9.5rem),1fr));gap:10px}
+.tile span{font-size:12px;color:var(--lav)} .tile b{display:block;font-family:var(--f-pix);font-size:32px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+.group-h,.tog{font-family:var(--f-pix);font-size:13px;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 2px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.isdone .rowbtn{opacity:.6} .isdone .lv{background:var(--edge);color:var(--lav)}
+.empty{border:2px dashed var(--edge);padding:12px;color:var(--lav);font-size:14px}
+</style>
+<style>
+/* Game Development additions; the kit above is copied unchanged. */
+.stack{display:grid;gap:10px;min-width:0}
+.chips{display:inline-flex;gap:4px;flex-wrap:wrap}
+.add{display:grid;gap:8px}
+.add label{font-family:var(--f-pix);font-weight:600;font-size:15px}
+.addmsg{font-size:13px} .addmsg.ok{color:var(--green)} .addmsg.bad{color:var(--red)}
+.err{color:var(--red)}
+.syncline a,.box a{color:var(--blue)}
+.syncline{display:flex;flex-wrap:wrap;gap:2px 14px}
+.tile b.idea{color:var(--gold)} .tile b.moving{color:var(--blue)} .tile b.done{color:var(--green)} .tile b.muted{color:var(--lav)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="frame">
+  <header class="banner">
+    <div class="eyebrow">Bab al-Yemen · Game Development</div>
+    <h1>Game Development</h1>
+    <div class="syncline" id="sync"><span>Loading the latest builds…</span></div>
+  </header>
+  <div class="body">
+    <div class="pending" id="pending" hidden></div>
+    <div class="empty" id="notice" hidden></div>
+
+    <section>
+      <h2>Needs your decision <small id="needs-n"></small></h2>
+      <p class="lead">Most important first; tap for details. Your answers reach the Game Development chat at your next message there.</p>
+      <div class="rows" id="needs"><div class="empty">Loading…</div></div>
+      <button class="tog" type="button" id="more-tog" aria-expanded="false" hidden></button>
+      <div class="rows" id="more" hidden></div>
+    </section>
+
+    <section>
+      <h2>Pipeline</h2>
+      <p class="lead">Idea → approved → building → test link → released. One item builds at a time, in your order.</p>
+      <div class="stack">
+        <div class="tiles" id="tiles"></div>
+        <form class="panel add" id="addForm" autocomplete="off">
+          <label for="ideaText">Add an idea</label>
+          <textarea id="ideaText" name="ideaText" placeholder="A new enemy, a boss tweak, a level idea…"></textarea>
+          <div class="acts"><button class="ib" type="submit" id="addBtn">Add idea</button><span class="addmsg" id="addMsg" role="status"></span></div>
+        </form>
+        <div id="pipe"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Missions</h2>
+      <p class="lead" id="mlead">The campaign map, mission by mission.</p>
+      <div class="rows" id="missions"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section>
+      <h2>Requests</h2>
+      <p class="lead">Read-only. Anything waiting on you is under Needs your decision.</p>
+      <div class="rows" id="requests"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section>
+      <button class="tog" type="button" id="done-tog" aria-expanded="false">▸ Done</button>
+      <div class="rows isdone" id="done" hidden><div class="empty">Loading…</div></div>
+    </section>
+
+    <p class="lead">Only the Game Development chat writes this page. The official record is claude/topics/game-development.md in the project.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const S = { items: null, answers: null, error: null };
+  const open = new Set(), drafts = {}, noteFor = {}, busy = new Set(), errs = {};
+  let db = null, dbState = 'loading', scheduled = false;
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const byOrder = (a, b) => (a.order == null ? 999 : a.order) - (b.order == null ? 999 : b.order);
+  const fmt = (iso) => { if (!iso) return ''; try { return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch (e) { return ''; } };
+  const line = (label, text) => text ? '<p><b>' + esc(label) + ': </b>' + esc(text) + '</p>' : '';
+  const lines = (label, text) => String(text || '').split(/\n+/).filter(Boolean).map((t, i) => line(i ? '' : label, t).replace('<b>: </b>', '')).join('');
+
+  /* Chip words follow the kit: Your call · Not seen · In progress · Done · Declined / Rejected · Parked. */
+  const ST = {
+    decide: ['you', 'Your call'], idea: ['you', 'Your call'], waiting: ['you', 'Action on you'],
+    sent: ['warn', 'Not seen'], progress: ['moving', 'In progress'], queued: ['moving', 'Queued'],
+    parked: ['muted', 'Parked'], later: ['muted', 'Parked'], paused: ['muted', 'Parked'],
+    done: ['done', 'Done'], released: ['done', 'Done'], rejected: ['no', 'Rejected'], declined: ['muted', 'Declined'],
+    live: ['done', 'Live'], test: ['moving', 'Test link'], none: ['muted', 'Not started'], secret: ['muted', 'Secret']
+  };
+  const st = (key) => { const c = ST[key] || ['muted', key || '']; return '<span class="st ' + c[0] + '">' + esc(c[1]) + '</span>'; };
+
+  const DECIDE = [
+    { k: 'approve', label: '✓', name: '✓ Approve' },
+    { k: 'change', label: '✎', name: '✎ Approve with changes', note: 'What should change?', need: true },
+    { k: 'reject', label: '✕', name: '✕ Reject', cls: 'no', note: 'Why not? (optional)' },
+    { k: 'why', label: '?', name: '? Why', cls: 'ghost', note: 'What would you like to know? (optional)' }
+  ];
+  const NLW = [
+    { k: 'now', label: 'Now', name: 'Now' },
+    { k: 'later', label: 'Later', name: 'Later', cls: 'ghost', note: 'When? A date or an event.', need: true },
+    { k: 'no', label: 'No', name: 'No', cls: 'no', note: 'Why not? (optional)' }
+  ];
+  const optionsFor = (it) => {
+    if (it.options && it.options.length) return it.options.map((o) => Object.assign({ cls: 'opt', name: o.label }, o));
+    if (it.type === 'request') return NLW;
+    if (it.type === 'idea' || it.type === 'decision') return DECIDE;
+    return null;
+  };
+  const nameOf = (it, k) => { const o = (optionsFor(it) || []).find((x) => x.k === k); return o ? o.name : k; };
+  const items = (sec) => (S.items || []).filter((x) => x.sec === sec).sort(byOrder);
+  const itemById = (id) => (S.items || []).find((x) => x.id === id);
+  const answerFor = (id) => (S.answers || []).find((a) => a.id === id);
+
+  /* ---------- rows (kit pattern: rowbtn > st · ctx · tx · car, box under it) ---------- */
+  // (kit v2 order: rank · level · status · title · context · caret; rows without a rank or level keep empty cells)
+  function row(id, chipHtml, ctx, tx, boxFn, rank, lv) {
+    const isOpen = open.has(id);
+    return '<div><button class="rowbtn" type="button" data-act="toggle" data-id="' + esc(id) + '" aria-expanded="' + isOpen + '">' +
+      '<span class="rank">' + (rank != null ? esc(rank) : '') + '</span>' + (lv ? '<span class="lv ' + esc(lv) + '">' + esc(lv) + '</span>' : '<span></span>') +
+      '<span class="chips">' + chipHtml + '</span><span class="tx">' + esc(tx || '') + '</span><span class="ctx">' + esc(ctx || '') + '</span><span class="car" aria-hidden="true">' + (isOpen ? '▾' : '▸') + '</span>' +
+      '</button>' + (isOpen ? '<div class="box">' + boxFn() + '</div>' : '') + '</div>';
+  }
+  const stale = (it) => !!it.since && (Date.now() - Date.parse(it.since)) > 7 * 864e5;
+
+  function itemRow(it, readonly, ranked) {
+    const ans = answerFor(it.id), waiting = ans && !ans.picked_up;
+    const chip = (waiting ? st('sent') : st(it.status)) + (ranked && !waiting && stale(it) ? '<span class="st warn">Stale</span>' : '');
+    return row(it.id, chip, it.ctx, it.title, () => {
+      let h = lines('What it is', it.details) + line('Why', it.why) + line('Recommendation', it.rec) + line('Drawbacks', it.drawbacks) +
+        line('Who does it', it.who) + line("How we'll know", it.how);
+      if (it.link && it.link.href) h += '<p><b>Link: </b><a href="' + esc(it.link.href) + '" target="_blank" rel="noopener">' + esc(it.link.text || it.link.href) + ' ↗</a></p>';
+      const opts = readonly ? null : optionsFor(it);
+      if (waiting) {
+        const neg = ans.choice === 'reject' || ans.choice === 'no';
+        h += '<p class="done-line' + (neg ? ' no' : '') + '">' + esc(nameOf(it, ans.choice)) + ' <span>· ' + esc(fmt(ans.at)) + ' · waiting for your chat' + (ans.note ? ' · “' + esc(ans.note) + '”' : '') + '</span></p>' +
+          '<div class="acts"><button class="ib ghost" type="button" data-act="undo" data-id="' + esc(it.id) + '"' + (busy.has(it.id) ? ' disabled' : '') + '>↶ Undo</button></div>';
+      } else {
+        if (ans && ans.picked_up) h += '<p class="done-line">' + esc(nameOf(it, ans.choice)) + ' <span>· ' + esc(fmt(ans.at)) + (ans.outcome ? ' · ' + esc(ans.outcome) : ' · picked up') + '</span></p>';
+        if (opts) h += controls(it, opts);
+      }
+      if (errs[it.id]) h += '<p class="err" role="alert">' + esc(errs[it.id]) + '</p>';
+      return h;
+    }, ranked ? it.rank : null, ranked ? it.level : null);
+  }
+
+  function controls(it, opts) {
+    const id = it.id, k = noteFor[id], dis = busy.has(id) ? ' disabled' : '';
+    if (k) {
+      const o = opts.find((x) => x.k === k) || {};
+      return '<p><label for="note-' + esc(id) + '"><b>' + esc(o.name || k) + ': </b>' + esc(o.note || 'Add a note') + '</label></p>' +
+        '<textarea id="note-' + esc(id) + '" data-draft="' + esc(id) + '">' + esc(drafts[id] || '') + '</textarea>' +
+        '<div class="acts"><button class="ib" type="button" data-act="save" data-id="' + esc(id) + '"' + dis + '>Save</button>' +
+        '<button class="ib ghost" type="button" data-act="cancel" data-id="' + esc(id) + '">Cancel</button></div>';
+    }
+    return '<div class="acts">' + opts.map((o) => '<button class="ib' + (o.cls ? ' ' + esc(o.cls) : '') + '" type="button" data-act="pick" data-id="' + esc(id) + '" data-k="' + esc(o.k) + '" aria-label="' + esc(o.name) + '" title="' + esc(o.name) + '"' + dis + '>' + esc(o.label) + '</button>').join('') + '</div>';
+  }
+
+  /* ---------- sections ---------- */
+  const empty = (t) => '<div class="empty">' + esc(t) + '</div>';
+  const loading = () => empty(dbState === 'none' ? 'Not available in this view.' : 'Loading…');
+
+  function renderTop() {
+    const m = itemById('meta') || {};
+    const link = (href, text) => href ? '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(text) + '</a>' : esc(text);
+    const parts = [];
+    if (m.live) parts.push('<span>Live ' + link(m.liveUrl, m.live) + '</span>');
+    if (m.test) parts.push('<span>Test link ' + link(m.testUrl, m.test) + '</span>');
+    if (m.updated) parts.push('<span>Updated ' + esc(fmt(m.updated)) + '</span>');
+    $('#sync').innerHTML = parts.length ? parts.join('') : '<span>' + (dbState === 'none' ? 'Builds unavailable in this view' : 'Loading the latest builds…') + '</span>';
+    const n = (S.answers || []).filter((a) => !a.picked_up).length, p = $('#pending');
+    p.hidden = !n;
+    if (n) p.innerHTML = '<b>' + n + '</b> ' + (n === 1 ? 'answer is' : 'answers are') + ' waiting for your chat. The Game Development chat picks ' + (n === 1 ? 'it' : 'them') + ' up at your next message there.';
+    const nt = $('#notice');
+    nt.hidden = !(dbState === 'none' || S.error);
+    nt.textContent = dbState === 'none' ? "This view can't reach the page's data, so nothing can load or be saved here. Open the page in claude.ai." : 'The page lost its connection to its data. Reload to see the latest.';
+  }
+
+  let moreOpen = false, doneOpen = false;
+  function renderNeeds() {
+    if (!S.items) { $('#needs').innerHTML = loading(); return; }
+    const list = items('decide').sort((a, b) => (a.rank == null ? 99 : a.rank) - (b.rank == null ? 99 : b.rank));
+    const top = list.slice(0, 7), rest = list.slice(7);
+    $('#needs-n').textContent = list.length ? String(list.length) : '';
+    $('#needs').innerHTML = top.length ? top.map((it) => itemRow(it, false, true)).join('') : empty('Nothing is waiting on you.');
+    const mt = $('#more-tog'), mr = $('#more');
+    mt.hidden = !rest.length; mt.textContent = (moreOpen ? '▾' : '▸') + ' More (' + rest.length + ')'; mt.setAttribute('aria-expanded', String(moreOpen));
+    mr.hidden = !rest.length || !moreOpen; mr.innerHTML = moreOpen ? rest.map((it) => itemRow(it, false, true)).join('') : '';
+  }
+
+  const GROUPS = [['building', 'Building'], ['test', 'On the test link'], ['approved', 'Approved, in your order'], ['idea', 'Ideas']];
+  function renderPipe() {
+    const pipe = items('pipeline');
+    const mine = (S.answers || []).filter((a) => a.kind === 'idea' && !a.picked_up).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    const count = (s) => pipe.filter((x) => x.stage === s).length;
+    const tiles = [['Idea', count('idea') + mine.length, 'idea'], ['Approved', count('approved'), 'muted'], ['Building', count('building'), 'moving'],
+      ['Test link', count('test'), 'moving'], ['Released', items('done').filter((x) => x.stage === 'released').length, 'done']];
+    $('#tiles').innerHTML = tiles.map((t) => '<div class="panel tile"><span>' + esc(t[0]) + '</span><b class="' + t[2] + '">' + (S.items ? t[1] : '–') + '</b></div>').join('');
+    if (!S.items) { $('#pipe').innerHTML = loading(); return; }
+    let h = '';
+    GROUPS.forEach(([stage, name]) => {
+      const rows = pipe.filter((x) => x.stage === stage);
+      const extra = stage === 'idea' ? mine.map(ideaRow) : [];
+      if (!rows.length && !extra.length) return;
+      h += '<div class="group-h">' + esc(name) + '</div><div class="rows">' + extra.join('') + rows.map((it) => itemRow(it, it.type !== 'idea' && it.type !== 'decision')).join('') + '</div>';
+    });
+    $('#pipe').innerHTML = h || empty('Nothing in the pipeline yet. Add the first idea above.');
+  }
+
+  function ideaRow(a) {
+    const text = String(a.note || '');
+    return row(a.id, st('sent'), 'Your idea · ' + fmt(a.at), text.length > 70 ? text.slice(0, 68) + '…' : text, () =>
+      lines('Idea', text) + '<p class="done-line">Added <span>· ' + esc(fmt(a.at)) + ' · waiting for your chat</span></p>' +
+      '<div class="acts"><button class="ib ghost" type="button" data-act="undo" data-id="' + esc(a.id) + '"' + (busy.has(a.id) ? ' disabled' : '') + '>↶ Undo</button></div>' +
+      (errs[a.id] ? '<p class="err" role="alert">' + esc(errs[a.id]) + '</p>' : ''));
+  }
+
+  function renderMissions() {
+    if (!S.items) { $('#missions').innerHTML = loading(); return; }
+    const list = items('mission');
+    const built = list.filter((m) => m.state && m.state !== 'none' && m.state !== 'secret').length;
+    $('#mlead').textContent = list.length ? 'The campaign map, mission by mission: ' + built + ' of ' + list.length + ' built.' : 'The campaign map, mission by mission.';
+    $('#missions').innerHTML = list.length ? list.map((m) => row(m.id, st(m.state), m.num ? 'Mission ' + m.num : m.road, m.name + (m.place ? ' · ' + m.place : ''), () => {
+      const h = line('Road', m.road) + line('Zones', m.zones) + line('Boss', m.boss) + line('Par', m.par) + line('Build', m.build) + line('Note', m.note);
+      return h || '<p>Not planned yet.</p>';
+    })).join('') : empty('No missions listed yet.');
+  }
+
+  function renderRequests() {
+    if (!S.items) { $('#requests').innerHTML = loading(); return; }
+    const list = items('request');
+    const group = (dir, name, none) => {
+      const rows = list.filter((r) => r.dir === dir);
+      return '<div class="group-h">' + esc(name) + '</div>' + (rows.length ? rows.map((r) => row(r.id, st(r.status),
+        (r.rid || '') + (dir === 'in' ? ' · from ' + (r.from || '') : ' · to ' + (r.to || '')), r.what,
+        () => line('Status', r.statusText) + lines('Note', r.note) + line('Date', r.date))).join('') : empty(none));
+    };
+    $('#requests').innerHTML = group('in', 'Received', 'Nothing received.') + group('out', 'Sent', 'Nothing sent yet.');
+  }
+
+  function renderDone() {
+    const list = S.items ? items('done') : [], t = $('#done-tog'), d = $('#done');
+    t.textContent = (doneOpen ? '▾' : '▸') + ' Done (' + list.length + ')'; t.setAttribute('aria-expanded', String(doneOpen));
+    d.hidden = !doneOpen;
+    if (doneOpen) d.innerHTML = !S.items ? loading() : (list.length ? list.map((it) => itemRow(it, true, false)).join('') : empty('Nothing finished yet.'));
+  }
+  $('#more-tog').addEventListener('click', () => { moreOpen = !moreOpen; render(); });
+  $('#done-tog').addEventListener('click', () => { doneOpen = !doneOpen; render(); });
+
+  function focusKey() {
+    const a = document.activeElement;
+    if (!a || !a.closest || !a.closest('.body') || !a.getAttribute) return null;
+    const q = (v) => '"' + CSS.escape(v || '') + '"';
+    if (a.getAttribute('data-draft')) return { sel: 'textarea[data-draft=' + q(a.getAttribute('data-draft')) + ']', s: a.selectionStart, e: a.selectionEnd };
+    if (a.getAttribute('data-act')) return { sel: '[data-act=' + q(a.getAttribute('data-act')) + '][data-id=' + q(a.getAttribute('data-id')) + ']' + (a.getAttribute('data-k') ? '[data-k=' + q(a.getAttribute('data-k')) + ']' : '') };
+    return null;
+  }
+  function render() {
+    const keep = focusKey();
+    renderTop(); renderNeeds(); renderPipe(); renderMissions(); renderRequests(); renderDone();
+    if (keep) { const t = document.querySelector(keep.sel); if (t) { t.focus({ preventScroll: true }); if (keep.s != null) { try { t.setSelectionRange(keep.s, keep.e); } catch (e) {} } } }
+  }
+  function schedule() { if (scheduled) return; scheduled = true; requestAnimationFrame(() => { scheduled = false; render(); }); }
+
+  /* ---------- writes: answers/{item id} = {item, kind, choice, note, at, picked_up: null} ---------- */
+  async function save(id, k, note) {
+    if (!db) { errs[id] = "Can't save in this view. Open the page in claude.ai."; render(); return; }
+    if (busy.has(id)) return;
+    busy.add(id); delete errs[id]; render();
+    try {
+      await db.doc('answers/' + id).set({ item: id, kind: 'answer', choice: k, note: note || '', at: new Date().toISOString(), picked_up: null, outcome: null });
+      delete noteFor[id]; delete drafts[id];
+    } catch (e) {
+      errs[id] = e && e.code === 'invalid_argument' ? 'This page is read-only for you.' : "Couldn't save that. Try again in a moment.";
+    } finally { busy.delete(id); render(); }
+  }
+  async function undo(id) {
+    const a = answerFor(id);
+    if (!db || !a || a.picked_up || busy.has(id)) return;
+    busy.add(id); delete errs[id]; render();
+    try { await db.doc('answers/' + id).delete(); } catch (e) { errs[id] = "Couldn't undo that. Try again in a moment."; }
+    finally { busy.delete(id); render(); }
+  }
+
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const id = b.getAttribute('data-id'), act = b.getAttribute('data-act');
+    if (act === 'toggle') { open.has(id) ? open.delete(id) : open.add(id); render(); return; }
+    if (act === 'undo') { undo(id); return; }
+    if (act === 'cancel') { delete noteFor[id]; delete errs[id]; render(); return; }
+    const it = itemById(id), opts = it ? optionsFor(it) || [] : [];
+    if (act === 'pick') {
+      const o = opts.find((x) => x.k === b.getAttribute('data-k'));
+      if (!o) return;
+      if (o.note) { noteFor[id] = o.k; delete errs[id]; render(); const t = document.getElementById('note-' + id); if (t) t.focus(); }
+      else save(id, o.k, '');
+    } else if (act === 'save') {
+      const o = opts.find((x) => x.k === noteFor[id]) || {};
+      const note = String(drafts[id] || '').trim();
+      if (o.need && !note) { errs[id] = 'Add a note first.'; render(); return; }
+      save(id, noteFor[id], note);
+    }
+  });
+  document.addEventListener('input', (e) => { const id = e.target && e.target.getAttribute && e.target.getAttribute('data-draft'); if (id) drafts[id] = e.target.value; });
+
+  $('#addForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ta = $('#ideaText'), msg = $('#addMsg'), btn = $('#addBtn'), text = ta.value.trim();
+    msg.className = 'addmsg'; msg.textContent = '';
+    if (!text) { msg.className = 'addmsg bad'; msg.textContent = 'Write the idea first.'; ta.focus(); return; }
+    if (!db) { msg.className = 'addmsg bad'; msg.textContent = "Can't save in this view. Open the page in claude.ai."; return; }
+    btn.disabled = true;
+    try {
+      await db.doc('answers/idea-' + Date.now().toString(36)).set({ item: null, kind: 'idea', choice: 'idea', note: text, at: new Date().toISOString(), picked_up: null, outcome: null });
+      ta.value = ''; msg.className = 'addmsg ok'; msg.textContent = 'Added. It reaches the chat at your next message there.';
+    } catch (err) {
+      msg.className = 'addmsg bad'; msg.textContent = err && err.code === 'invalid_argument' ? 'This page is read-only for you.' : "Couldn't add it. Try again in a moment.";
+    } finally { btn.disabled = false; }
+  });
+
+  /* ---------- data: two collections, live ---------- */
+  async function start() {
+    let d = null;
+    try { d = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch (e) { d = null; }
+    if (!d) { dbState = 'none'; render(); return; }
+    db = d; dbState = 'ready';
+    const fail = (e) => { S.error = (e && e.code) || 'unavailable'; schedule(); };
+    ['items', 'answers'].forEach((name) => db.collection(name).onSnapshot((snap) => {
+      S[name] = snap.docs.map((x) => Object.assign({ id: x.id }, x.data())); schedule();
+    }, fail));
+  }
+  render();
+  start();
+})();
+</script>

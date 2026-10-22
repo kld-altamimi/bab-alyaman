@@ -1,0 +1,449 @@
+<title>Taiz Level Map</title>
+<meta name="bay-kit" content="v2">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--ink:#04050c;--bg:#10142c;--panel:#1e223c;--edge:#3c4278;--lav:#96a0dc;--text:#e8ecff;
+--gold:#ffc22e;--red:#ff4030;--blue:#8fc0ff;--green:#5cc85c;--orange:#ff9a3c;--sand:#f0d9a0;
+--f-pix:"Pixelify Sans","Courier New",monospace;--f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+html,body{background:var(--ink)}
+body{color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.frame{max-width:64rem;margin:0 auto;background:var(--bg);border:3px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding-bottom:20px}
+.banner{padding:18px;background:#0b3a6e;border-bottom:3px solid var(--ink);display:grid;gap:4px}
+.eyebrow{font-family:var(--f-pix);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+h1{font-family:var(--f-pix);font-weight:700;font-size:clamp(28px,5vw,40px);line-height:1;margin:0;color:var(--gold);text-shadow:3px 3px 0 var(--ink)}
+.syncline,.lead{font-size:12px;color:var(--lav)} .lead{font-size:13px;margin:0 0 10px}
+.body{padding:0 18px;display:grid;gap:24px;margin-top:18px}
+h2{font-family:var(--f-pix);font-weight:600;font-size:22px;margin:0 0 4px} h2 small{font-family:var(--f-body);font-size:12px;color:var(--lav);font-weight:500;margin-left:8px}
+.panel{background:var(--panel);border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding:12px 14px;min-width:0}
+.rows{display:grid;gap:6px}
+.rowbtn{width:100%;display:grid;grid-template-columns:auto auto auto 1fr auto auto;gap:10px;align-items:center;text-align:left;font:inherit;color:var(--text);background:var(--panel);border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);padding:9px 12px;cursor:pointer}
+.rowbtn:hover{box-shadow:inset 0 0 0 2px var(--lav)}
+.rank{font-family:var(--f-pix);font-size:16px;color:var(--lav);min-width:1.4em;text-align:right}
+.st{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border:1px solid currentColor;white-space:nowrap}
+.st.you{color:var(--gold)} .st.warn{color:var(--orange)} .st.moving{color:var(--blue)} .st.done{color:var(--green)} .st.no{color:var(--red)} .st.muted{color:var(--lav)}
+.ctx{font-size:12px;color:var(--lav);white-space:nowrap} .tx{min-width:0;overflow-wrap:anywhere;font-weight:500} .car{color:var(--lav)}
+@media (max-width:600px){.rowbtn{grid-template-columns:auto auto 1fr auto}.ctx,.rank{display:none}}
+.box{background:var(--bg);border:2px solid var(--ink);border-top:0;box-shadow:inset 0 0 0 1px var(--edge);padding:10px 12px;display:grid;gap:6px;font-size:13px}
+.box p{margin:0;overflow-wrap:anywhere} .box b{color:var(--lav);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ib{font:inherit;font-size:14px;font-weight:700;line-height:1;min-width:30px;height:30px;padding:0 9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--ink);color:var(--ink);background:var(--gold);box-shadow:inset -2px -2px 0 #b86a00}
+.ib.no{background:var(--red);box-shadow:inset -2px -2px 0 #c8301a}
+.ib.ghost{background:var(--panel);color:var(--lav);box-shadow:inset 0 0 0 1px var(--edge)}
+.ib.opt{background:var(--panel);color:var(--text);box-shadow:inset 0 0 0 1px var(--edge);font-size:13px}
+.ib:focus-visible,.rowbtn:focus-visible,textarea:focus-visible,.tog:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+textarea{font:inherit;font-size:14px;width:100%;box-sizing:border-box;min-height:52px;border:2px solid var(--ink);box-shadow:inset 0 0 0 1px var(--edge);background:var(--panel);color:var(--text);padding:7px 9px}
+.done-line{font-weight:600;color:var(--green)} .done-line.no{color:var(--red)} .done-line span{color:var(--lav);font-weight:500}
+.pending{background:#3c2a08;border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--gold);color:var(--sand);padding:9px 12px;font-size:14px} .pending b{color:var(--gold)}
+.group-h,.tog{font-family:var(--f-pix);font-size:13px;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 2px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.isdone .rowbtn{opacity:.6}
+.empty{border:2px dashed var(--edge);padding:12px;color:var(--lav);font-size:14px}
+</style>
+<style>
+/* The map: the kit above is copied unchanged. The level is drawn by the game's own renderer at 1:1 (world pixels);
+   lines sit in an SVG scaled with it, markers and pins sit above it at screen size. */
+.tools{display:grid;gap:8px}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar .lbl{font-family:var(--f-pix);font-size:13px;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.ib.on{background:var(--gold);color:var(--ink)}
+.ib.opt[aria-pressed="true"]{background:var(--blue);color:var(--ink);box-shadow:inset -2px -2px 0 #3d6fb0}
+.chip{font:inherit;font-size:12px;font-weight:600;padding:4px 8px;border:2px solid var(--ink);box-shadow:inset 0 0 0 1px var(--edge);background:var(--panel);color:var(--lav);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 0 0 2px var(--lav)}
+.chip i{width:9px;height:9px;display:inline-block;border:1px solid var(--ink)}
+.chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mapwrap{position:relative}
+#vp{position:relative;height:min(62vh,560px);min-height:300px;overflow:hidden;background:#0a0d24;border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#vp.adding{cursor:crosshair}
+#vp:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#world img{position:absolute;top:0;height:1300px;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none;-webkit-user-drag:none}
+#world svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#marks{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.mk{position:absolute;left:0;top:0;width:0;height:0;margin:0;padding:0;border:0;background:none;overflow:visible;pointer-events:auto;cursor:pointer;font:700 10px/1 var(--f-body);color:var(--ink);white-space:nowrap;transform-origin:0 0}
+.mk span{display:inline-block;transform:translate(-50%,-50%);padding:2px 4px;border:1px solid var(--ink);box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+.mk.zone span{background:var(--green);font-family:var(--f-pix);font-size:12px;padding:3px 6px}
+.mk.fight span{background:var(--gold);font-family:var(--f-pix);font-size:12px}
+.mk.boss span{background:var(--red);color:var(--text);font-family:var(--f-pix);font-size:12px;padding:3px 6px}
+.mk.door span{width:6px;height:6px;padding:0;background:var(--sand)} .mk.door.roof span{background:var(--orange)}
+.mk.pin span{background:var(--gold);font-family:var(--f-pix);font-size:13px;min-width:20px;text-align:center;border-radius:10px 10px 10px 0;transform:translate(0,-100%);border:2px solid var(--ink)}
+.mk.pin.seen span{background:var(--green)}
+.mk.pin.draft span{background:var(--text)}
+.mk.end span{background:var(--text);font-family:var(--f-pix);font-size:12px}
+.mk:focus-visible{outline:2px solid var(--gold)}
+#pop{position:absolute;z-index:5;max-width:min(300px,85%);background:var(--bg);border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--edge),3px 3px 0 var(--ink);padding:9px 11px;font-size:13px;display:grid;gap:6px;pointer-events:auto}
+#pop p{margin:0} #pop b{color:var(--gold);font-family:var(--f-pix);font-size:15px;font-weight:600}
+.hint{position:absolute;left:8px;top:8px;z-index:4;background:rgba(4,5,12,.85);border:2px solid var(--ink);box-shadow:inset 0 0 0 1px var(--edge);padding:6px 9px;font-size:13px;color:var(--sand);pointer-events:none}
+#editor{display:grid;gap:8px}
+#editor p{margin:0;font-size:13px;color:var(--lav)}
+#mini{position:relative;cursor:pointer;border:2px solid var(--ink);box-shadow:inset 0 0 0 1px var(--edge);background:#0a0d24;line-height:0;touch-action:none}
+#mini img{width:100%;height:auto;image-rendering:pixelated;display:block;pointer-events:none}
+#mini .vw{position:absolute;top:0;border:2px solid var(--gold);box-sizing:border-box;pointer-events:none;height:100%}
+#mini .zl{position:absolute;bottom:2px;font:600 10px/1 var(--f-body);color:var(--sand);transform:translateX(-50%);text-shadow:1px 1px 0 var(--ink);white-space:nowrap;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--lav)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.legend i{font:700 10px/1 var(--f-body);font-style:normal;color:var(--ink);padding:2px 4px;border:1px solid var(--ink)}
+.err{color:var(--red);font-size:13px;margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="frame">
+  <header class="banner">
+    <div class="eyebrow">Bab al-Yemen · Game Development</div>
+    <h1>Taiz Level Map</h1>
+    <div class="syncline" id="sync">The Castle (Mission 3), test build 0.10.60, drawn by the game itself at full size. Drag to move, pinch or scroll to zoom.</div>
+  </header>
+  <div class="body">
+    <div class="pending" id="pending" hidden></div>
+    <div class="empty" id="notice" hidden></div>
+
+    <section class="tools" aria-label="Map controls">
+      <div class="bar">
+        <span class="lbl">Look</span>
+        <button class="ib opt" type="button" id="lk-night" aria-pressed="true">Night</button>
+        <button class="ib opt" type="button" id="lk-day" aria-pressed="false">Night lifted</button>
+        <span class="lbl" style="margin-left:8px">Zoom</span>
+        <button class="ib ghost" type="button" id="z-out" aria-label="Zoom out">−</button>
+        <button class="ib ghost" type="button" id="z-in" aria-label="Zoom in">+</button>
+        <button class="ib ghost" type="button" id="z-fit">Whole level</button>
+      </div>
+      <div class="bar" id="jumps"><span class="lbl">Go to</span></div>
+      <div class="bar" id="layers"><span class="lbl">Show</span></div>
+    </section>
+
+    <section class="mapwrap" aria-label="The Taiz level">
+      <div class="acts" style="margin-bottom:8px">
+        <button class="ib" type="button" id="addBtn">Add a comment</button>
+        <span class="lead" id="addHint" style="margin:0">Tap Add a comment, then tap the place on the map.</span>
+      </div>
+      <div id="vp" tabindex="0" aria-label="Map of the Taiz level. Arrow keys move, plus and minus zoom.">
+        <div id="world"></div>
+        <div id="marks"></div>
+        <div class="hint" id="vpHint" hidden>Tap the map where your comment goes</div>
+      </div>
+      <div class="panel" id="editor" hidden style="margin-top:8px">
+        <p id="edWhere"></p>
+        <label for="edText" class="lead" style="margin:0">Your comment</label>
+        <textarea id="edText" placeholder="What should change here?"></textarea>
+        <div class="acts"><button class="ib" type="button" id="edSave">Save comment</button><button class="ib ghost" type="button" id="edCancel">Cancel</button><span class="err" id="edErr" role="alert"></span></div>
+      </div>
+      <div id="mini" style="margin-top:8px" aria-label="The whole level; tap to go there"></div>
+      <div class="legend" id="legend" style="margin-top:8px"></div>
+    </section>
+
+    <section>
+      <h2>Your comments <small id="n-notes"></small></h2>
+      <p class="lead">Each one reaches the Game Development chat at your next message there. You can undo a comment until the chat has picked it up.</p>
+      <div class="rows" id="notes"><div class="empty">Loading…</div></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LAYOUT = /*LAYOUT*/null;
+  const W = LAYOUT.W, H = LAYOUT.H;
+  const TILES = [[0, 2000], [2000, 2000], [4000, 2000], [6000, 1950]];
+  const KIND = {
+    rifle: ['R', '#96a0dc', 'Rifleman'], rpg: ['RPG', '#ff9a3c', 'RPG man (his rockets can be shot down)'],
+    sam: ['M', '#ff4030', 'Missile man'], aa: ['AA', '#ff7a5c', 'Anti-aircraft gun'], sniper: ['S', '#8fc0ff', 'Sniper in a window'],
+    mortar: ['Mo', '#f0d9a0', 'Mortar (a ring marks where it lands)'], light: ['L', '#fff3b0', 'Searchlight (held in it, every gun fires faster)'],
+    crate: ['C', '#5cc85c', 'Drone crate'], drone: ['D', '#9be39b', 'Drones'], truck: ['P', '#ffb347', 'Pickup in the chase'],
+    cgun: ['BOSS 1', '#ff4030', 'The Castle Gun'], launcher: ['BOSS 2', '#ff4030', 'The Launcher']
+  };
+  const HOW = { roof: 'on a roof', window: 'in a window', door: 'comes out of a door', hatch: 'comes up through a hatch', road: 'on the road', 'flies in': 'flies in', 'rolls out of the keep': 'rolls out of the keep' };
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = { get(k) { try { return JSON.parse(localStorage.getItem('taizmap.' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('taizmap.' + k, JSON.stringify(v)); } catch (e) {} } };
+  const zoneAt = (x) => { let z = null; for (const q of LAYOUT.zones) if (x >= q.x - 40) z = q; return z ? z.name : 'The opening'; };
+  const fightNear = (x, y) => { let best = null, bd = 1e9; for (const g of LAYOUT.gates) { const d = Math.hypot(g.x - x, (g.y - y) * 0.5); if (d < bd) { bd = d; best = g; } } return best && bd < 420 ? best : null; };
+  const whereText = (x, y) => { const f = fightNear(x, y); return zoneAt(x) + (f ? ' · near fight ' + f.id : '') + ' · ' + Math.round(x) + ', ' + Math.round(y); };
+  const fmt = (iso) => { try { return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch (e) { return ''; } };
+
+  /* ---------- the picture ---------- */
+  const vp = $('#vp'), world = $('#world'), marks = $('#marks');
+  world.style.width = W + 'px'; world.style.height = H + 'px';
+  let look = store.get('look') === 'day' ? 'day' : 'night';
+  const imgs = TILES.map(([x, w], i) => { const im = document.createElement('img'); im.alt = ''; im.decoding = 'async'; im.style.left = x + 'px'; im.style.width = w + 'px'; im.draggable = false; world.appendChild(im); return im; });
+  function setLook(l) {
+    look = l; store.set('look', l);
+    imgs.forEach((im, i) => { im.src = 'tiles/' + l + '_' + i + '.webp'; });
+    $('#lk-night').setAttribute('aria-pressed', String(l === 'night')); $('#lk-day').setAttribute('aria-pressed', String(l === 'day'));
+  }
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  const pts = (a) => a.map((p) => p[0] + ',' + p[1]).join(' ');
+  svg.innerHTML =
+    '<g id="g-stone">' + LAYOUT.rock.map((r) => '<polygon points="' + pts(r) + '" fill="rgba(255,64,48,0.16)" stroke="#ff4030" stroke-width="2" vector-effect="non-scaling-stroke"/>').join('') +
+    LAYOUT.scenery.map((s) => '<rect x="' + s.x + '" y="' + s.y + '" width="' + s.w + '" height="' + s.h + '" fill="rgba(143,192,255,0.14)" stroke="#8fc0ff" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>').join('') + '</g>' +
+    '<g id="g-route"><polyline points="' + pts(LAYOUT.route) + '" fill="none" stroke="#04050c" stroke-width="6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+    '<polyline points="' + pts(LAYOUT.route) + '" fill="none" stroke="#ffc22e" stroke-width="3" stroke-dasharray="10 7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></g>';
+  world.appendChild(svg);
+
+  /* ---------- markers (screen size) ---------- */
+  const MK = [];
+  function addMk(cls, x, y, html, info, layer, extra) {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'mk ' + cls; el.innerHTML = '<span' + (extra || '') + '>' + html + '</span>';
+    el.setAttribute('aria-label', info.title);
+    const m = { el, x, y, info, layer };
+    el.addEventListener('click', (e) => { e.stopPropagation(); showPop(m); });
+    marks.appendChild(el); MK.push(m); return m;
+  }
+  LAYOUT.zones.forEach((z) => addMk('zone', z.x, z.y - 40, '⚑ ' + (z.i + 1), { title: 'Checkpoint ' + (z.i + 1) + ': ' + z.name, lines: ['Continues start here.'] }, 'route'));
+  const r0 = LAYOUT.route[0], L = LAYOUT.landing;
+  addMk('end', r0[0], r0[1] + 60, 'LIFT-OFF', { title: 'Lift-off', lines: ['The Apache takes off here after the opening; the camera leads the climb.'] }, 'route');
+  addMk('end', L.pad, L.y - 30, 'LANDING', { title: 'The landing pad', lines: ['Dawn, then the Apache lands in the courtyard and Yazeed walks off.'] }, 'route');
+  const kindName = (k, n) => (KIND[k] ? KIND[k][2] : k) + (n > 1 && k !== 'crate' ? ' ×' + n : '');
+  LAYOUT.gates.forEach((g) => {
+    const lines = Object.keys(g.counts).map((k) => kindName(k, g.counts[k]));
+    addMk('fight', g.x, g.y, g.id, { title: 'Fight ' + g.id, lines: ['The camera holds here until these are down: ' + (lines.join(', ') || 'nobody listed') + '.'] }, 'fights');
+  });
+  LAYOUT.spawns.forEach((s) => {
+    const K = KIND[s.k] || [s.k, '#96a0dc', s.k];
+    const boss = s.k === 'cgun' || s.k === 'launcher';
+    const lines = [(HOW[s.how] ? 'He ' + HOW[s.how] + '.' : '')].filter(Boolean);
+    if (s.k === 'crate') lines.push('Launches ' + s.n + ' drone' + (s.n > 1 ? 's' : '') + '.');
+    if (s.gate) lines.push('Part of fight ' + s.gate + '.');
+    addMk(boss ? 'boss' : 'en', s.x, s.y - (boss ? 30 : 10), esc(K[0]), { title: kindName(s.k, s.n), lines }, boss ? 'fights' : 'enemies', boss ? '' : ' style="background:' + K[1] + '"');
+  });
+  LAYOUT.doors.forEach((d) => addMk('door ' + d.kind, d.x, d.y - 8, '', { title: d.kind === 'roof' ? 'Roof door (men come out of it)' : 'Street door (men come out of it)', lines: [] }, 'doors'));
+  LAYOUT.scenery.forEach((s) => addMk('end', s.x + s.w / 2, s.y + 20, 'BACKGROUND', { title: 'Background only', lines: ['Painted like a house you can hit, but the Apache flies through it (since 0.10.60).'] }, 'stone'));
+
+  const LAYERS = [['route', 'Route and checkpoints', '#ffc22e', true], ['fights', 'Fights and bosses', '#ffc22e', true], ['enemies', 'Enemies', '#96a0dc', true],
+    ['stone', 'Solid stone (what the Apache can hit)', '#ff4030', false], ['doors', 'Doors', '#f0d9a0', false], ['notes', 'Your comments', '#ffc22e', true]];
+  const shown = Object.assign({}, ...LAYERS.map((l) => ({ [l[0]]: l[3] })), store.get('layers') || {});
+  LAYERS.forEach(([id, label, col]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.id = 'ly-' + id; b.innerHTML = '<i style="background:' + col + '"></i>' + esc(label);
+    b.addEventListener('click', () => { shown[id] = !shown[id]; store.set('layers', shown); applyLayers(); });
+    $('#layers').appendChild(b);
+  });
+  function applyLayers() {
+    LAYERS.forEach(([id]) => $('#ly-' + id).setAttribute('aria-pressed', String(!!shown[id])));
+    $('#g-route').style.display = shown.route ? '' : 'none';
+    $('#g-stone').style.display = shown.stone ? '' : 'none';
+    MK.forEach((m) => { m.el.hidden = !shown[m.layer]; });
+    place();
+  }
+  $('#legend').innerHTML = Object.keys(KIND).filter((k) => k !== 'cgun' && k !== 'launcher').map((k) => '<span><i style="background:' + KIND[k][1] + '">' + esc(KIND[k][0]) + '</i>' + esc(KIND[k][2].replace(/ \(.*\)$/, '')) + '</span>').join('');
+
+  /* ---------- view: k = screen px per world px ---------- */
+  let k = 0.3, tx = 0, ty = 0;
+  const KMAX = 3;
+  const kMin = () => Math.min(vp.clientWidth / W, vp.clientHeight / H);
+  const kFitH = () => vp.clientHeight / H;
+  function clamp() {
+    k = Math.max(kMin(), Math.min(KMAX, k));
+    const vw = vp.clientWidth, vh = vp.clientHeight, ww = W * k, wh = H * k;
+    tx = ww <= vw ? (vw - ww) / 2 : Math.min(0, Math.max(vw - ww, tx));
+    ty = wh <= vh ? (vh - wh) / 2 : Math.min(0, Math.max(vh - wh, ty));
+  }
+  let raf = 0;
+  function apply() { clamp(); if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+  function draw() {
+    world.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + k + ')';
+    place(); mini(); store.set('view', { k, cx: (vp.clientWidth / 2 - tx) / k, cy: (vp.clientHeight / 2 - ty) / k });
+  }
+  function place() {
+    const vw = vp.clientWidth, vh = vp.clientHeight, small = k < 0.16;
+    for (const m of MK) {
+      if (m.el.hidden) continue;
+      const x = m.x * k + tx, y = m.y * k + ty;
+      const off = x < -60 || y < -40 || x > vw + 60 || y > vh + 40 || (small && m.layer === 'enemies');
+      m.el.style.visibility = off ? 'hidden' : '';
+      if (!off) m.el.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+    }
+    if (pop.m) posPop();
+  }
+  function zoomAt(cx, cy, f) {
+    const r = vp.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;
+    const wx = (px - tx) / k, wy = (py - ty) / k;
+    k = Math.max(kMin(), Math.min(KMAX, k * f));
+    tx = px - wx * k; ty = py - wy * k; apply();
+  }
+  function centreOn(x, y, kk) { if (kk) k = kk; clamp(); tx = vp.clientWidth / 2 - x * k; ty = vp.clientHeight / 2 - y * k; apply(); }
+  $('#z-in').addEventListener('click', () => { const r = vp.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.5); });
+  $('#z-out').addEventListener('click', () => { const r = vp.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.5); });
+  $('#z-fit').addEventListener('click', () => { k = kMin(); apply(); });
+  $('#lk-night').addEventListener('click', () => setLook('night'));
+  $('#lk-day').addEventListener('click', () => setLook('day'));
+  LAYOUT.zones.forEach((z) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'ib opt'; b.textContent = z.name.replace(/^The /, '');
+    b.addEventListener('click', () => centreOn(z.x + 250, z.y - 60, Math.max(k, Math.min(0.9, kFitH() * 1.6)))); $('#jumps').appendChild(b);
+  });
+
+  /* ---------- drag, pinch, wheel, keys ---------- */
+  const ptrs = new Map();
+  let drag = null, pinch = null, moved = false;
+  vp.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.mk') || e.target.closest('#pop')) return;
+    vp.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, tx, ty }; moved = false; }
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, k, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, tx, ty }; moved = true; }
+  });
+  vp.addEventListener('pointermove', (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()], r = vp.getBoundingClientRect();
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const wx = (pinch.mx - r.left - pinch.tx) / pinch.k, wy = (pinch.my - r.top - pinch.ty) / pinch.k;
+      k = Math.max(kMin(), Math.min(KMAX, pinch.k * d / pinch.d));
+      tx = mx - r.left - wx * k; ty = my - r.top - wy * k; apply();
+    } else if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
+      if (moved) { tx = drag.tx + dx; ty = drag.ty + dy; apply(); vp.style.cursor = 'grabbing'; }
+    }
+  });
+  const up = (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    vp.style.cursor = '';
+    if (ptrs.size === 1) { const p = [...ptrs.values()][0]; drag = { x: p.x, y: p.y, tx, ty }; pinch = null; return; }
+    if (ptrs.size === 0) {
+      if (!moved && e.type === 'pointerup') tapAt(e.clientX, e.clientY);
+      drag = null; pinch = null;
+    }
+  };
+  vp.addEventListener('pointerup', up); vp.addEventListener('pointercancel', up);
+  vp.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018))); }, { passive: false });
+  vp.addEventListener('dblclick', (e) => { if (!adding) zoomAt(e.clientX, e.clientY, 2); });
+  vp.addEventListener('keydown', (e) => {
+    const step = 80;
+    if (e.key === 'ArrowLeft') tx += step; else if (e.key === 'ArrowRight') tx -= step; else if (e.key === 'ArrowUp') ty += step; else if (e.key === 'ArrowDown') ty -= step;
+    else if (e.key === '+' || e.key === '=') { $('#z-in').click(); return; } else if (e.key === '-') { $('#z-out').click(); return; }
+    else if (e.key === 'Escape') { closePop(); if (adding) setAdding(false); return; } else return;
+    e.preventDefault(); apply();
+  });
+  window.addEventListener('resize', apply);
+
+  /* ---------- popover ---------- */
+  const pop = { el: null, m: null };
+  function showPop(m) {
+    closePop();
+    const el = document.createElement('div'); el.id = 'pop';
+    el.innerHTML = '<b>' + esc(m.info.title) + '</b>' + (m.info.lines || []).map((l) => '<p>' + esc(l) + '</p>').join('') +
+      (m.note ? '' : '<div class="acts"><button class="ib" type="button" data-pop="here">Comment here</button><button class="ib ghost" type="button" data-pop="close">Close</button></div>');
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pop]'); if (!b) return;
+      if (b.dataset.pop === 'here') { const mm = pop.m; closePop(); startDraft(mm.x, mm.y); } else closePop();
+    });
+    vp.appendChild(el); pop.el = el; pop.m = m; posPop();
+  }
+  function posPop() {
+    const m = pop.m, el = pop.el, vw = vp.clientWidth, vh = vp.clientHeight;
+    let x = m.x * k + tx + 12, y = m.y * k + ty + 12;
+    x = Math.max(6, Math.min(vw - el.offsetWidth - 6, x)); y = Math.max(6, Math.min(vh - el.offsetHeight - 6, y));
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+  }
+  function closePop() { if (pop.el) pop.el.remove(); pop.el = null; pop.m = null; }
+
+  /* ---------- comments (the page's store: notes/{id}) ---------- */
+  let db = null, dbState = 'loading', notes = null, adding = false, draft = null, busy = false;
+  const noteMarks = [];
+  function setAdding(on) {
+    adding = on; vp.classList.toggle('adding', on); $('#vpHint').hidden = !on;
+    $('#addBtn').textContent = on ? 'Cancel adding' : 'Add a comment';
+    if (!on && draft && !$('#editor').hidden) return;
+  }
+  $('#addBtn').addEventListener('click', () => { closePop(); if (!db) { showErr("Comments can't be saved in this view. Open the page in claude.ai."); return; } setAdding(!adding); });
+  function tapAt(cx, cy) {
+    closePop();
+    if (!adding) return;
+    const r = vp.getBoundingClientRect();
+    startDraft((cx - r.left - tx) / k, (cy - r.top - ty) / k);
+  }
+  let draftMk = null;
+  function startDraft(x, y) {
+    x = Math.max(0, Math.min(W, x)); y = Math.max(0, Math.min(H, y));
+    draft = { x: Math.round(x), y: Math.round(y) };
+    setAdding(false);
+    if (draftMk) { draftMk.el.remove(); MK.splice(MK.indexOf(draftMk), 1); }
+    draftMk = addMk('pin draft', draft.x, draft.y, '•', { title: 'New comment', lines: [] }, 'notes'); draftMk.note = true;
+    $('#editor').hidden = false; $('#edWhere').textContent = 'Here: ' + whereText(draft.x, draft.y); $('#edErr').textContent = '';
+    place(); $('#edText').focus();
+  }
+  function endDraft() {
+    draft = null; $('#editor').hidden = true; $('#edText').value = '';
+    if (draftMk) { draftMk.el.remove(); MK.splice(MK.indexOf(draftMk), 1); draftMk = null; }
+  }
+  $('#edCancel').addEventListener('click', endDraft);
+  $('#edSave').addEventListener('click', async () => {
+    const text = $('#edText').value.trim();
+    if (!text) { $('#edErr').textContent = 'Write the comment first.'; return; }
+    if (!db || busy) return;
+    busy = true; $('#edSave').disabled = true;
+    try {
+      await db.doc('notes/n-' + Date.now().toString(36)).set({ x: draft.x, y: draft.y, where: whereText(draft.x, draft.y), text, at: new Date().toISOString(), picked_up: null, outcome: null });
+      endDraft();
+    } catch (e) { $('#edErr').textContent = e && e.code === 'invalid_argument' ? 'This page is read-only for you.' : "Couldn't save it. Try again in a moment."; }
+    finally { busy = false; $('#edSave').disabled = false; }
+  });
+  function showErr(t) { const n = $('#notice'); n.hidden = false; n.textContent = t; }
+
+  const open = new Set();
+  function renderNotes() {
+    noteMarks.forEach((m) => { m.el.remove(); MK.splice(MK.indexOf(m), 1); }); noteMarks.length = 0;
+    const el = $('#notes');
+    if (!notes) { el.innerHTML = '<div class="empty">' + (dbState === 'none' ? 'Comments are not available in this view.' : 'Loading…') + '</div>'; return; }
+    const list = notes.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    $('#n-notes').textContent = list.length ? String(list.length) : '';
+    list.forEach((n, i) => {
+      const m = addMk('pin' + (n.picked_up ? ' seen' : ''), n.x, n.y, String(i + 1), { title: 'Comment ' + (i + 1), lines: [n.text, n.picked_up ? 'Picked up' + (n.outcome ? ': ' + n.outcome : '') : 'Waiting for the chat'] }, 'notes');
+      m.note = true; noteMarks.push(m);
+    });
+    const waiting = list.filter((n) => !n.picked_up).length, p = $('#pending');
+    p.hidden = !waiting;
+    if (waiting) p.innerHTML = '<b>' + waiting + '</b> ' + (waiting === 1 ? 'comment is' : 'comments are') + ' waiting for the Game Development chat. ' + (waiting === 1 ? 'It reaches' : 'They reach') + ' it at your next message there.';
+    el.innerHTML = list.length ? list.map((n, i) => {
+      const isOpen = open.has(n.id), chip = n.picked_up ? '<span class="st done">Done</span>' : '<span class="st warn">Not seen</span>';
+      return '<div class="' + (n.picked_up ? 'isdone' : '') + '"><button class="rowbtn" type="button" data-nt="toggle" data-id="' + esc(n.id) + '" aria-expanded="' + isOpen + '"><span class="rank">' + (i + 1) + '</span>' + chip +
+        '<span class="tx">' + esc(n.text.length > 80 ? n.text.slice(0, 78) + '…' : n.text) + '</span><span class="ctx">' + esc(String(n.where || '').split(' · ')[0]) + '</span><span class="car">' + (isOpen ? '▾' : '▸') + '</span></button>' +
+        (isOpen ? '<div class="box"><p><b>Comment: </b>' + esc(n.text) + '</p><p><b>Where: </b>' + esc(n.where || '') + '</p>' +
+          (n.picked_up ? '<p class="done-line">Picked up <span>· ' + esc(n.outcome || fmt(n.picked_up)) + '</span></p>' : '<p class="done-line">Saved <span>· ' + esc(fmt(n.at)) + ' · waiting for your chat</span></p>') +
+          '<div class="acts"><button class="ib opt" type="button" data-nt="show" data-id="' + esc(n.id) + '">Show on the map</button>' +
+          (n.picked_up ? '' : '<button class="ib ghost" type="button" data-nt="undo" data-id="' + esc(n.id) + '">↶ Undo</button>') + '</div></div>' : '') + '</div>';
+    }).join('') : '<div class="empty">No comments yet. Tap Add a comment, then tap the map.</div>';
+    applyLayers();
+  }
+  $('#notes').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-nt]'); if (!b) return;
+    const id = b.dataset.id, n = (notes || []).find((q) => q.id === id); if (!n) return;
+    if (b.dataset.nt === 'toggle') { open.has(id) ? open.delete(id) : open.add(id); renderNotes(); }
+    else if (b.dataset.nt === 'show') { centreOn(n.x, n.y, Math.max(k, 0.8)); vp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    else if (b.dataset.nt === 'undo' && db && !n.picked_up) { b.disabled = true; try { await db.doc('notes/' + id).delete(); } catch (err) { b.disabled = false; showErr("Couldn't undo that. Try again in a moment."); } }
+  });
+
+  /* ---------- the whole level, small ---------- */
+  const mn = $('#mini');
+  mn.innerHTML = '<img src="tiles/mini.webp" alt="">' + LAYOUT.zones.map((z) => '<span class="zl" style="left:' + (z.x / W * 100) + '%">' + esc(z.name.replace(/^The /, '')) + '</span>').join('') + '<div class="vw"></div>';
+  function mini() {
+    const v = mn.querySelector('.vw'), x0 = Math.max(0, -tx / k), w = Math.min(W, vp.clientWidth / k);
+    v.style.left = (x0 / W * 100) + '%'; v.style.width = (w / W * 100) + '%';
+  }
+  mn.addEventListener('pointerdown', (e) => {
+    const r = mn.getBoundingClientRect();
+    centreOn((e.clientX - r.left) / r.width * W, (vp.clientHeight / 2 - ty) / k);
+  });
+
+  /* ---------- start ---------- */
+  setLook(look);
+  const saved = store.get('view');
+  requestAnimationFrame(() => {
+    if (saved && saved.k) centreOn(saved.cx, saved.cy, saved.k);
+    else centreOn(r0[0] + vp.clientWidth / (2 * kFitH()), H / 2, kFitH());
+    applyLayers();
+  });
+  renderNotes();
+  (async () => {
+    let d = null;
+    try { d = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch (e) { d = null; }
+    if (!d) { dbState = 'none'; renderNotes(); $('#addBtn').disabled = true; $('#addHint').textContent = 'Comments can only be saved when the page is open in claude.ai.'; return; }
+    db = d; dbState = 'ready';
+    db.collection('notes').onSnapshot((snap) => { notes = snap.docs.map((x) => Object.assign({ id: x.id }, x.data())); renderNotes(); },
+      () => showErr('The page lost its connection to the comments. Reload to see the latest.'));
+  })();
+})();
+</script>
