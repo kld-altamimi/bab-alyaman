@@ -252,12 +252,12 @@ var Sim = Sim || require('./sim.js');
     e.ext = 'fly'; e.air = false;
     if (!q.plat) { e.y = q.y != null ? q.y : Sim.groundY(L, x); e.plat = -1; }          // (in the street, or on the road)
     e.px = e.x; e.py = e.y;
-    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = 20 + Math.floor(s.rand() * 40) + (q.cd || 0);
+    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
     e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 === 0;
-    if (q.k === 'sam') e.cd = 8 + Math.floor(s.rand() * 16) + (q.cd || 0);          // (the missile man does not hang about)
+    if (q.k === 'sam') e.cd = Math.round((8 + Math.floor(s.rand() * 16)) * T.FIRST) + (q.cd || 0);          // (the missile man does not hang about)
     if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
-    if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = 30 + Math.floor(s.rand() * 30); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
-    if (q.k === 'sniper') { e.x = q.win[0]; e.y = q.win[1]; e.plat = -1; e.px = e.x; e.py = e.y; e.st = 'hide'; e.hidden = true; e.cd = 30 + Math.floor(s.rand() * 50); e.brave = true; }
+    if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = Math.round((30 + Math.floor(s.rand() * 30)) * T.FIRST); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
+    if (q.k === 'sniper') { e.x = q.win[0]; e.y = q.win[1]; e.plat = -1; e.px = e.x; e.py = e.y; e.st = 'hide'; e.hidden = true; e.cd = Math.round((30 + Math.floor(s.rand() * 50)) * T.FIRST); e.brave = true; }
     if (q.k === 'light') { e.beam = -Math.PI / 2 + (q.beam || -0.5); e.dir = q.dir || 1; e.lk = 0; e.lose = 0; e.brave = true; }
     if (q.k === 'mortar' || q.k === 'rpg') e.brave = true;
     if (q.k === 'cgun') { e.st = 'cover'; e.hidden = true; e.brave = true; e.bar = -2.6; e.rise = 0; e.phase = 1; e.plan = []; e.boss = true; e.face = -1; }
@@ -287,7 +287,7 @@ var Sim = Sim || require('./sim.js');
       var m = place(s, q);
       if (!q.from) { m.emerge = F.EMERGE; ev(s, { t: 'emerge', x: m.x, y: m.y, k: m.k }); }
       else ev(s, { t: 'enter', x: m.x, y: m.y, k: m.k, how: m.entry });
-      m.cd = Math.max(m.cd, (m.emerge || 0) + 16);
+      m.cd = Math.max(m.cd, (m.emerge || 0) + Math.round(16 * T.FIRST));
       return;
     }
     // a flight of drones, in from ahead (or from behind) at about the Apache's height: they are seen coming
@@ -697,7 +697,7 @@ var Sim = Sim || require('./sim.js');
     if (e.st === 'out') {
       // along to his post (shot at on the way, and not yet shooting)
       var dxo = e.goX - e.x, so = F.WALK_V * DT;
-      if (Math.abs(dxo) <= so) { e.x = e.goX; e.st = 'wait'; e.stT = 0; e.moving = 0; e.cd = 10 + Math.floor(s.rand() * 24); }
+      if (Math.abs(dxo) <= so) { e.x = e.goX; e.st = 'wait'; e.stT = 0; e.moving = 0; e.cd = Math.round((10 + Math.floor(s.rand() * 24)) * T.FIRST); }
       else { e.face = dxo > 0 ? 1 : -1; e.moving = e.face; e.x += e.face * so; e.walkD += so; }
       var ty0 = standY(L, e, e.x);
       e.y += clamp(ty0 - e.y, -1.5, 1.5);
@@ -743,7 +743,7 @@ var Sim = Sim || require('./sim.js');
           var ux = tx / tl, uy = ty / tl, cs = Math.cos(sp), sn = Math.sin(sp);
           s.bullets.push({ x: mx, y: my, vx: (ux * cs - uy * sn) * F.RIFLE_V, vy: (ux * sn + uy * cs) * F.RIFLE_V, life: 200, own: false, chip: true, src: 'rifle' });
           ev(s, { t: 'eshot', k: 'rifle', x: mx, y: my, face: e.face });
-          if (++e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = 50 + Math.floor(s.rand() * 50); }
+          if (++e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = Math.round((50 + Math.floor(s.rand() * 50)) * T.GAP); }
         }
       } else if (e.st === 'cool') { if (e.stT > 14) { e.st = 'wait'; e.stT = 0; } }
     } else if (e.k === 'aa') {
@@ -763,7 +763,7 @@ var Sim = Sim || require('./sim.js');
           var bx = ax0 + Math.cos(e.bar) * 16, by = ay0 + Math.sin(e.bar) * 16;
           s.bullets.push({ x: bx, y: by, vx: Math.cos(e.bar) * F.AA_V, vy: Math.sin(e.bar) * F.AA_V, life: 140, own: false, heavy: true, src: 'anti-aircraft gun' });
           ev(s, { t: 'eshot', k: 'aa', x: bx, y: by, ang: e.bar });
-          if (++e.shots >= F.AA_SHOTS) { e.st = 'cool'; e.stT = 0; e.cd = F.AA_COOL + Math.floor(s.rand() * 40); }
+          if (++e.shots >= F.AA_SHOTS) { e.st = 'cool'; e.stT = 0; e.cd = Math.round((F.AA_COOL + Math.floor(s.rand() * 40)) * T.GAP); }
         }
       } else if (e.st === 'cool') { if (e.stT > 10) { e.st = 'wait'; e.stT = 0; } }
     } else if (e.k === 'sam') {
@@ -788,7 +788,7 @@ var Sim = Sim || require('./sim.js');
           e.st = 'fired'; e.stT = 0; s.locking = 0; s.lockT = 0;
         }
         e.lk++;
-      } else if (e.st === 'fired') { if (e.stT > F.SAM_UP) { e.st = 'cool'; e.stT = 0; e.cd = F.SAM_RELOAD + Math.floor(s.rand() * 60); } }
+      } else if (e.st === 'fired') { if (e.stT > F.SAM_UP) { e.st = 'cool'; e.stT = 0; e.cd = Math.round((F.SAM_RELOAD + Math.floor(s.rand() * 60)) * T.GAP); } }
       else if (e.st === 'cool') { if (e.stT > 30) { e.st = 'wait'; e.stT = 0; } }
     } else if (e.k === 'rpg') {
       // the RPG: down on one knee with it on his shoulder (the tell), then it goes, straight at where the Apache was. A
@@ -802,7 +802,7 @@ var Sim = Sim || require('./sim.js');
         if (e.stT >= F.RPG_AIM) {
           s.missiles.push({ kind: 'rpg', x: rx + Math.cos(e.aimA) * 8, y: ry + Math.sin(e.aimA) * 8, ang: e.aimA, v: F.RPG_V, t: 0, gone: false, decoy: false, from: e.id });
           ev(s, { t: 'rpg_fire', x: rx, y: ry, face: e.face });
-          e.st = 'cool'; e.stT = 0; e.cd = F.RPG_COOL + Math.floor(s.rand() * 70);
+          e.st = 'cool'; e.stT = 0; e.cd = Math.round((F.RPG_COOL + Math.floor(s.rand() * 70)) * T.GAP);
         }
       } else if (e.st === 'cool') { if (e.stT > 24) { e.st = 'wait'; e.stT = 0; } }
     } else if (e.k === 'sniper') {
@@ -822,7 +822,7 @@ var Sim = Sim || require('./sim.js');
           ev(s, { t: 'eshot', k: 'sniper', x: sx0, y: sy0, ang: ta });
           e.st = 'shot'; e.stT = 0;
         }
-      } else if (e.st === 'shot') { if (e.stT > 16) { e.st = 'hide'; e.stT = 0; e.cd = F.SNIPE_COOL + Math.floor(s.rand() * 90); } }
+      } else if (e.st === 'shot') { if (e.stT > 16) { e.st = 'hide'; e.stT = 0; e.cd = Math.round((F.SNIPE_COOL + Math.floor(s.rand() * 90)) * T.GAP); } }
     } else if (e.k === 'mortar') {
       // a mortar: a shell dropped down the tube, and up it goes; where it will burst is marked (where the Apache was, and a
       // little ahead of it) until it does
@@ -834,7 +834,7 @@ var Sim = Sim || require('./sim.js');
           var tx2 = clamp(h.x + h.vx * 0.35, s.cam + 40, s.cam + s.viewW - 40), ty2 = clamp(h.y + h.vy * 0.2, s.camY + 30, s.camY + VH(s) - 30);
           s.shells.push({ x: e.x + e.face * 3, y: e.y - 16, tx: tx2, ty: ty2, t: 0, gone: false, from: e.id });
           ev(s, { t: 'mortar_fire', x: e.x, y: e.y - 16, tx: tx2, ty: ty2 });
-          e.st = 'cool'; e.stT = 0; e.cd = F.MORTAR_COOL + Math.floor(s.rand() * 70);
+          e.st = 'cool'; e.stT = 0; e.cd = Math.round((F.MORTAR_COOL + Math.floor(s.rand() * 70)) * T.GAP);
         }
       } else if (e.st === 'cool') { if (e.stT > 20) { e.st = 'wait'; e.stT = 0; } }
     }
@@ -1082,7 +1082,7 @@ var Sim = Sim || require('./sim.js');
         var sp = (s.rand() - 0.5) * 0.1, a = Math.atan2(dy, dx) + sp;
         s.bullets.push({ x: gx + Math.cos(a) * 12, y: gy + Math.sin(a) * 12, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, life: 120, own: false, chip: true, src: 'pickup gun' });
         ev(s, { t: 'eshot', k: 'truck', x: gx, y: gy, ang: a });
-        if (++e.shots >= F.TRUCK_SHOTS) { e.gst = 'cool'; e.gT = 0; e.gcd = F.TRUCK_COOL + Math.floor(s.rand() * 40); }
+        if (++e.shots >= F.TRUCK_SHOTS) { e.gst = 'cool'; e.gT = 0; e.gcd = Math.round((F.TRUCK_COOL + Math.floor(s.rand() * 40)) * T.GAP); }
       }
     } else if (e.gst === 'cool') { if (e.gT > 12) e.gst = 'wait'; }
     e.gunA = Math.atan2(dy, dx);

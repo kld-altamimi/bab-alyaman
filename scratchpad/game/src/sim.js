@@ -24,6 +24,10 @@ var Sim = (function () {
     HOLD: 0.5, LANE_L: 0.18, LANE_R: 0.25,
     DRUM_FUSE: 54,
     SETTLE: 28,
+    // ordinary enemies sooner and more often, in every mission (game-features-R5; Khaled, 23 Oct 00:15: "modest"): the wait
+    // before a man's first shot is FIRST of what it was, the rest between his bursts GAP of it. The warnings before he fires
+    // (aiming, leaning out, winding up) stay as they were, and so do the bosses
+    FIRST: 0.67, GAP: 0.75,
     DIAG: Math.SQRT1_2,
     DOOR_HITS: 14, DOOR_TURN: 14, BASH_REACH: 24, BASH_CD: 50,
     // Mocha: the cook's ladle, up close and at a distance; the roasting house's steam vents; men coming out of doors
@@ -198,17 +202,17 @@ var Sim = (function () {
     var e = {
       id: s.nextId++, k: sp.k, g: sp.g, x: x, y: surfaceY(L, plat, x), vx: 0, vy: 0, plat: plat, air: false,
       face: sp.enter === -1 ? 1 : -1, hw: K.hw, h: K.h, hp: K.hp, alive: true, hostile: true, post: !!sp.post, look: sp.look || 'worried',
-      st: sp.post ? 'wait' : 'walk', stT: 0, cd: 16 + Math.floor(s.rand() * 34), band: 0, shots: 0, turnT: 0,
+      st: sp.post ? 'wait' : 'walk', stT: 0, cd: Math.round((16 + Math.floor(s.rand() * 34)) * T.FIRST), band: 0, shots: 0, turnT: 0,
       hurtT: 99, deadT: 0, walkD: 0, seen: false, lit: false, captured: false, offT: 0,
       tag: sp.tag || null, behind: sp.behind || null, covered: !!sp.covered, moving: 0, slot: 0
     };
     s.slotN = ((s.slotN || 0) + 1) % 5;
     e.slot = s.slotN * 12;
-    if (sp.covered) e.cd += 60;
+    if (sp.covered) e.cd += Math.round(60 * T.FIRST);
     if (sp.k === 'rifle') e.band = 96 + s.rand() * 78;
     if (sp.k === 'bomber') e.band = 150 + s.rand() * 60;
-    if (sp.k === 'door') { e.band = 8; e.cd = 60 + Math.floor(s.rand() * 30); e.door = T.DOOR_HITS; e.bashCd = 0; }
-    if (sp.k === 'cook') { e.band = 70 + s.rand() * 40; e.cd = 40 + Math.floor(s.rand() * 30); e.swingCd = 0; }
+    if (sp.k === 'door') { e.band = 8; e.cd = Math.round((60 + Math.floor(s.rand() * 30)) * T.FIRST); e.door = T.DOOR_HITS; e.bashCd = 0; }
+    if (sp.k === 'cook') { e.band = 70 + s.rand() * 40; e.cd = Math.round((40 + Math.floor(s.rand() * 30)) * T.FIRST); e.swingCd = 0; }
     s.enemies.push(e);
     s.groups[sp.g].hostile++;
     return e;
@@ -614,7 +618,7 @@ var Sim = (function () {
     // the two edges of the screen are for walking through, not for standing in
     var inL = s.cam + s.viewW * s.laneL + e.slot, inR = s.cam + s.viewW * (1 - s.laneR) - e.slot;
     if (e.x > inR) { moved = -1; speed = KIND[e.k].lane; } else if (e.x < inL) { moved = 1; speed = KIND[e.k].lane; }
-    else if (!e.arrived) { e.arrived = true; e.cd = Math.max(e.cd, T.SETTLE + Math.floor(s.rand() * 20)); }
+    else if (!e.arrived) { e.arrived = true; e.cd = Math.max(e.cd, Math.round((T.SETTLE + Math.floor(s.rand() * 20)) * T.FIRST)); }
     // nor is the far side of somebody else's sandbags: only the man posted there may use them. A walker who finds them
     // between himself and Yazeed keeps coming until he is through.
     // (it only matters while Yazeed is on the outside of them: once he is in among the bags they stop nothing of his)
@@ -750,7 +754,7 @@ var Sim = (function () {
           var level = Math.abs(p.y - e.y) < 14;
           enemyFire(s, e, !level, 26);
           e.shots++;
-          if (e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = (e.covered ? 110 : 44) + Math.floor(s.rand() * 50); }
+          if (e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = Math.round(((e.covered ? 110 : 44) + Math.floor(s.rand() * 50)) * T.GAP); }
         }
       } else if (e.st === 'cool') {
         if (e.stT > 14) { e.st = home; e.stT = 0; }
@@ -772,12 +776,12 @@ var Sim = (function () {
           ev(s, { t: 'lob', x: e.x, y: sy });
         }
       } else if (e.st === 'throw') {
-        if (e.stT > 18) { e.st = home; e.stT = 0; e.cd = 95 + Math.floor(s.rand() * 45); }
+        if (e.stT > 18) { e.st = home; e.stT = 0; e.cd = Math.round((95 + Math.floor(s.rand() * 45)) * T.GAP); }
       }
     } else if (e.k === 'door') {
       var wantFace = dx >= 0 ? 1 : -1;
       if (e.st === 'stagger') {                    // the door has just gone: he looks at his hands
-        if (e.stT > 30) { e.st = 'walk'; e.stT = 0; e.cd = 14 + Math.floor(s.rand() * 16); e.band = 64 + s.rand() * 44; e.arrived = true; }
+        if (e.stT > 30) { e.st = 'walk'; e.stT = 0; e.cd = Math.round((14 + Math.floor(s.rand() * 16)) * T.FIRST); e.band = 64 + s.rand() * 44; e.arrived = true; }
       } else if (e.door <= 0) {
         // without it he is a man with a pistol and a grudge
         if (e.st === 'walk' || e.st === 'wait') {
@@ -790,7 +794,7 @@ var Sim = (function () {
         } else if (e.st === 'burst') {
           if (e.stT % 10 === 1) {
             enemyFire(s, e, Math.abs(p.y - e.y) >= 14, 27);
-            if (++e.shots >= 2) { e.st = 'cool'; e.stT = 0; e.cd = 46 + Math.floor(s.rand() * 40); }
+            if (++e.shots >= 2) { e.st = 'cool'; e.stT = 0; e.cd = Math.round((46 + Math.floor(s.rand() * 40)) * T.GAP); }
           }
         } else { if (e.stT > 12) { e.st = 'walk'; e.stT = 0; } }
       } else if (e.st === 'walk' || e.st === 'wait') {
@@ -822,7 +826,7 @@ var Sim = (function () {
         if (e.stT === 2 || e.stT === 12 || e.stT === 22) enemyFire(s, e, false, 30);
         if (e.stT >= 30) { e.st = 'rec'; e.stT = 0; }
       } else if (e.st === 'rec') {
-        if (e.stT >= 14) { e.st = home; e.stT = 0; e.cd = 70 + Math.floor(s.rand() * 45); }
+        if (e.stT >= 14) { e.st = home; e.stT = 0; e.cd = Math.round((70 + Math.floor(s.rand() * 45)) * T.GAP); }
       }
     } else if (e.k === 'cook') {
       // Mocha's cooks: a pot for a helmet and a ladle for everything else. At a distance he flings a ladleful of hot
@@ -839,7 +843,7 @@ var Sim = (function () {
       } else if (e.st === 'scoop') {                // the ladle goes back, full...
         if (e.stT >= 28) { flingBeans(s, e); e.st = 'fling'; e.stT = 0; }
       } else if (e.st === 'fling') {                // ...and over
-        if (e.stT >= 16) { e.st = home; e.stT = 0; e.cd = 96 + Math.floor(s.rand() * 50); }
+        if (e.stT >= 16) { e.st = home; e.stT = 0; e.cd = Math.round((96 + Math.floor(s.rand() * 50)) * T.GAP); }
       } else if (e.st === 'swingw') {
         if (e.stT >= 16) {
           e.st = 'swing'; e.stT = 0;
@@ -1260,7 +1264,7 @@ var Sim = (function () {
           if (sp.door) {
             // out of a doorway in the back wall: he steps into the light, and until he is out nothing touches him
             var nd = spawnEnemy(s, sp, sp.x);
-            nd.emerge = T.EMERGE; nd.arrived = true; nd.cd = Math.max(nd.cd, T.EMERGE + T.SETTLE); nd.face = s.p.x >= sp.x ? 1 : -1;
+            nd.emerge = T.EMERGE; nd.arrived = true; nd.cd = Math.max(nd.cd, T.EMERGE + Math.round(T.SETTLE * T.FIRST)); nd.face = s.p.x >= sp.x ? 1 : -1;
             ev(s, { t: 'emerge', x: sp.x, y: nd.y, k: sp.k });
             continue;
           }

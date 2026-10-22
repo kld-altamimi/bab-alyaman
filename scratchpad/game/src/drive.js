@@ -176,14 +176,14 @@ var Sim = Sim || require('./sim.js');
         x = it.x + i * (it.gap || 24);
         var kind = (it.kinds && it.kinds[i % it.kinds.length]) || 'rifle';
         var e = I.spawnEnemy(s, { g: 'ROAD', k: kind, post: 1, look: ['worried', 'youth', 'angry', 'qat'][(i + (it.x >> 3)) % 4] }, x);
-        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : 10 + Math.floor(s.rand() * 40) + i * 6); e.noKnife = true;
+        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : Math.round((10 + Math.floor(s.rand() * 40) + i * 6) * T.FIRST));          // (R5: T.FIRST, T.GAP, sim.js) e.noKnife = true;
         if (it.march) { e.march = true; e.cd = 9999; }
       }
       if (!s.hinted.ram) { s.hinted.ram = 1; ev(s, { t: 'hint', k: 'ram' }); }
     } else if (it.k === 'truck') {
       var mode = it.mode || 'block';
       s.trucks.push({ id: s.nextId++, x: it.x, y: groundY(L, it.x), vx: 0, face: mode === 'run' ? 1 : -1, mode: mode, hp: D.TRUCK_HP, gun: it.nogun ? 0 : D.GUNNER_HP, gst: 'idle', gT: 0,
-                      gcd: 20 + Math.floor(s.rand() * 30), shots: 0, st: 'ok', vy: 0, ang: 0, spin: 0, paint: it.paint || 'olive', hurtT: 99, t: 0, wheel: 0, seen: false });
+                      gcd: Math.round((20 + Math.floor(s.rand() * 30)) * T.FIRST), shots: 0, st: 'ok', vy: 0, ang: 0, spin: 0, paint: it.paint || 'olive', hurtT: 99, t: 0, wheel: 0, seen: false });
       if (mode === 'charge') ev(s, { t: 'horn', k: 'truck', x: it.x });
       if (!s.hinted.truck) { s.hinted.truck = 1; ev(s, { t: 'hint', k: 'truck' }); }
     } else if (it.k === 'drones') {
@@ -232,7 +232,7 @@ var Sim = Sim || require('./sim.js');
       } else if (e.st === 'aim') {
         if (e.stT >= 20) { e.st = 'burst'; e.stT = 0; e.shots = 0; }
       } else if (e.st === 'burst') {
-        if (e.stT % 8 === 1) { I.enemyFire(s, e, false, 26); if (++e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = 40 + Math.floor(s.rand() * 40); } }
+        if (e.stT % 8 === 1) { I.enemyFire(s, e, false, 26); if (++e.shots >= 3) { e.st = 'cool'; e.stT = 0; e.cd = Math.round((40 + Math.floor(s.rand() * 40)) * T.GAP); } }
       } else if (e.st === 'cool') { if (e.stT > 14) { e.st = 'wait'; e.stT = 0; } }
     } else if (e.k === 'bomber') {
       if (e.st === 'wait') {
@@ -247,7 +247,7 @@ var Sim = Sim || require('./sim.js');
           e.lit = false; e.st = 'throw'; e.stT = 0;
           ev(s, { t: 'lob', x: e.x, y: sy });
         }
-      } else if (e.st === 'throw') { if (e.stT > 18) { e.st = 'wait'; e.stT = 0; e.cd = 110; } }
+      } else if (e.st === 'throw') { if (e.stT > 18) { e.st = 'wait'; e.stT = 0; e.cd = Math.round(110 * T.GAP); } }
     }
   }
 
@@ -294,7 +294,7 @@ var Sim = Sim || require('./sim.js');
             var mx = gunnerX(t) - 28, my = t.y - 43, ax = (c.x + 6) - mx, ay = (c.y - 18) - my, al = Math.sqrt(ax * ax + ay * ay) || 1;
             s.bullets.push({ x: mx, y: my, vx: ax / al * D.HEAVY_V + t.vx, vy: ay / al * D.HEAVY_V, life: 170, own: false, heavy: true, src: 'gun truck' });
             ev(s, { t: 'eshot', k: 'heavy', x: mx, y: my, face: -1 });
-            if (++t.shots >= 4) { t.gst = 'idle'; t.gcd = 84 + Math.floor(s.rand() * 40); }
+            if (++t.shots >= 4) { t.gst = 'idle'; t.gcd = Math.round((84 + Math.floor(s.rand() * 40)) * T.GAP); }
           }
         }
       }
