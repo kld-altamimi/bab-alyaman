@@ -29,6 +29,10 @@ of these files, never the place where edits happen. If the artifact and the repo
 - `node --check` on the script block catches syntax errors; a headless Chromium run (`playwright`) with
   `window.__m1.begin('m1', 0)` confirms the game boots and starts a mission without page errors.
 - The debug handle `window.__m1` exposes `state()`, `sim()`, `cur()`, `begin()`, `skipAhead()`, `report()`.
+- `python3 tools/signoff.py . <output folder> --strict` runs game-features' "must still work" checklist
+  (claude/topics/game-features-checklist.md in the Project) on this folder's build: every line must pass before Khaled
+  is asked to push. (`--strict` holds every build to the lines added in 0.11.64: menu steps, like / dislike, the big
+  Continue; leave it off only for a build made before 0.11.64.)
 
 ## Analytics events (see analytics.js)
 
@@ -51,6 +55,8 @@ analytics.js reads instead of the debug handle. `life_lost` in the simulation ca
 | `mission_leave` | `stopGame()` | + status (play / over / clear) — ends the run |
 | `quit` | tab hidden, on any screen | + state (home / map / play / pause / over …), run_seconds if mid-run |
 | `share_click` | Share button (home screen, results) | from (home / results), mission (results only), how (sheet = the phone's share menu, copy = link copied) |
+| `menu_step` | the steps before a mission, each once per visit: the title tapped (sound on, or the `?play` screen's one tap), Start, the map, a mission card picked, the briefings list | step (title / start / map / card / briefings), link (play / plain), mission (map, card) |
+| `feedback` | the results screen's like / dislike buttons (one vote per results screen) and its "Tell us on X" button | mission, choice (like / dislike / x) |
 
 Every event also carries: `build`, `run_id` and `run_continues` (while in a run), `lang`, `input` (touch / keyboard),
 `fire_mode` (hold / auto), `orientation`, `dev` (filter `dev = true` out of real numbers) and `muted`.
