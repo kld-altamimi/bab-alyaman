@@ -78,12 +78,15 @@ var Sim = Sim || require('./sim.js');
   Sim.KIND.cgun = { hw: 30, h: 34, hp: 210, score: 3000, speed: 0, lane: 0 };          // (22 Oct: its attacks all escapable now, so it lasts long enough to learn)
   Sim.KIND.launcher = { hw: 72, h: 44, hp: 480, score: 6000, speed: 0, lane: 0 };      // (against the clock since 22 Oct: tougher)
   var BG = Sim.BG = {
-    CG_RISE: 44, CG_TRACK: [0, 56, 42, 30], CG_FLAK_V: 330, CG_FLAK_R: 30, CG_SWEEP_N: 9, CG_SWEEP_EVERY: 5, CG_SWEEP_TELL: 44, CG_HEAVY_V: 300,
+    CG_RISE: 44, CG_TRACK: [0, 56, 42, 30], CG_FLAK_V: 330, CG_FLAK_R: 30, CG_SWEEP_N: 8, CG_SWEEP_EVERY: 5, CG_SWEEP_TELL: 44, CG_HEAVY_V: 300,
     // (Khaled, 22 Oct, playing it: its hits could not be avoided. Every attack now has one rule that gets you out of it: a
     // flak shell bursts where the Apache was, its mark up for at least CG_FLAK_MIN; the sweep swings and glows first, and
     // can't fire lower than CG_LOW above level, so low beside the bastion is out of it; the barrage leaves one side clear;
     // and after each sweep the barrels are too hot to fire for CG_COOL)
     CG_FLAK_MIN: 45, CG_LOW: 0.5, CG_COOL: 120, CG_BARRAGE_FUSE: 62,
+    // (Khaled again, 22 Oct 21:26: the sweep still shot "the full sky", impossible to dodge. Now it sweeps only from the far
+    // side up to CG_OVER past straight up: the sky on the Apache's side of the gun is clear, and a red wedge shows the rest)
+    CG_OVER: 0.16,
     LN_OPEN: 40, LN_ROLL_V: 56, LN_RAISE: [0, 780, 600, 450], LN_LOWER: 40, LN_LOAD: 80, LN_MAX: 1.22, LN_LEN: 104, LN_PIVOT: [62, -30],
     LN_MG_AT: [-56, -46], LN_MG_EVERY: [0, 240, 210, 180], LN_MG_SHOTS: 4, LN_MG_V: 300, LN_SMOKE_T: 130, LN_SMOKE_CD: [0, 600, 480, 420], LN_SHUF: 34,
     // the count (Khaled, 22 Oct: a timed boss): its length, when the missile is all the way up, when the crew lose count,
@@ -868,7 +871,7 @@ var Sim = Sim || require('./sim.js');
         if (!e.plan.length) e.plan = e.phase === 1 ? ['flak', 'flak', 'sweep'] : (e.phase === 2 ? ['flak', 'flak', 'call', 'flak', 'sweep'] : ['barrage', 'sweep', 'flak']);
         e.st = e.plan.shift(); e.stT = 0; e.shots = 0;
         // (from the far side, towards the Apache: it is seen coming)
-        if (e.st === 'sweep') { e.sweepDir = h.x < e.x ? -1 : 1; e.sweepFrom = e.sweepDir > 0 ? -Math.PI + BG.CG_LOW : -BG.CG_LOW; ev(s, { t: 'tell', k: 'cgun', x: mx, y: my }); }
+        if (e.st === 'sweep') { sweepPlan(e, h); ev(s, { t: 'tell', k: 'cgun', x: mx, y: my }); }
       }
     } else if (e.st === 'flak') {
       // (where the Apache is now, not where it is going: flying on is enough, if it sees the mark in time)
@@ -887,7 +890,7 @@ var Sim = Sim || require('./sim.js');
       if (e.stT <= BG.CG_SWEEP_TELL) e.bar += clamp(angDiff(e.sweepFrom, e.bar), -0.12, 0.12);
       else {
         if (e.stT === BG.CG_SWEEP_TELL + 1) e.bar = e.sweepFrom;
-        else e.bar += e.sweepDir * (Math.PI - 2 * BG.CG_LOW) / ((BG.CG_SWEEP_N - 1) * BG.CG_SWEEP_EVERY);
+        else e.bar += (e.sweepTo - e.sweepFrom) / ((BG.CG_SWEEP_N - 1) * BG.CG_SWEEP_EVERY);
         if ((e.stT - BG.CG_SWEEP_TELL) % BG.CG_SWEEP_EVERY === 1) {
           for (var t2 = -1; t2 <= 1; t2 += 2) {
             var bx = mx - Math.sin(e.bar) * t2 * 3, by = my + Math.cos(e.bar) * t2 * 3;
@@ -902,6 +905,14 @@ var Sim = Sim || require('./sim.js');
       if (e.stT === 10) for (var d = 0; d < 2; d++) { var dr = droneOut(s, e.g, d, 2); dr.x = e.x + (d ? 26 : -26); dr.y = e.y - 10; dr.wait = 10 + d * 20; dr.from = e.id; ev(s, { t: 'drone_up', x: dr.x, y: dr.y }); }
       if (e.stT >= 30) { e.st = 'track'; e.stT = 0; }
     }
+  }
+  // a sweep's plan: from low on the far side of the gun (away from the Apache) up to a little past straight up, and no
+  // further (the Apache's side of the sky is clear)
+  function sweepPlan(e, h) {
+    var left = h.x < e.x;           // (the Apache on the left: the sweep starts low on the right and comes up over the top)
+    e.sweepDir = left ? -1 : 1;
+    e.sweepFrom = left ? -BG.CG_LOW : -Math.PI + BG.CG_LOW;
+    e.sweepTo = left ? -Math.PI / 2 - BG.CG_OVER : -Math.PI / 2 + BG.CG_OVER;
   }
   // a flak shell, out of the barrels and bursting at the marked place (wait: ticks before it goes)
   function flak(s, e, mx, my, tx, ty, wait, minFuse) {
@@ -925,6 +936,7 @@ var Sim = Sim || require('./sim.js');
     return { x: px + Math.cos(a) * BG.LN_LEN, y: py + Math.sin(a) * BG.LN_LEN, a: a, px: px, py: py };
   }
   Sim.lnNose = lnNose;
+  Sim.cgSweepPlan = sweepPlan;
   function launcher(s, e, G) {
     var h = s.heli, ok = heliOK(s), K = Sim.KIND.launcher, n;
     if (e.st === 'hide') { e.hidden = true; e.hp = K.hp; if (atFight(s, e)) { e.st = 'open'; e.stT = 0; ev(s, { t: 'boss_intro', k: 'launcher', x: e.stopX, y: e.y }); } return; }

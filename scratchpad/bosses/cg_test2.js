@@ -24,7 +24,7 @@ for (const a of Object.keys(ATT)) {
       h.x = x; h.y = y; h.vx = 0; h.vy = 0;
       const g = c.enemies.find(e => e.k === 'cgun');
       g.hp = ATT[a].hp; g.phase = a === 'barrage' ? 3 : 1; g.plan = []; g.st = a; g.stT = 0; g.shots = 0;
-      if (a === 'sweep') { g.sweepDir = h.x < g.x ? -1 : 1; g.sweepFrom = g.sweepDir > 0 ? -Math.PI + BG.CG_LOW : -BG.CG_LOW; }
+      if (a === 'sweep') Sim.cgSweepPlan(g, h);
       const r = search(c, { k: 'cgun', react: REACT, horizon: ATT[a].horizon, D: 6, width: +(process.env.BEAM || 200), after: freeze });
       res.push({ x: Math.round(x - g.x), y: Math.round(y - g.y), hits: r.hits });
     }

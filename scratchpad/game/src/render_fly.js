@@ -887,6 +887,14 @@
     }
     if (!e.alive) { if (tick % 5 === 0) K.part('smoke', x + (Math.random() - 0.5) * 40, y - 24, { life: 46, vx: -8, vy: -36 }); if (tick % 9 === 0) K.part('ember', x + (Math.random() - 0.5) * 30, y - 20, { life: 16, vx: (Math.random() - 0.5) * 30, vy: -60 }); return; }
     if (e.phase >= 2 && tick % (e.phase === 3 ? 4 : 9) === 0) K.part('smoke', x + 10, py - 8, { life: 30, vx: -6, vy: -30 });
+    // (a sweep: the part of the sky it will rake, a red wedge from the barrels, pulsing while it warns; the rest is clear)
+    if (e.st === 'sweep' && e.sweepFrom != null && e.sweepTo != null) {
+      var wa = e.stT <= Fz.CG_SWEEP_TELL ? 0.1 + 0.1 * ((tick >> 3) & 1) : 0.1, R = 560;
+      cx.save(); cx.fillStyle = 'rgba(255,50,30,' + wa.toFixed(2) + ')';
+      cx.beginPath(); cx.moveTo(x, py); cx.arc(x, py, R, e.sweepFrom, e.sweepTo, e.sweepFrom > e.sweepTo); cx.closePath(); cx.fill(); cx.restore();
+      K.dotted(x, py, x + Math.cos(e.sweepFrom) * R, py + Math.sin(e.sweepFrom) * R, 6, '#ff4030');
+      K.dotted(x, py, x + Math.cos(e.sweepTo) * R, py + Math.sin(e.sweepTo) * R, 6, '#ff4030');
+    }
     if (e.st === 'sweep' && e.stT <= Fz.CG_SWEEP_TELL && (tick >> 2) % 2) K.spr('hud_alert', x, y - 60);
     // (cooling: steam off the barrels, white puffs drifting up)
     if (e.st === 'cool' && tick % 4 === 0) { var sa = e.bar, sl = 14 + Math.random() * 36; K.part('puff', x + Math.cos(sa) * sl + (Math.random() - 0.5) * 6, py + Math.sin(sa) * sl, { life: 18, vx: (Math.random() - 0.5) * 10, vy: -40, flip: Math.random() < 0.5 }); }

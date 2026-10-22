@@ -56,7 +56,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await begin(3);
   const t1 = await run(s => s.enemies.some(e => e.k === 'cgun' && e.alive && e.st === 'track' && !e.hidden), 60 * 120);
   console.log('to the Castle Gun:', (t1 / 60).toFixed(1), 's');
-  await run(null, 1, s => { const g = s.enemies.find(e => e.k === 'cgun'); const h = s.heli; g.plan = []; g.st = 'sweep'; g.stT = 0; g.shots = 0; g.sweepDir = h.x < g.x ? -1 : 1; g.sweepFrom = g.sweepDir > 0 ? -Math.PI + Sim.BG.CG_LOW : -Sim.BG.CG_LOW; });
+  await run(null, 1, s => { const g = s.enemies.find(e => e.k === 'cgun'); const h = s.heli; g.plan = []; g.st = 'sweep'; g.stT = 0; g.shots = 0; Sim.cgSweepPlan(g, h); });
   await run(null, 26, null, true);
   await snap('cg_sweep_warning');
   await run(s => { const g = s.enemies.find(e => e.k === 'cgun'); return g.st === 'cool' && g.stT > 24; }, 400, null, true);

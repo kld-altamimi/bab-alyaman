@@ -182,6 +182,8 @@ function pilot(opt) {
         }
         if (best) { ax = best.dx; ay = best.dy; }
       }
+      // (the Castle Gun's sweep: off to the side of the gun that its red wedge leaves clear)
+      for (const g of s.enemies) if (g.alive && g.k === 'cgun' && g.st === 'sweep' && g.sweepTo != null) { const safe = g.sweepDir < 0 ? -1 : 1; if ((h.x - g.x) * safe < 120) ax = safe; }
     }
     if (!opt.noRockets && rocketWait <= 0 && s.enemies.some(e => e.alive && e.hostile && e.k === 'aa' && X.inView(s, e.x, e.y, -10) && Math.abs(e.y - 12 - h.y) < 40 && e.x > h.x)) { grenade = true; rocketWait = 30; }
     // on the aim stick: at the nearest thing the gun can reach (or nothing, and not firing); else FIRE held, and the gun finds its own
