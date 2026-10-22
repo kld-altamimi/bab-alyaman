@@ -52,7 +52,7 @@ var Menu = (function () {
     return { x: clamp(Math.round(n[0] - vis / 2), 0, MAP.w - W), y: clamp(Math.round(n[1] - H / 2 + 8), 0, MAP.h - H) };
   }
   // keys: along the campaign a stage at a time (keeping to the road you are on where there is a choice), or across a fork
-  function stageOf(m) { return m.stage || 7; }
+  function stageOf(m) { return m.stage || 8; }
   function stageStep(id, dir) {
     var m = BY[id], s = stageOf(m) + dir, near = dir > 0 ? m.next : PREV[id], pick = null;
     for (var i = 0; i < near.length; i++) if (stageOf(BY[near[i]]) === s) { pick = near[i]; break; }

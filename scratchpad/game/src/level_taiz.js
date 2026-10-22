@@ -38,14 +38,16 @@ var LEVEL_TAIZ = (function () {
   // the camera's way through the level (fly.js): along and up, with the corners rounded off
   var ROUTE = [
     [1000, 1060],     // the street of the lower town, under the first roofs (the opening)
-    [1320, 890],      // up over the roofs
+    [1040, 890],      // straight up over the first roofs before anything else (Khaled, 22 Oct, on the map: "the camera
+                      //   must lead upwards here")
     [2840, 890],      // along them
     [3030, 820],      // up over the old city's gate
     [3290, 820],      // over the tall house on the far side of it
     [3430, 1070],     // down into the souq, between the tall houses
-    [3560, 1070],
-    [3660, 860],      // up out of it, over the tall house on its far side
-    [4320, 745],      // up the terraces
+    [3520, 1070],
+    [4320, 745],      // up out of it at an angle, through the tall house on its far side (scenery since 0.10.60; Khaled,
+                      //   22 Oct, on the map: "this should be a background, thus the fly line would go at an angle"),
+                      //   and up the terraces
     [4600, 795],      // the hillside road: down to it a little, so the road (and the pickups on it) runs through the
     [5240, 680],      //   lower part of the picture, not along its bottom edge under the thumbs
     [5460, 760],      // the bridge: low enough to see under it
