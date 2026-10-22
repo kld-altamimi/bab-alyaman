@@ -456,6 +456,9 @@ LINES = {
     # the way they say it), screamed, and a second one after the first. The announcer's ta3iz is the city's name.
     'grunt_qanya': ('grunt', dry, 'THE BLACK JINN!', '*gun-ni-ya *suu-daaa !', dict(final=8, hold_vib=0.35)),
     'ann_taiz': ('announcer', pa, "AND WE'RE OFF! THE CASTLE!", 'ha-*yaa da-*raa-ni ! . ta-*3iiiiiiz !', dict(final=-7, hold_vib=0.35)),
+    # ---- 22 Oct: Taiz's launcher against the clock (Khaled's pick): the crew lose count, and their commander starts it again
+    'grunt_count': ('grunt', dry, 'Ten! Nine! Eight! ...Eight?', '*3ac-ra ! *tis-3a ! *ta-maa-nya ! . . *ta-maa-nya ?', dict(final=7)),
+    'cmdr_again': ('commander', megaphone, 'From the top, you donkey!', '*min a-*law-wal ! . yaa *7maaaar !', dict(final=-6, hold_vib=0.25)),
     'uncle_spice': ('uncle', radio, 'The spice is mine. Hide it where nobody looks.', 'ad-vi-*ye mA-le *ma-ne . *jA-yi GA-ye-*mec ko-*nid . ke *hic-kas ne-*gAh ne-mi-*ko-ne', dict(final=-6)),
 }
 

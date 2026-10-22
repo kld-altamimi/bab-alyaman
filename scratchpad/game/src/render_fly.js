@@ -14,7 +14,7 @@
   'use strict';
   if (typeof Render === 'undefined') return;
   var FS = null, IMT = null, SH = null, cx = null, K = null, W = 468, H = 216, tick = 0;
-  var trail = [], goUpT = 0, beatT = 99, beatSolid = false, flashes = [], rlockBeat = 99;
+  var trail = [], goUpT = 0, beatT = 99, beatSolid = false, flashes = [], rlockBeat = 99, recountT = 0, recountAdd = 0, captions = {};
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function lerp(a, b, f) { return a + (b - a) * f; }
   function mix(c0, c1, f) { return [lerp(c0[0], c1[0], f), lerp(c0[1], c1[1], f), lerp(c0[2], c1[2], f)]; }
@@ -654,6 +654,8 @@
         K.spr(f + ((tick >> 2) % 2 ? '!' : ''), e.x, dy);
       } else if (e.st === 'dive') {
         K.sprRot(f, e.x, dy, Math.atan2(e.vy, e.vx) * 0.5, e.vx < 0);
+      } else if (e.st === 'oops') {
+        K.sprRot(f, e.x, dy, Math.PI + Math.sin(tick * 0.45) * 0.35, false);          // (the wrong way up, wobbling)
       } else K.spr(flash(e) ? f + '!' : f, e.x, dy);
       // (its light, blinking: how it is seen coming at night)
       if (dk && (tick + e.id * 7) % 40 < 6) { cx.fillStyle = '#ff3a26'; cx.fillRect(Math.round(e.x), Math.round(dy) - 4, 1, 1); }
@@ -714,7 +716,29 @@
       if (e.st === 'fired' && e.stT < 30 && tick % 4 === 0) K.part('smoke', tx - Math.cos(ang) * 10, ty - Math.sin(ang) * 10, { life: 26, vx: -Math.cos(ang) * 20, vy: -24 });
       return true;
     }
+    // giving up (Khaled's pick, 22 Oct): some wave a white vest over their heads, and now and then one holds up a sign
+    if (e.k === 'rifle' && e.alive && e.st === 'panic') {
+      K.spr(base + 'up_' + ((Math.floor(e.walkD / 8) % 2) ? 'pass' : 'run'), e.x, e.y, flip);
+      giveUp(e, dk);
+      return true;
+    }
     return false;                      // (riflemen: drawn as everywhere else)
+  }
+  function giveUp(e, dk) {
+    var x = Math.round(e.x), top = Math.round(e.y) - 37, kind = e.id % 5 === 2 ? 'sign' : (e.id % 2 ? 'vest' : '');
+    if (kind === 'vest') {
+      // a white vest held up in both hands, flapping
+      var fl = (tick >> 2) & 1, wc = dk ? [200, 204, 216] : [248, 246, 238], ws = dk ? [140, 142, 160] : [196, 190, 176];
+      cx.fillStyle = rgb(wc); cx.fillRect(x - 7, top - 9 - fl, 14, 9); cx.fillRect(x + (fl ? 7 : -11), top - 8 + fl, 4, 5);
+      cx.fillStyle = rgb(ws); cx.fillRect(x - 7, top - 1 - fl, 14, 1); cx.fillRect(x - 4, top - 9 - fl, 2, 4); cx.fillRect(x + 2, top - 9 - fl, 2, 4);
+    } else if (kind === 'sign') {
+      // a bit of box held up on a stick: I'M ONLY THE COOK
+      var label = T("I'M ONLY THE COOK"), w = K.textW('s_lav', label) + 6, x0 = x - Math.round(w / 2), bc = dk ? [92, 76, 56] : [150, 120, 82];
+      cx.fillStyle = rgb(mix(bc, [0, 0, 0], 0.35)); cx.fillRect(x - 1, top - 6, 2, 8);
+      cx.fillStyle = rgb(bc); cx.fillRect(x0, top - 17, w, 11);
+      cx.fillStyle = rgb(mix(bc, [255, 255, 255], 0.2)); cx.fillRect(x0, top - 17, w, 1);
+      K.text('s_lav', label, x, top - 15, 'c');
+    }
   }
   // the colours of a thing drawn here: its own, or the night's
   function nc(c, dk) { return rgb(dk ? nightRGB(c) : c); }
@@ -789,10 +813,35 @@
     K.spr(body + (flash(e) ? '!' : ''), 0, bob, false);
     var wn = e.vx > 150 ? 'wheelf' + ((tick >> 1) & 1) : 'wheel' + (3 - (((Math.floor(e.wheel / 2.4) % 4) + 4) % 4));
     K.spr(wn, -wr, -9); K.spr(wn, wr, -9);
+    if (e.load) load(e.load, bob, dk, flash(e));
     cx.restore();
     if (e.gst === 'tell' && (tick >> 2) % 2) K.spr('hud_alert', e.x - 22, e.y - 64);
     if (e.hp <= 6 && tick % 5 === 0) K.part('smoke', e.x + 30, e.y - 28, { life: 24, vx: -30, vy: -30 });
     if (e.st === 'drive' && e.vx > 60 && tick % 4 === 0) K.part('puff', e.x - 46, e.y - 3, { life: 10, vx: -20, flip: true });
+  }
+  // what a pickup in the chase carries on its cab's roof, roped down (Khaled's pick, 22 Oct): a sofa, or a goat looking back
+  // at the Apache. (A little of their own colour kept at night, so they read on the dark road.)
+  var SOFA = [184, 54, 64], GOAT = [238, 234, 222], GOATP = [44, 38, 34];
+  function load(kind, bob, dk, white) {
+    var c = function (q) { return white ? '#fff8e8' : rgb(dk ? mix(nightRGB(q), q, 0.35) : q); }, y = -42 + bob;
+    if (kind === 'sofa') {
+      // from the front: its back across the top, the arms at its ends, three cushions, gold feet, two turns of rope
+      cx.fillStyle = c(SOFA); cx.fillRect(-9, y - 11, 28, 5); cx.fillRect(-10, y - 7, 4, 6); cx.fillRect(16, y - 7, 4, 6); cx.fillRect(-6, y - 5, 22, 4);
+      cx.fillStyle = c(mix(SOFA, [255, 255, 255], 0.35)); cx.fillRect(-9, y - 11, 28, 1); cx.fillRect(-6, y - 5, 22, 1); cx.fillRect(-10, y - 7, 4, 1); cx.fillRect(16, y - 7, 4, 1);
+      cx.fillStyle = c(mix(SOFA, [0, 0, 0], 0.45)); cx.fillRect(1, y - 5, 1, 4); cx.fillRect(8, y - 5, 1, 4); cx.fillRect(-6, y - 6, 22, 1);
+      cx.fillStyle = c([232, 190, 84]); cx.fillRect(-9, y - 1, 2, 1); cx.fillRect(17, y - 1, 2, 1);
+      cx.fillStyle = c([70, 56, 40]); cx.fillRect(-3, y - 12, 1, 12); cx.fillRect(12, y - 12, 1, 12);
+    } else if (kind === 'goat') {
+      // side on, facing back up the road, its head up; now and then it looks round
+      var nod = ((tick >> 5) & 1) && !white ? 1 : 0;
+      cx.fillStyle = c(GOAT);
+      cx.fillRect(-4, y - 9, 15, 6); cx.fillRect(-8, y - 12, 5, 5); cx.fillRect(-11, y - 15 + nod, 6, 5);
+      cx.fillRect(-3, y - 3, 1, 3); cx.fillRect(0, y - 3, 1, 3); cx.fillRect(7, y - 3, 1, 3); cx.fillRect(10, y - 3, 1, 3); cx.fillRect(11, y - 10, 2, 2);
+      cx.fillStyle = c(GOATP);
+      cx.fillRect(2, y - 9, 5, 3); cx.fillRect(-8, y - 18 + nod, 1, 3); cx.fillRect(-7, y - 19 + nod, 2, 1); cx.fillRect(-5, y - 18 + nod, 1, 1);
+      cx.fillRect(-10, y - 13 + nod, 1, 1); cx.fillRect(-11, y - 10 + nod, 1, 2);
+      cx.fillStyle = c(mix(GOAT, [0, 0, 0], 0.3)); cx.fillRect(-5, y - 15 + nod, 1, 2); cx.fillRect(-4, y - 4, 15, 1);
+    }
   }
   // THE CASTLE GUN: twin barrels on a turntable behind a shield, sandbags round it; under a tarp until it rises. (It
   // stands in the castle's floodlights, as the walls do: lit warm at night, so it reads against the sky.)
@@ -824,6 +873,9 @@
       cx.fillStyle = hurt ? W2 : fl(mix(CG, [255, 255, 255], 0.3), dk); cx.fillRect(0, -2, 52, 1);
       cx.fillStyle = fl(CGD, dk); cx.fillRect(46, -3, 7, 6); cx.fillRect(12, -3, 3, 6);
       if (e.alive && e.phase === 3) { cx.fillStyle = 'rgba(255,90,40,' + (0.4 + 0.25 * Math.sin(tick * 0.4)).toFixed(2) + ')'; cx.fillRect(20, -2, 26, 4); }
+      // (a sweep coming: the barrels warm up; too hot to fire after it: red, fading as they cool)
+      if (e.alive && e.st === 'sweep' && e.stT <= Fz.CG_SWEEP_TELL) { cx.fillStyle = 'rgba(255,170,60,' + (0.3 + 0.35 * ((tick >> 2) & 1)).toFixed(2) + ')'; cx.fillRect(14, -2, 38, 4); }
+      if (e.alive && e.st === 'cool') { cx.fillStyle = 'rgba(255,70,30,' + (0.85 * (1 - e.stT / Fz.CG_COOL)).toFixed(2) + ')'; cx.fillRect(8, -2, 45, 4); }
       cx.restore();
     }
     // the shield, until it comes off (phase 2)
@@ -836,6 +888,8 @@
     if (!e.alive) { if (tick % 5 === 0) K.part('smoke', x + (Math.random() - 0.5) * 40, y - 24, { life: 46, vx: -8, vy: -36 }); if (tick % 9 === 0) K.part('ember', x + (Math.random() - 0.5) * 30, y - 20, { life: 16, vx: (Math.random() - 0.5) * 30, vy: -60 }); return; }
     if (e.phase >= 2 && tick % (e.phase === 3 ? 4 : 9) === 0) K.part('smoke', x + 10, py - 8, { life: 30, vx: -6, vy: -30 });
     if (e.st === 'sweep' && e.stT <= Fz.CG_SWEEP_TELL && (tick >> 2) % 2) K.spr('hud_alert', x, y - 60);
+    // (cooling: steam off the barrels, white puffs drifting up)
+    if (e.st === 'cool' && tick % 4 === 0) { var sa = e.bar, sl = 14 + Math.random() * 36; K.part('puff', x + Math.cos(sa) * sl + (Math.random() - 0.5) * 6, py + Math.sin(sa) * sl, { life: 18, vx: (Math.random() - 0.5) * 10, vy: -40, flip: Math.random() < 0.5 }); }
   }
   // THE LAUNCHER: eight wheels, a cab with a man and a machine gun on its roof, and its missile on a rail that a ram raises
   // (in the castle's floodlights, as the walls are, so it reads; in front of the keep, and through its gate as it comes out)
@@ -881,6 +935,13 @@
     // the cradle under the missile, and the missile (a new one coming out of the keep onto the rail while it loads)
     cx.save(); cx.translate(px, py); cx.rotate(a); cx.fillStyle = lnCol(LN.steel, dk, burnt, white); cx.fillRect(0, 6, 96, 4); cx.restore();
     if (e.missile && !dead) missileBody(px, py, a, B.LN_LEN, dk, white, false);
+    if (e.missile && !dead && e.st === 'ignite') {
+      // nought: the engine lit at its tail, on the rail, the truck shaking, and smoke billowing out along the courtyard
+      var tx2 = px - Math.cos(a) * 4, ty2 = py - Math.sin(a) * 4;
+      fire(tx2, ty2, 5 + (tick % 3)); fire(tx2 + 3, ty2 + 6, 3 + ((tick >> 1) % 2));
+      glow(tx2, ty2 + 4, 34, [255, 170, 80], 0.45);
+      if (tick % 2 === 0) for (var sm = 0; sm < 2; sm++) K.part('smoke', tx2 + (Math.random() - 0.5) * 20, y - 4, { life: 50, vx: (sm ? 1 : -1) * (40 + Math.random() * 70), vy: -6 - Math.random() * 16 });
+    }
     else if (!dead && e.st === 'load') { var lf = Math.min(1, e.stT / B.LN_LOAD); missileBody(px + (1 - lf) * B.LN_LEN, py, Math.PI, B.LN_LEN, dk, false, false); }
     else if (dead && e.missile && t0 < 30) missileBody(px, py, a, B.LN_LEN, dk, false, false);
     // the ram that raises it
@@ -1003,6 +1064,10 @@
     cx.fillStyle = rgb(c1); cx.fillRect(0, -1, lw, 1);
     cx.restore();
     if (e.st === 'open' && (tick >> 2) % 2) K.spr('hud_alert', x, y - 22);
+    // (what it says on the side, the first time it opens: Khaled's pick, 22 Oct)
+    if (e.st === 'open' && captions[e.id] == null) captions[e.id] = tick;
+    var ct = captions[e.id] != null ? tick - captions[e.id] : -1;
+    if (ct >= 0 && ct < 150) { K.text('s_lav', T('MADE IN TEHRAN'), x, y - 40, 'c'); K.text('s_org', T('FRAGILE'), x, y - 32, 'c'); }
   }
 
   // ------------------------------------------------------------------ what gives light, then the Apache and what flies
@@ -1115,11 +1180,11 @@
       var ms = s.missiles[i];
       if (ms.gone) continue;
       var mca = Math.cos(ms.ang), msa = Math.sin(ms.ang);
-      if (ms.kind === 'big' || ms.kind === 'dud') {
+      if (ms.kind === 'big' || ms.kind === 'dud' || ms.kind === 'icbm') {
         // (the launcher's: as long as the Apache, the nose where it is; a long flame and a thick trail)
         var ml = Sim.BG.LN_LEN, tlx = ms.x - mca * ml, tly = ms.y - msa * ml;
         missileBody(tlx, tly, ms.ang, ml, night(s), false, false);
-        fire(tlx - mca * 4, tly - msa * 4, ms.kind === 'dud' ? 2.2 + (tick % 3) : 4.4);
+        fire(tlx - mca * 4, tly - msa * 4, ms.kind === 'dud' ? 2.2 + (tick % 3) : (ms.kind === 'icbm' ? 5.5 + (tick % 2) : 4.4));
         if (!paused) {
           lay(ms, tlx - mca * 8, tly - msa * 8, 70, 1);
           if (tick % 2 === 0) K.part('smoke', tlx - mca * 10, tly - msa * 10, { life: 44, vx: -mca * 26, vy: -msa * 26 - 8 });
@@ -1378,7 +1443,7 @@
       case 'boss_intro': case 'boss_phase': case 'boss_dying': case 'boss_dead':
         if (e.k !== 'cgun' && e.k !== 'launcher') return false;
         if (e.t === 'boss_intro') {
-          Render.setBanner(T(e.k === 'cgun' ? 'THE CASTLE GUN' : 'THE LAUNCHER'), '', 200);
+          Render.setBanner(T(e.k === 'cgun' ? 'THE CASTLE GUN' : 'THE LAUNCHER'), e.k === 'launcher' ? T('WRECK IT BEFORE IT LAUNCHES') : '', 200);
           if (e.k === 'cgun') { for (var tq = 0; tq < 6; tq++) K.part('piece', e.x - 20 + tq * 8, e.y - 30, { life: 50, vx: -40 + tq * 16, vy: -200 - Math.random() * 60, g: 600, spin: 0.2, name: 'fx_puff', oy: 0 }); }
           if (e.k === 'launcher') dawnCopies();          // (the dawn's pictures made now, ready for the end)
         } else if (e.t === 'boss_phase') { K.embers(e.x, e.y, 14, 300); K.shake(10); K.flash(2); if (e.k === 'cgun' && e.n === 2) K.part('piece', e.x - 14, e.y - 10, { life: 70, vx: -90, vy: -220, g: 700, spin: -0.3, name: 'aa_bar_burnt', oy: 0 }); }
@@ -1391,6 +1456,23 @@
       case 'smoke':
         for (var sq = 0; sq < 6; sq++) K.part('puff', e.x - 60 + sq * 24, e.y - 8, { life: 14, flip: sq % 2 === 0 });
         return true;
+      case 'overheat':
+        for (var oq = 0; oq < 5; oq++) K.part('smoke', e.x + (Math.random() - 0.5) * 20, e.y - 4, { life: 36, vx: (Math.random() - 0.5) * 30, vy: -40 });
+        return true;
+      case 'recount':
+        recountT = 90; recountAdd = e.add || 0;
+        return true;
+      case 'ignite':
+        K.flash(2); K.shake(6);
+        return true;
+      case 'got_away':
+        Render.setBanner(T('THE MISSILE GOT AWAY'), '', 170);
+        return true;
+      case 'countdown':
+        return true;
+      case 'oops':
+        K.part('alert', e.x, e.y - 14, { life: 30 });
+        return false;
       case 'big_launch':
         K.flash(2); K.shake(10);
         for (var bq = 0; bq < 10; bq++) K.part('smoke', e.x + (Math.random() - 0.5) * 40, e.y + 40 + Math.random() * 30, { life: 50 + bq * 3, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 30 });
@@ -1442,6 +1524,17 @@
         else if (ready) K.text('b_org', T('FLARES!'), mid, 76, 'c');
       }
     }
+    // the launcher's count (Khaled, 22 Oct: a timed boss): under the boss's name in the middle, red in its last ten
+    // seconds; frozen and blinking while the crew argue over it, then what they put back on; IGNITION at nought
+    var bs = s.boss;
+    if (recountT > 0 && !paused) recountT--;
+    if (bs && bs.kind === 'launcher' && bs.clock != null && bs.st !== 'dead' && s.status === 'play') {
+      var secs = Math.ceil(bs.clock / 60), clk = Math.floor(secs / 60) + ':' + ('0' + secs % 60).slice(-2), cy0 = 40;
+      if (bs.ign) { if ((tick >> 2) % 2) K.text('b_red', T('IGNITION!'), mid, cy0, 'c'); }
+      else if (bs.argue) { if ((tick >> 3) % 2) K.text('b_org', T('LAUNCH IN {0}', [clk + ' ?']), mid, cy0, 'c'); }
+      else if (secs > 10 || (tick >> 3) % 2 || paused) K.text(secs <= 10 ? 'b_red' : 'b_org', T('LAUNCH IN {0}', [clk]), mid, cy0, 'c');
+      if (recountT > 0 && recountAdd) K.text('m_org', '+' + recountAdd, mid + Math.floor(K.textW('b_org', T('LAUNCH IN {0}', [clk])) / 2) + 10, cy0 + 2 - Math.floor((90 - recountT) / 9), 'c');
+    }
     // the way on is up
     if (goUpT > 0) {
       goUpT -= paused ? 0 : 1;
@@ -1457,5 +1550,5 @@
   }
 
   Render.bosses.fly = { back: back, scene: scene, man: man, post: post, pre: pre, hudAll: hudAll, tint: tint,
-                        reset: function () { trail.length = 0; goUpT = 0; beatT = 99; beatSolid = false; flashes.length = 0; rlockBeat = 99; FLASH = {}; } };
+                        reset: function () { trail.length = 0; goUpT = 0; beatT = 99; beatSolid = false; flashes.length = 0; rlockBeat = 99; FLASH = {}; recountT = 0; captions = {}; } };
 })();

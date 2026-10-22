@@ -34,7 +34,7 @@ def sprite(clips):
 
 GEN = '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchpad/game/gen/'
 AUD = '/home/claude/bab_out/m1/audio/'
-SPEAKER = {'uncle': 'THE UNCLE', 'announcer': 'ANNOUNCER', 'yazeed': 'YAZEED', 'grunt': 'RIFLEMAN', 'shop1': 'SHOPKEEPER',
+SPEAKER = {'uncle': 'THE UNCLE', 'announcer': 'ANNOUNCER', 'yazeed': 'YAZEED', 'grunt': 'RIFLEMAN', 'commander': 'COMMANDER', 'shop1': 'SHOPKEEPER',
            'shop2': 'SHOPKEEPER', 'shop3': 'SHOPKEEPER', 'tailor': 'TAILOR'}
 
 au = json.load(open(GEN + 'audio.json'))

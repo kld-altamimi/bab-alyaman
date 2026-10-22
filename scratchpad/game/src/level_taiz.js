@@ -77,7 +77,7 @@ var LEVEL_TAIZ = (function () {
   // A: the first of a fight wakes when the camera gets to trigAt; the rest follow on, each when the one before is done
   var groups = {}, wake = { A: [1330, 890], B: [1900, 890], C: [2800, 890], D: [3150, 820], E: [3800, 832], F: null,
                             G: [5250, 680], H: [5700, 599], I: [6150, 530], J: [6300, 270], K: [6760, 270], M: [7180, 270] };
-  var zoneOf = { A: 0, B: 0, C: 1, D: 1, E: 1, F: 2, G: 2, H: 2, I: 3, J: 3, K: 3, M: 3 };
+  var zoneOf = { A: 0, B: 0, C: 1, D: 1, E: 1, F: 2, G: 2, H: 2, I: 3, J: 3, K: 3, M: 4 };
   groups.Z0 = { zone: 0, noSurrender: true };            // (the five in the street in the opening: fly.js runs them)
   // (the pickups wake as the terraces' fight ends, not at a point on the way: the chase starts right after it)
   var wakeF = { after: 'E3', delay: 30 };
@@ -109,7 +109,10 @@ var LEVEL_TAIZ = (function () {
       { name: 'The lower town', spawn: 900, at: [1000, 1060], pos: [900, 1000], indoor: true },
       { name: 'The old city', spawn: 2700, at: [2800, 890], pos: [2690, 860], indoor: true },
       { name: 'The hillside road', spawn: 4250, at: [4330, 739], pos: [4240, 700], indoor: true },
-      { name: 'The castle', spawn: 6050, at: [6140, 560], pos: [6050, 470], indoor: true }
+      { name: 'The castle', spawn: 6050, at: [6140, 560], pos: [6050, 470], indoor: true },
+      // (past the Castle Gun, before the keep: the launcher is against the clock, so a lost launch starts again here, not
+      //   back before the walls and the gun; Khaled, 22 Oct)
+      { name: 'The keep', spawn: 6960, at: [7010, 270], pos: [6930, 196], indoor: true }
     ],
     gates: gates,
     groups: groups,
@@ -147,7 +150,8 @@ var LEVEL_TAIZ = (function () {
         { g: 'B', k: 'rifle', x: 2066, plat: 'h139', look: 'youth' },
         { g: 'B', k: 'rifle', x: 2178, plat: 'h149', look: 'angry' },
         { g: 'B', k: 'light', x: 2200, plat: 'h149', look: 'worried', beam: -0.6, dir: -1 },
-        { g: 'B2', k: 'crate', x: 2118, plat: 'h139', n: 3, delay: 0 },
+        { g: 'B2', k: 'crate', x: 2118, plat: 'h139', n: 3, delay: 0, oops: true },      // (its first drone goes the wrong way: Khaled, 22 Oct)
+        { g: 'B2', k: 'rifle', x: 2094, plat: 'h139', look: 'worried' },                   // (the man minding it: where that first drone goes)
         { g: 'B3', k: 'rifle', x: 2188, plat: 'h149', look: 'qat', from: 'door:h149_roof', delay: 0 },
         { g: 'B3', k: 'rifle', x: 2090, plat: 'h139', look: 'worried', from: 'run:2045', delay: 30 },
         // ---- the old city's gate: men on its towers and over its arch, a missile man up through a hatch
@@ -176,8 +180,8 @@ var LEVEL_TAIZ = (function () {
         { g: 'E2', k: 'rifle', x: 4172, plat: 'terr3', look: 'youth', from: 'door:h227_street', delay: 30 },
         { g: 'E3', k: 'crate', x: 4240, plat: 'h227', n: 3, delay: 0 },
         // ---- the hillside road: the chase. Three pickups with guns in the back, away up the road, firing back
-        { g: 'F', k: 'truck', x: 4420, paint: 'olive', lead: 0.36 },     // (just past the right of the picture while the
-        { g: 'F', k: 'truck', x: 4500, paint: 'sand', lead: 0.52 },      //  terraces are fought over: they are off up the
+        { g: 'F', k: 'truck', x: 4420, paint: 'olive', lead: 0.36, load: 'sofa' },     // (just past the right of the picture while the
+        { g: 'F', k: 'truck', x: 4500, paint: 'sand', lead: 0.52, load: 'goat' },      //  terraces are fought over: they are off up the
         { g: 'F', k: 'truck', x: 4580, paint: 'olive', lead: 0.68 },     //  road the moment that is done, the Apache after them)
         { g: 'F2', k: 'drone', n: 2, delay: 0 },
         // ---- the bridge: men on the deck, more running down the road from the village

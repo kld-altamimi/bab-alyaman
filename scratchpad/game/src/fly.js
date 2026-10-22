@@ -75,12 +75,20 @@ var Sim = Sim || require('./sim.js');
   Sim.KIND.light = { hw: 9, h: 22, hp: 6, score: 300, speed: 0, lane: 0 };
   // the two bosses: the Castle Gun on the bastion, and the missile launcher they keep in the keep (Khaled, 21 Oct 15:01:
   // "there shouldn't be an Apache at the end, it should be something else"; he chose the launcher)
-  Sim.KIND.cgun = { hw: 30, h: 34, hp: 150, score: 3000, speed: 0, lane: 0 };
-  Sim.KIND.launcher = { hw: 72, h: 44, hp: 240, score: 6000, speed: 0, lane: 0 };
+  Sim.KIND.cgun = { hw: 30, h: 34, hp: 210, score: 3000, speed: 0, lane: 0 };          // (22 Oct: its attacks all escapable now, so it lasts long enough to learn)
+  Sim.KIND.launcher = { hw: 72, h: 44, hp: 480, score: 6000, speed: 0, lane: 0 };      // (against the clock since 22 Oct: tougher)
   var BG = Sim.BG = {
-    CG_RISE: 44, CG_TRACK: [0, 56, 42, 30], CG_FLAK_V: 330, CG_FLAK_R: 30, CG_SWEEP_N: 11, CG_SWEEP_EVERY: 5, CG_SWEEP_TELL: 22, CG_HEAVY_V: 300,
+    CG_RISE: 44, CG_TRACK: [0, 56, 42, 30], CG_FLAK_V: 330, CG_FLAK_R: 30, CG_SWEEP_N: 9, CG_SWEEP_EVERY: 5, CG_SWEEP_TELL: 44, CG_HEAVY_V: 300,
+    // (Khaled, 22 Oct, playing it: its hits could not be avoided. Every attack now has one rule that gets you out of it: a
+    // flak shell bursts where the Apache was, its mark up for at least CG_FLAK_MIN; the sweep swings and glows first, and
+    // can't fire lower than CG_LOW above level, so low beside the bastion is out of it; the barrage leaves one side clear;
+    // and after each sweep the barrels are too hot to fire for CG_COOL)
+    CG_FLAK_MIN: 45, CG_LOW: 0.5, CG_COOL: 120, CG_BARRAGE_FUSE: 62,
     LN_OPEN: 40, LN_ROLL_V: 56, LN_RAISE: [0, 780, 600, 450], LN_LOWER: 40, LN_LOAD: 80, LN_MAX: 1.22, LN_LEN: 104, LN_PIVOT: [62, -30],
-    LN_MG_AT: [-56, -46], LN_MG_EVERY: [0, 120, 90, 66], LN_MG_SHOTS: 6, LN_MG_V: 300, LN_SMOKE_T: 130, LN_SMOKE_CD: [0, 420, 330, 260], LN_SHUF: 34,
+    LN_MG_AT: [-56, -46], LN_MG_EVERY: [0, 240, 210, 180], LN_MG_SHOTS: 4, LN_MG_V: 300, LN_SMOKE_T: 130, LN_SMOKE_CD: [0, 600, 480, 420], LN_SHUF: 34,
+    // the count (Khaled, 22 Oct: a timed boss): its length, when the missile is all the way up, when the crew lose count,
+    // how long they argue and how much they put back on, and how long the engine burns on the rail at nought
+    LN_CLOCK: 40 * 60, LN_UP_AT: 10 * 60, LN_RECOUNT_AT: 15 * 60, LN_ARGUE: 150, LN_RECOUNT_ADD: 8 * 60, LN_IGNITE: 180, LOST_T: 170,
     BIG_V: 150, BIG_CLIMB: 40, BIG_TURN: 1.5, BIG_LIFE: 480, BIG_R: 40, BIG_HP: 4,
     DAWN_T: 320, LAND_AUTO: 900, SETTLE_T: 50
   };
@@ -201,7 +209,7 @@ var Sim = Sim || require('./sim.js');
   // ------------------------------------------------------------------ setting up
   function create(s, opts) {
     var L = s.L, i;
-    s.heli = null; s.missiles = []; s.rockets = []; s.flares = []; s.shells = []; s.chaseT = 0; s.chaseOn = false; s.chaseEnd = false; s.spotT = 0; s.guide = null;
+    s.heli = null; s.missiles = []; s.rockets = []; s.flares = []; s.shells = []; s.chaseT = 0; s.chaseOn = false; s.chaseEnd = false; s.spotT = 0; s.guide = null; s.lost = null;
     if (!L.fly) return;
     prep(L);
     var rt = route(L), z = L.zones[s.zone];
@@ -239,8 +247,8 @@ var Sim = Sim || require('./sim.js');
     e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = 20 + Math.floor(s.rand() * 40) + (q.cd || 0);
     e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 === 0;
     if (q.k === 'sam') e.cd = 8 + Math.floor(s.rand() * 16) + (q.cd || 0);          // (the missile man does not hang about)
-    if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; }
-    if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = 30 + Math.floor(s.rand() * 30); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; }
+    if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
+    if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = 30 + Math.floor(s.rand() * 30); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
     if (q.k === 'sniper') { e.x = q.win[0]; e.y = q.win[1]; e.plat = -1; e.px = e.x; e.py = e.y; e.st = 'hide'; e.hidden = true; e.cd = 30 + Math.floor(s.rand() * 50); e.brave = true; }
     if (q.k === 'light') { e.beam = -Math.PI / 2 + (q.beam || -0.5); e.dir = q.dir || 1; e.lk = 0; e.lose = 0; e.brave = true; }
     if (q.k === 'mortar' || q.k === 'rpg') e.brave = true;
@@ -643,7 +651,7 @@ var Sim = Sim || require('./sim.js');
     ev(s, { t: 'flare', x: h.x, y: h.y });
     for (var i = 0; i < s.missiles.length; i++) {
       var q = s.missiles[i];
-      if (q.gone || q.decoy || q.kind === 'rpg') continue;
+      if (q.gone || q.decoy || q.kind === 'rpg' || q.kind === 'icbm' || q.kind === 'dud') continue;
       q.decoy = true; q.fl = first + (i % F.FLARE_N);
       ev(s, { t: 'decoyed', x: q.x, y: q.y });
     }
@@ -834,8 +842,9 @@ var Sim = Sim || require('./sim.js');
   function phaseOf(e, K) { return e.hp > K.hp * 0.66 ? 1 : (e.hp > K.hp * 0.33 ? 2 : 3); }
   // THE CASTLE GUN: a great twin gun the Zanabeel have hauled up onto the bastion, under a tarp until the Apache comes. It
   // turns after it (slowly); it fires flak (a shell that bursts where the Apache was: the place is marked), and sweeps the
-  // sky with its heavy rounds; hurt, its shield comes off and it is quicker, and its crew sends up drones; at the last it
-  // fires flak all round the Apache at once.
+  // sky with its heavy rounds (from the far side towards the Apache, after a warning, never low: under its lowest round,
+  // beside the bastion, is out of it); then its barrels are too hot to fire for a while. Hurt, its shield comes off and it
+  // is quicker, and its crew sends up drones; at the last it fires flak all round the Apache at once, but for one side.
   function castleGun(s, e, G) {
     var h = s.heli, ok = heliOK(s), K = Sim.KIND.cgun, mx, my;
     if (e.st === 'cover') { e.hidden = true; e.hp = K.hp; if (atFight(s, e)) { e.st = 'rise'; e.stT = 0; ev(s, { t: 'boss_intro', k: 'cgun', x: e.x, y: e.y }); } return; }
@@ -845,33 +854,47 @@ var Sim = Sim || require('./sim.js');
     if (ph !== e.phase) { e.phase = ph; e.plan = []; ev(s, { t: 'boss_phase', k: 'cgun', n: ph, x: e.x, y: e.y - 20 }); }
     // the barrels: from the trunnion, turning after the Apache, no lower than level either way
     var px = e.x, py = e.y - 24, want = ok ? clamp(Math.atan2(h.y - py, h.x - px), -Math.PI + 0.15, -0.15) : -Math.PI / 2;
-    if (e.st !== 'sweep') e.bar += clamp(angDiff(want, e.bar), -0.03 - 0.01 * e.phase, 0.03 + 0.01 * e.phase);
+    if (e.st !== 'sweep' && e.st !== 'cool') e.bar += clamp(angDiff(want, e.bar), -0.03 - 0.01 * e.phase, 0.03 + 0.01 * e.phase);
     mx = px + Math.cos(e.bar) * 30; my = py + Math.sin(e.bar) * 30;
+    if (e.st === 'cool') {
+      // too hot to fire: the barrels up and steaming until they cool (whatever else is going on)
+      e.bar += clamp(angDiff(-Math.PI / 2, e.bar), -0.02, 0.02);
+      if (e.stT >= BG.CG_COOL) { e.st = 'track'; e.stT = 0; ev(s, { t: 'cooled', x: mx, y: my }); }
+      return;
+    }
     if (!ok) { if (e.st !== 'track') { e.st = 'track'; e.stT = 0; } return; }
     if (e.st === 'track') {
       if (e.stT >= BG.CG_TRACK[e.phase]) {
         if (!e.plan.length) e.plan = e.phase === 1 ? ['flak', 'flak', 'sweep'] : (e.phase === 2 ? ['flak', 'flak', 'call', 'flak', 'sweep'] : ['barrage', 'sweep', 'flak']);
         e.st = e.plan.shift(); e.stT = 0; e.shots = 0;
-        if (e.st === 'sweep') { e.sweepDir = h.x < e.x ? 1 : -1; e.bar = e.sweepDir > 0 ? -Math.PI + 0.25 : -0.25; ev(s, { t: 'tell', k: 'cgun', x: mx, y: my }); }
+        // (from the far side, towards the Apache: it is seen coming)
+        if (e.st === 'sweep') { e.sweepDir = h.x < e.x ? -1 : 1; e.sweepFrom = e.sweepDir > 0 ? -Math.PI + BG.CG_LOW : -BG.CG_LOW; ev(s, { t: 'tell', k: 'cgun', x: mx, y: my }); }
       }
     } else if (e.st === 'flak') {
-      if (e.stT === 1) flak(s, e, mx, my, h.x + h.vx * 0.35, h.y + h.vy * 0.2);
+      // (where the Apache is now, not where it is going: flying on is enough, if it sees the mark in time)
+      if (e.stT === 1) flak(s, e, mx, my, h.x, h.y);
       if (e.stT >= 22) { e.st = 'track'; e.stT = 0; }
     } else if (e.st === 'barrage') {
-      // four at once, around it: find the gap
-      if (e.stT === 1) { var k, offs = [[-60, -36], [60, -30], [-40, 40], [56, 44]]; for (k = 0; k < 4; k++) flak(s, e, mx, my, h.x + offs[k][0], h.y + offs[k][1], k * 5); flak(s, e, mx, my, h.x, h.y, 22); }
+      // five at once: on the Apache, above and below it, and to one side of it; the other side, towards the middle of the
+      // picture, is clear
+      if (e.stT === 1) {
+        var side = h.x > s.cam + s.viewW / 2 ? 1 : -1, k, offs = [[0, 0], [side * 64, -34], [side * 64, 34], [0, -64], [0, 64]];
+        for (k = 0; k < offs.length; k++) flak(s, e, mx, my, h.x + offs[k][0], h.y + offs[k][1], k ? 2 : 0, BG.CG_BARRAGE_FUSE);
+      }
       if (e.stT >= 40) { e.st = 'track'; e.stT = 0; }
     } else if (e.st === 'sweep') {
-      // the barrels swing across the sky, firing as they go
-      if (e.stT > BG.CG_SWEEP_TELL) {
-        e.bar += e.sweepDir * (Math.PI - 0.5) / (BG.CG_SWEEP_N * BG.CG_SWEEP_EVERY);
+      // the warning: the barrels swing over to the far side (and glow); then across the sky, firing as they go, never low
+      if (e.stT <= BG.CG_SWEEP_TELL) e.bar += clamp(angDiff(e.sweepFrom, e.bar), -0.12, 0.12);
+      else {
+        if (e.stT === BG.CG_SWEEP_TELL + 1) e.bar = e.sweepFrom;
+        else e.bar += e.sweepDir * (Math.PI - 2 * BG.CG_LOW) / ((BG.CG_SWEEP_N - 1) * BG.CG_SWEEP_EVERY);
         if ((e.stT - BG.CG_SWEEP_TELL) % BG.CG_SWEEP_EVERY === 1) {
           for (var t2 = -1; t2 <= 1; t2 += 2) {
             var bx = mx - Math.sin(e.bar) * t2 * 3, by = my + Math.cos(e.bar) * t2 * 3;
             s.bullets.push({ x: bx, y: by, vx: Math.cos(e.bar) * BG.CG_HEAVY_V, vy: Math.sin(e.bar) * BG.CG_HEAVY_V, life: 150, own: false, heavy: true, src: 'castle gun' });
           }
           ev(s, { t: 'eshot', k: 'aa', x: mx, y: my, ang: e.bar });
-          if (++e.shots >= BG.CG_SWEEP_N) { e.st = 'track'; e.stT = 0; }
+          if (++e.shots >= BG.CG_SWEEP_N) { e.st = 'cool'; e.stT = 0; ev(s, { t: 'overheat', x: mx, y: my }); }
         }
       }
     } else if (e.st === 'call') {
@@ -881,19 +904,22 @@ var Sim = Sim || require('./sim.js');
     }
   }
   // a flak shell, out of the barrels and bursting at the marked place (wait: ticks before it goes)
-  function flak(s, e, mx, my, tx, ty, wait) {
+  function flak(s, e, mx, my, tx, ty, wait, minFuse) {
     tx = clamp(tx, s.cam + 30, s.cam + s.viewW - 30); ty = clamp(ty, s.camY + 26, s.camY + VH(s) - 30);
     var d = Math.sqrt((tx - mx) * (tx - mx) + (ty - my) * (ty - my));
-    s.shells.push({ kind: 'flak', x: mx, y: my, sx: mx, sy: my, tx: tx, ty: ty, t: -(wait || 0), fuse: Math.max(26, Math.round(d / BG.CG_FLAK_V * 60) + 18), gone: false, from: e.id });
+    s.shells.push({ kind: 'flak', x: mx, y: my, sx: mx, sy: my, tx: tx, ty: ty, t: -(wait || 0), fuse: Math.max(minFuse || BG.CG_FLAK_MIN, Math.round(d / BG.CG_FLAK_V * 60) + 18), gone: false, from: e.id });
     if (!wait) ev(s, { t: 'flak', x: mx, y: my, tx: tx, ty: ty });
   }
-  // THE LAUNCHER: the Zanabeel's pride, kept in the keep: a great eight-wheeled missile truck. When the Apache comes the keep's
-  // gate opens and it rolls out into the courtyard, and up goes its missile; once it is up it locks on (the beat, as a missile
-  // man's) and fires it: a big slow missile that climbs, then turns after the Apache (flares lead it off; it can be shot
-  // down). Then down again, another missile pushed out of the keep onto it, and up again, quicker each time it is hurt. The
-  // man on the cab has a machine gun; the crew puts up smoke when the rocket pod locks on to it (the lock is lost in it);
-  // hurt badly, it shuffles to and fro. Rockets hit it three times as hard. It goes up in a run of bangs, its missile (if
-  // it has one up) cooking off into the sky, and burns down to nothing, leaving the courtyard for the landing.
+  // THE LAUNCHER: the Zanabeel's pride, kept in the keep: a great eight-wheeled missile truck, its missile for friendly
+  // territory, not for the Apache (Khaled, 22 Oct, playing the first cut, where it fired at the Apache: "doesn't make sense
+  // ... maybe the last one could be a timed boss where I need to kill it before it launches a missile into friendly
+  // territories"). When the Apache comes the keep's gate opens, it rolls out into the courtyard, its jacks go down and the
+  // count to the launch starts, the missile rising as it runs (the count waits while the Apache is down). With 15 seconds
+  // left the crew lose count, argue, and start again from further back (Khaled's pick, 22 Oct). At nought the engine
+  // lights: a few seconds more to finish it on its rail; then the missile goes, and the mission is lost (Continue starts
+  // the fight again, from the keep). The man on the cab has a machine gun; the crew puts up smoke when the rocket pod locks
+  // on to it (the lock is lost in it). Rockets hit it three times as hard. Destroyed, it goes up in a run of bangs, its
+  // missile cooking off into the sky, and burns down to nothing, leaving the courtyard for the landing.
   function lnNose(e) {
     var a = Math.PI + e.raise * BG.LN_MAX, px = e.x + BG.LN_PIVOT[0], py = e.y + BG.LN_PIVOT[1];
     return { x: px + Math.cos(a) * BG.LN_LEN, y: py + Math.sin(a) * BG.LN_LEN, a: a, px: px, py: py };
@@ -913,45 +939,41 @@ var Sim = Sim || require('./sim.js');
     if (e.st === 'roll') {
       var nx0 = Math.max(e.stopX, e.x - BG.LN_ROLL_V * DT);
       e.wheel += e.x - nx0; e.x = nx0;
-      if (e.x <= e.stopX) { e.st = 'raise'; e.stT = 0; }
-    } else if (e.phase === 3) {
-      // (hurt badly: to and fro in the courtyard, the missile going up all the same)
-      var nx = e.stopX + Math.sin(e.shufT++ / 46) * BG.LN_SHUF;
-      e.wheel += Math.abs(nx - e.x); e.x = nx;
+      if (e.x <= e.stopX) { e.st = 'count'; e.stT = 0; e.clock = BG.LN_CLOCK; e.argue = 0; e.lastSec = 0; ev(s, { t: 'countdown', x: e.x, y: e.y - 40, secs: BG.LN_CLOCK / 60 }); }
     }
+    s.boss.clock = e.st === 'count' || e.st === 'ignite' ? Math.max(0, e.clock) : null; s.boss.argue = e.argue > 0; s.boss.ign = e.st === 'ignite';
     if (e.smokeT > 0) e.smokeT--;
     if (e.smokeCd > 0) e.smokeCd--;
     if (e.ramT > 0) e.ramT--;
-    if (!ok) { if (e.st === 'lock' || e.st === 'aim') { e.st = 'raise'; e.stT = 0; } return; }
-    // (flown into: it is a truck)
-    var hb = heliBox(h);
-    if (!e.ramT && hb.x1 > e.x - K.hw && hb.x0 < e.x + K.hw && hb.y1 > e.y - K.h && hb.y0 < e.y) { e.ramT = 60; I.hurtPlayer(s, e.x, 'launcher'); }
-    // the crew's smoke, the moment the rocket pod has it: the lock is lost in it
-    if (h.rlock === e.id && h.rlockT > 4 && e.smokeCd <= 0 && e.st !== 'roll') { e.smokeT = BG.LN_SMOKE_T; e.smokeCd = BG.LN_SMOKE_CD[e.phase]; ev(s, { t: 'smoke', x: e.x, y: e.y - 20 }); }
-    lnGun(s, e);
-    if (e.st === 'raise') {
-      if (e.missile) e.raise = Math.min(1, e.raise + 1 / BG.LN_RAISE[e.phase]);
-      if (e.raise >= 1 && !s.locking) { n = lnNose(e); e.st = 'lock'; e.stT = 0; e.lk = 0; s.locking = e.id; s.lockT = 0; ev(s, { t: 'lock_on', x: n.x, y: n.y, id: e.id }); }
-    } else if (e.st === 'lock' || e.st === 'aim') {
-      n = lnNose(e);
-      s.lockT = e.lk;
-      var bi = F.BEATS.indexOf(e.lk);
-      if (bi >= 0) ev(s, { t: 'lock', n: bi, of: F.BEATS.length, x: n.x, y: n.y });
-      if (e.lk === F.SAM_LOCK - F.SAM_SOLID) { e.st = 'aim'; ev(s, { t: 'lock', n: F.BEATS.length, of: F.BEATS.length, solid: true, x: n.x, y: n.y }); }
-      if (e.lk >= F.SAM_LOCK) {
-        // away it goes: straight up off the rail, then after the Apache (or a flare, if one is burning)
-        var fl = liveFlare(s);
-        s.missiles.push({ kind: 'big', x: n.x, y: n.y, ang: n.a, v: 30, t: 0, hp: BG.BIG_HP, gone: false, decoy: fl !== null, fl: fl, from: e.id });
-        ev(s, { t: 'big_launch', x: n.x, y: n.y, ang: n.a, decoy: fl !== null });
-        e.st = 'lower'; e.stT = 0; e.missile = false; s.locking = 0; s.lockT = 0;
+    if (e.st === 'spent') return;           // (the missile is away: nothing more to do here)
+    if (ok) {
+      // (flown into: it is a truck)
+      var hb = heliBox(h);
+      if (!e.ramT && hb.x1 > e.x - K.hw && hb.x0 < e.x + K.hw && hb.y1 > e.y - K.h && hb.y0 < e.y) { e.ramT = 60; I.hurtPlayer(s, e.x, 'launcher'); }
+      // the crew's smoke, the moment the rocket pod has it: the lock is lost in it
+      if (h.rlock === e.id && h.rlockT > 4 && e.smokeCd <= 0 && e.st !== 'roll') { e.smokeT = BG.LN_SMOKE_T; e.smokeCd = BG.LN_SMOKE_CD[e.phase]; ev(s, { t: 'smoke', x: e.x, y: e.y - 20 }); }
+      lnGun(s, e);
+    }
+    if (e.st === 'count') {
+      if (e.argue > 0) {
+        // the crew have lost count: the clock stands while they argue, then goes back
+        if (--e.argue === 0) { e.clock += BG.LN_RECOUNT_ADD; ev(s, { t: 'recount', add: BG.LN_RECOUNT_ADD / 60, x: e.x - 40, y: e.y - 50 }); }
+      } else if (ok) e.clock--;
+      e.raise = Math.max(e.raise, clamp(1 - (e.clock - BG.LN_UP_AT) / (BG.LN_CLOCK - BG.LN_UP_AT), 0, 1));
+      if (!e.recounted && e.clock <= BG.LN_RECOUNT_AT) { e.recounted = true; e.argue = BG.LN_ARGUE; ev(s, { t: 'lost_count', x: e.x - 40, y: e.y - 50 }); }
+      var sec = Math.ceil(e.clock / 60);
+      if (sec !== e.lastSec) { e.lastSec = sec; if (sec <= 10 && !e.argue) ev(s, { t: 'count_tick', n: sec, x: e.x, y: e.y }); }
+      if (e.clock <= 0) { e.st = 'ignite'; e.stT = 0; n = lnNose(e); ev(s, { t: 'ignite', x: n.px, y: n.py }); }
+    } else if (e.st === 'ignite') {
+      // nought: the engine lights and burns on the rail for a moment (the last chance); then away it goes
+      if (e.stT >= BG.LN_IGNITE) {
+        n = lnNose(e);
+        s.missiles.push({ kind: 'icbm', x: n.x, y: n.y, ang: n.a, v: 40, t: 0, gone: false, decoy: true, from: e.id });
+        e.missile = false; e.st = 'spent'; e.stT = 0;
+        ev(s, { t: 'big_launch', x: n.x, y: n.y, ang: n.a, away: true });
+        if (!s.lost) s.lost = { t: 0, why: 'launch' };
+        ev(s, { t: 'got_away', x: n.x, y: n.y });
       }
-      e.lk++;
-    } else if (e.st === 'lower') {
-      e.raise = Math.max(0, e.raise - 1 / BG.LN_LOWER);
-      if (e.raise <= 0) { e.st = 'load'; e.stT = 0; ev(s, { t: 'load', x: e.x + 60, y: e.y - 30 }); }
-    } else if (e.st === 'load') {
-      // (the next one pushed out of the keep onto the rail)
-      if (e.stT >= BG.LN_LOAD) { e.missile = true; e.st = 'raise'; e.stT = 0; }
     }
   }
   // the man on the cab with the machine gun: a moment to swing round, then a burst at the Apache
@@ -1074,7 +1096,7 @@ var Sim = Sim || require('./sim.js');
   function crate(s, e, G) {
     var ok = heliOK(s), up = 0, i;
     if (e.st === 'wait') {
-      if (G.awake && e.seen && ok && e.left > 0) { e.st = 'open'; e.stT = 0; ev(s, { t: 'crate_open', x: e.x, y: e.y }); }
+      if (G.awake && e.seen && ok && e.left > 0) { e.st = 'open'; e.stT = e.oops && !e.oopsed ? F.CRATE_OPEN - 4 : 0; ev(s, { t: 'crate_open', x: e.x, y: e.y }); }      // (the one that goes wrong: at once)
     } else if (e.st === 'open') {
       if (e.stT >= F.CRATE_OPEN) {
         var d = droneOut(s, e.g, 0, 1);
@@ -1082,6 +1104,12 @@ var Sim = Sim || require('./sim.js');
         d.off = ((e.left % 3) - 1) * 40;
         e.left--; e.st = e.left > 0 ? 'reload' : 'empty'; e.stT = 0;
         ev(s, { t: 'drone_up', x: e.x, y: e.y - 8 });
+        if (e.oops && !e.oopsed) {
+          // (Khaled's pick, 22 Oct: the first out of this one goes the wrong way, into one of its own crew)
+          e.oopsed = true; d.st = 'oops'; d.stT = 0; d.tgt = 0; I.standDown(s, d);          // (no threat to the Apache: the gun leaves it be)
+          var bd = 1e9;
+          for (i = 0; i < s.enemies.length; i++) { var m2 = s.enemies[i]; if (m2.alive && m2.hostile && m2.k === 'rifle' && m2.st !== 'panic' && !(m2.emerge > 0)) { var dd = Math.abs(m2.x - e.x) + Math.abs(m2.y - e.y); if (dd < 240 && dd < bd) { bd = dd; d.tgt = m2.id; } } }
+        }
         if (e.st === 'empty') I.standDown(s, e);
       }
     } else if (e.st === 'reload') {
@@ -1092,6 +1120,21 @@ var Sim = Sim || require('./sim.js');
   }
   function drone(s, e) {
     var h = s.heli, L = s.L, ok = heliOK(s);
+    if (e.st === 'oops') {
+      // up out of its crate as they all come, then off the wrong way and into one of its own (or, with nobody near, into
+      // the roof): a puff, and him flung
+      var tg = null, i2;
+      for (i2 = 0; i2 < s.enemies.length; i2++) if (s.enemies[i2].id === e.tgt) tg = s.enemies[i2];
+      if (e.stT < 10) { e.y -= 60 * DT; return; }
+      if (e.stT < 34) { e.x += Math.sin(e.stT * 0.5) * 0.8; return; }             // (a moment wobbling about, lost)
+      var ox = tg && tg.alive ? tg.x : e.x - 300, oy = tg && tg.alive ? tg.y - tg.h * 0.6 : e.y + 80;
+      e.x += clamp(ox - e.x, -120 * DT, 120 * DT); e.y += clamp(oy - e.y, -100 * DT, 100 * DT);
+      if (tg && tg.alive && Math.abs(tg.x - e.x) < 8 && Math.abs(oy - e.y) < 10) {
+        ev(s, { t: 'oops', x: e.x, y: e.y }); I.hurtEnemy(s, tg, 99, e.x < tg.x ? 1 : -1, 'blast'); I.hurtEnemy(s, e, 99, 0, 'blast'); return;
+      }
+      if (e.stT > 150 || rockAt(L, e.x, e.y + 4)) { ev(s, { t: 'oops', x: e.x, y: e.y }); I.hurtEnemy(s, e, 99, 0, 'blast'); }
+      return;
+    }
     if (e.st === 'in' || e.st === 'hover') {
       // (it takes up station off the Apache's nose, level with its gun, or off its tail and below, for one that came from
       // behind: where the gun can reach it, which does not point up; in the middle of the picture, clear of the thumbs)
@@ -1188,6 +1231,13 @@ var Sim = Sim || require('./sim.js');
         // (the launcher's missile, cooking off as it burns: away into the sky in a spiral, and pop)
         q.ang += q.spin; q.v = Math.min(260, q.v + 9); q.x += Math.cos(q.ang) * q.v * DT; q.y += Math.sin(q.ang) * q.v * DT - 1.2;
         if (q.t > 66) { q.gone = true; ev(s, { t: 'firework', x: q.x, y: q.y }); }
+        continue;
+      }
+      if (q.kind === 'icbm') {
+        // (the launcher's missile, away: up off its rail and out of the picture, for somewhere else; it is no danger here)
+        q.v = Math.min(420, q.v + 5); q.ang += clamp(-Math.PI / 2 - q.ang, -0.006, 0.006);
+        q.x += Math.cos(q.ang) * q.v * DT; q.y += Math.sin(q.ang) * q.v * DT;
+        if (q.t > 240) q.gone = true;
         continue;
       }
       var big = q.kind === 'big';
@@ -1381,7 +1431,9 @@ var Sim = Sim || require('./sim.js');
     var z2 = s.zone;
     while (z2 + 1 < L.zones.length && s.u >= L.zones[z2 + 1].u) z2++;
     if (z2 !== s.zone) { s.zone = z2; s.zoneScore = s.score; ev(s, { t: 'checkpoint', zone: z2, name: L.zones[z2].name }); I.refill(s); }
-    if (s.status === 'play' && !p.dead && s.u >= rt.len - 2 && !gate && !s.boss) {          // (a boss still going up: after it)
+    // the launcher's missile got away: a moment to watch it go, then the mission is lost (Continue: the keep again)
+    if (s.lost && s.status === 'play') { if (++s.lost.t >= BG.LOST_T) { s.status = 'over'; ev(s, { t: 'over', why: s.lost.why }); } }
+    if (s.status === 'play' && !p.dead && !s.lost && s.u >= rt.len - 2 && !gate && !s.boss) {          // (a boss still going up: after it)
       if (L.fly.landing && !s.ending) { s.ending = { st: 'dawn', t: 0, t2: 0 }; ev(s, { t: 'dawn', x: L.fly.landing.pad, y: L.fly.landing.y }); }
       else if (!L.fly.landing) { s.status = 'clear'; s.clearT = 0; ev(s, { t: 'clear' }); }
     }

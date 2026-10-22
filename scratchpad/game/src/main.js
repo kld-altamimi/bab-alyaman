@@ -342,6 +342,7 @@
           else if (e.k === 'swoop') Sound.sfx('boat_horn', { pan: panOf(e.x) });
           else if (e.k === 'spray_hi' || e.k === 'spray_lo') Sound.sfx('spinup', { gain: 0.9, rate: e.k === 'spray_hi' ? 1.1 : 0.8, pan: panOf(e.x) });
           else if (e.k === 'steam' || e.k === 'pour') Sound.sfx('hiss', { pan: panOf(e.x) });
+          else if (e.k === 'cgun') Sound.sfx('spinup', { gain: 1, rate: 0.6, pan: panOf(e.x) });          // (the Castle Gun's sweep coming)
           else if (e.k === 'lunge') Sound.sfx('horn_truck', { rate: 0.8, pan: panOf(e.x) });
           else if (e.k === 'lob') Sound.sfx('bay', { rate: 1.2, pan: panOf(e.x) });
           else if (e.k === 'tl_scissors') Sound.sfx('snip', { gain: 0.75, rate: 0.9, pan: panOf(e.x) });       // (the Tailor's shears out)
@@ -560,6 +561,23 @@
           if (!flags.smokeTip) { flags.smokeTip = 1; after(10, function () { hint(T('Smoke! Your rockets lose it in there. Use the gun')); }); }
           break;
         case 'big_launch': Sound.sfx('launch', { gain: 1, rate: 0.62, pan: panOf(e.x) }); Sound.sfx('boom_m', { gain: 0.6, rate: 0.7, pan: panOf(e.x) }); buzz(80); break;
+        // the Castle Gun's barrels too hot to fire, after its sweep
+        case 'overheat':
+          Sound.sfx('hiss', { gain: 0.8, rate: 0.9, pan: panOf(e.x) }); Sound.sfx('steam', { gain: 0.6, pan: panOf(e.x) });
+          if (!flags.coolTip) { flags.coolTip = 1; after(10, function () { hint(T('Its barrels are too hot to fire. Now!')); }); }
+          break;
+        // the launcher's count (a timed boss, Khaled 22 Oct): under way; the crew losing count and starting again; the last
+        // ten seconds; nought; the missile away; and one of their drones going the wrong way
+        case 'countdown':
+          Sound.sfx('rlocked', { gain: 0.8, rate: 0.6 });
+          if (!flags.countTip) { flags.countTip = 1; after(40, function () { hint(T('Wreck it before the count runs out')); }); }
+          break;
+        case 'lost_count': speak('grunt_count', { pri: 6, who: 'RIFLEMAN', wait: true, keep: true }); break;
+        case 'recount': speak('cmdr_again', { pri: 6, who: 'COMMANDER', wait: true, keep: true }); Sound.sfx('pick_gren', { gain: 0.6 }); break;
+        case 'count_tick': Sound.sfx('beep', { gain: e.n <= 3 ? 0.9 : 0.6, rate: e.n <= 3 ? 1.25 : 1 }); break;
+        case 'ignite': Sound.sfx('rip', { gain: 0.9, rate: 0.5, pan: panOf(e.x) }); Sound.sfx('spinup', { gain: 1, rate: 0.45, pan: panOf(e.x) }); buzz(60); break;
+        case 'got_away': after(40, function () { Sound.sfx('boom_m', { gain: 0.3, rate: 0.5 }); }); break;
+        case 'oops': speak('grunt_face', { pri: 3, who: 'RIFLEMAN' }); break;
         case 'load': Sound.sfx('clatter', { gain: 0.45, rate: 0.8, pan: panOf(e.x) }); break;
         case 'cookoff': Sound.sfx('launch', { gain: 0.8, rate: 1.4, pan: panOf(e.x) }); break;
         case 'firework': Sound.sfx('pop', { gain: 0.9, rate: 0.9 }); Sound.sfx('boom_s', { gain: 0.5, rate: 1.35 }); break;

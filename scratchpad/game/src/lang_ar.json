@@ -460,5 +460,16 @@
  "Tell us on X": "شاركنا رأيك على X",
  "I liked it": "أعجبتني",
  "I didn't like it": "لم تعجبني",
- "Feedback on {0}: ": "ملاحظاتي على {0}: "
+ "Feedback on {0}: ": "ملاحظاتي على {0}: ",
+ "LAUNCH IN {0}": "الإطلاق بعد {0}",
+ "IGNITION!": "اشتعال!",
+ "THE MISSILE GOT AWAY": "أفلت الصاروخ",
+ "WRECK IT BEFORE IT LAUNCHES": "دمّرها قبل الإطلاق",
+ "Wreck it before the count runs out": "دمّرها قبل أن ينتهي العدّ",
+ "Its barrels are too hot to fire. Now!": "المدفع ساخن ولا يطلق. الآن!",
+ "Ten! Nine! Eight! ...Eight?": "عشرة! تسعة! ثمانية! ... ثمانية؟",
+ "From the top, you donkey!": "من الأول يا حمار!",
+ "I'M ONLY THE COOK": "أنا الطباخ بس",
+ "MADE IN TEHRAN": "صنع في طهران",
+ "FRAGILE": "قابل للكسر"
 }

@@ -170,7 +170,18 @@ function pilot(opt) {
       for (const e of s.enemies) if (e.alive && e.k === 'drone' && (e.st === 'tell' || e.st === 'dive')) { ay = e.y < h.y ? 1 : -1; if (h.y > s.camY + VH - 46) ay = -1; if (h.y < s.camY + 50) ay = 1; }
       for (const q of s.missiles) if (!q.decoy && Math.hypot(q.x - h.x, q.y - h.y) < 120 && (h.flareCd > 0 || q.kind === 'rpg')) ay = q.y < h.y ? 1 : -1;
       // out of the ring where a shell is coming down (a mortar's, the Castle Gun's flak)
-      for (const q of (s.shells || [])) if (q.t > -10 && Math.hypot(q.tx - h.x, q.ty - h.y) < (q.kind === 'flak' ? 30 : F.MORTAR_R) + 34) { const dx = h.x - q.tx, dy = h.y - q.ty, dl = Math.hypot(dx, dy) || 1; ax = dx / dl; ay = dy / dl; if (h.y < s.camY + 50) ay = 1; if (h.y > s.camY + VH - 46) ay = -1; }
+      // (a shell marked near it: off to whichever side has least coming down on it; a shell right on it has no 'away')
+      const shells = (s.shells || []).filter(q => q.t > -10);
+      if (shells.some(q => Math.hypot(q.tx - h.x, q.ty - h.y) < (q.kind === 'flak' ? 30 : F.MORTAR_R) + 44)) {
+        let best = null;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, -1], [0, 1], [0.7, -0.7], [-0.7, -0.7], [0.7, 0.7], [-0.7, 0.7]]) {
+          const px = h.x + dx * 90, py = h.y + dy * 60;
+          if (py < s.camY + F.EDGE_T + 4 || py > s.camY + VH - F.EDGE_B - 4 || px < s.cam + F.EDGE_X || px > s.cam + s.viewW - F.EDGE_X || X.rockAt(s.L, px, py)) continue;
+          let danger = 0; for (const q of shells) danger += Math.max(0, 80 - Math.hypot(q.tx - px, q.ty - py));
+          if (!best || danger < best.d) best = { dx, dy, d: danger };
+        }
+        if (best) { ax = best.dx; ay = best.dy; }
+      }
     }
     if (!opt.noRockets && rocketWait <= 0 && s.enemies.some(e => e.alive && e.hostile && e.k === 'aa' && X.inView(s, e.x, e.y, -10) && Math.abs(e.y - 12 - h.y) < 40 && e.x > h.x)) { grenade = true; rocketWait = 30; }
     // on the aim stick: at the nearest thing the gun can reach (or nothing, and not firing); else FIRE held, and the gun finds its own
