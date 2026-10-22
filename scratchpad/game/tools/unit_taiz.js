@@ -55,6 +55,88 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(clear || z === 0, 'zone ' + z + ' starts in the open at ' + h.x.toFixed(0) + ',' + h.y.toFixed(0));
   }
   console.log('route ' + rt.len.toFixed(0) + ' px; zones at u = ' + L.zones.map(z => z.u.toFixed(0)).join(', ') + '; fights at u = ' + L.gates.map(g => g.id + ' ' + g.u.toFixed(0)).join(', '));
+  // the three tied up on the roofs (22 Oct): each on his roof, in his zone, in the open, and at one of the fights (where the
+  // camera holds) in the picture at every width, with room above him for the Apache to come down over him
+  const caps = L.props.filter(q => q.k === 'detainee');
+  ok(caps.length === 3 && s.stats.detainees === 3, 'three tied up on the roofs (' + caps.length + ')');
+  for (const q of caps) {
+    const pi = L.plats.findIndex(p => p.id === q.plat), y = pi >= 0 ? Sim.platY(L.plats[pi], q.x) : null;
+    ok(y !== null, 'captive x=' + q.x + ' on his roof ' + q.plat);
+    if (y === null) continue;
+    const z = L.zones.reduce((a, zz, i) => (zz.u <= X.uOf(rt, q.x, y) ? i : a), 0);
+    ok(z === q.zone, 'captive x=' + q.x + ' in zone ' + q.zone + ' (by the route: ' + z + ')');
+    let sky = true;
+    for (let dy = 6; dy <= F.HANDS + F.RESCUE_UP; dy += 4) for (const dx of [-12, 0, 12]) if (X.rockAt(L, q.x + dx, y - dy)) sky = false;
+    ok(sky, 'captive x=' + q.x + ': open sky over him');
+    for (const vw of [WW(384), WW(468)]) {
+      // (where the camera may be: from where it first shows him, at every step along the route, to where he is gone again)
+      const seen = (u) => { const c = X.at(rt, u), cam = c.x - vw / 2, camY = c.y - VH / 2; return { cam, camY, in: q.x >= cam + 12 && q.x <= cam + vw - 12 && y - 50 >= camY + 10 && y <= camY + VH - 20 }; };
+      const hx = q.x - F.ROPE_AT[0], hy = y - F.HANDS - 40 - F.ROPE_AT[1];
+      let fine = 0, shown = 0;
+      for (let u = 0; u <= rt.len; u += 8) {
+        const v = seen(u);
+        if (!v.in) continue;
+        shown++;
+        // (well in the picture, clear of the thumbs, and the Apache able to be over him there)
+        if (q.x >= v.cam + vw * 0.2 && q.x <= v.cam + vw * 0.8 && hx >= v.cam + F.EDGE_X && hx <= v.cam + vw - F.EDGE_X && hy >= v.camY + F.EDGE_T && hy <= v.camY + VH - F.EDGE_B &&
+            ![[-F.HW, 0], [F.HW, 0], [0, F.HB], [0, -F.HT]].some(([dx, dy]) => X.rockAt(L, hx + dx, hy + dy))) fine++;
+      }
+      const gate = L.gates.find(g => seen(g.u).in);
+      ok(gate && fine * 8 >= 120, 'captive x=' + q.x + ' (width ' + vw + '): in the picture at fight ' + (gate && gate.id) + ', and reachable from the air over ' + fine * 8 + ' px of the way');
+    }
+  }
+})();
+
+// ------------------------------------------------------------------ the people tied up on the roofs
+(function captives() {
+  const L = TAIZ, vw = WW(468), rt = X.route(L);
+  // the Apache put over him (and kept from harm: this is about the rope), at the fight where he is in the picture
+  const over = (z, dx, up) => {
+    const s = Sim.create(L, { viewW: vw, viewH: VH, zone: z, seed: 3, stats: z === 0 ? { kills: 0, captures: 0, freed: 0, detainees: 0, shots: 0, hits: 0, plates: 0, deaths: 0, continues: 0, grenades: 0, streakBest: 0, hurtBy: {}, rescued: [] } : undefined });
+    s.heli.st = 'fly'; s.p.inv = 1e9;
+    const o = s.props.find(q => q.k === 'detainee' && q.st === 'tied');
+    let best = null;
+    for (const g of L.gates) { const c = X.at(rt, g.u); if (o.x > c.x - vw * 0.3 && o.x < c.x + vw * 0.3 && (!best || Math.abs(c.x - o.x) < Math.abs(X.at(rt, best.u).x - o.x))) best = g; }
+    s.u = best.u; Sim.step(s, { viewW: vw, viewH: VH });
+    const h = s.heli; h.x = o.x - F.ROPE_AT[0] + dx; h.y = o.y - F.HANDS - up - F.ROPE_AT[1]; h.vx = h.vy = 0; h.tilt = 0;
+    return { s, o };
+  };
+  const hold = (s, n) => { const ev = []; for (let t = 0; t < n; t++) { Sim.step(s, { viewW: vw, viewH: VH }); for (const e of s.events) ev.push(e); } return ev; };
+  for (const z of [0, 1, 2]) {
+    const { s, o } = over(z, 0, 50), r0 = s.p.grenades, sc0 = s.score;
+    const ev = hold(s, F.RESCUE_T + 4);
+    ok(o.st === 'lift' && s.stats.freed === 1 && s.p.grenades === r0 + F.RESCUE_ROCKETS && s.score - sc0 >= 500, 'zone ' + z + ': held over him, he takes the rope (' + o.st + ', freed ' + s.stats.freed + ', rockets ' + r0 + ' -> ' + s.p.grenades + ')');
+    ok(ev.some(e => e.t === 'freed') && ev.some(e => e.t === 'pickup' && e.k === 'rockets') && ev.some(e => e.t === 'rope_down'), 'zone ' + z + ': the rope going down, him freed, five rockets');
+    hold(s, F.LIFT_T + 2);
+    ok(o.gone && o.st === 'aboard', 'zone ' + z + ': and up it into the Apache');
+  }
+  // only over him: off to the side, or too high, nothing; held over him a while and away, the rope goes back up
+  { const { s, o } = over(0, F.RESCUE_DX + 14, 50); hold(s, 120); ok(o.st === 'tied' && !o.rope, 'off to the side: no rope'); }
+  { const { s, o } = over(0, 0, F.RESCUE_UP + 30); hold(s, 120); ok(o.st === 'tied' && !o.rope, 'too high over him: no rope'); }
+  { const { s, o } = over(0, 0, 50); hold(s, F.RESCUE_T >> 1); const r = o.rope; s.heli.x += 120; hold(s, F.RESCUE_T); ok(r > 0.4 && o.st === 'tied' && o.rope === 0, 'over him a while, then off: the rope back up (' + r.toFixed(2) + ' -> ' + o.rope + ')'); }
+  // a continue: whoever was freed before it is not there to be freed again
+  {
+    const { s, o } = over(0, 0, 50); hold(s, F.RESCUE_T + F.LIFT_T + 6);
+    s.status = 'over';
+    const c = Sim.continueZone(s, vw);
+    ok(c.stats.freed === 1 && !c.props.some(q => q.k === 'detainee' && q.px === o.px), 'after a continue he is not tied up there again (freed ' + c.stats.freed + ')');
+  }
+  // all three: the Liberator; fewer: not
+  {
+    const st = { kills: 0, captures: 0, freed: 0, detainees: 0, shots: 0, hits: 0, plates: 0, deaths: 0, continues: 0, grenades: 0, streakBest: 0, hurtBy: {}, rescued: [] };
+    let last = null;
+    for (const z of [0, 1, 2]) {
+      const s = Sim.create(L, { viewW: vw, viewH: VH, zone: z, seed: 3, stats: st });
+      s.heli.st = 'fly'; s.p.inv = 1e9;
+      const o = s.props.find(q => q.k === 'detainee' && q.st === 'tied' && q.px > (z ? L.props[z - 1].x : 0));
+      s.u = X.uOf(rt, o.x, o.y); Sim.step(s, { viewW: vw, viewH: VH });
+      s.heli.x = o.x - F.ROPE_AT[0]; s.heli.y = o.y - F.HANDS - 50 - F.ROPE_AT[1];
+      if (z === 1) ok(!Sim.results(s).liberator, 'one of three: no Liberator');
+      hold(s, F.RESCUE_T + 4);
+      last = s;
+    }
+    ok(last.stats.freed === 3 && Sim.results(last).liberator, 'all three: the Liberator (' + last.stats.freed + ' of ' + last.stats.detainees + ')');
+  }
 })();
 
 // ------------------------------------------------------------------ the opening, on foot
@@ -115,7 +197,8 @@ function check(s, prev, where) {
     for (const [dx, dy] of [[-F.HW, 0], [F.HW, 0], [0, F.HB], [0, -F.HT]]) if (X.rockAt(s.L, h.x + dx, h.y + dy)) { bad.push('Apache in stone at ' + h.x.toFixed(1) + ',' + h.y.toFixed(1)); break; }
   }
   if (s.u < prev.u - 1e-9) bad.push('camera went back along the route');
-  if (p.plates < 0 || p.plates > Sim.T.PLATES || p.lives < 0 || p.grenades < 0 || p.grenades > F.ROCKETS) bad.push('bad counters');
+  if (p.plates < 0 || p.plates > Sim.T.PLATES || p.lives < 0 || p.grenades < 0 || p.grenades > F.ROCKETS + F.RESCUE_ROCKETS * s.stats.detainees) bad.push('bad counters');
+  if (s.stats.freed > s.stats.detainees || s.stats.freed !== (s.stats.rescued || []).length) bad.push('freed ' + s.stats.freed + ' of ' + s.stats.detainees + ', rescued ' + JSON.stringify(s.stats.rescued));
   if (s.bullets.length > 400 || s.enemies.length > 90 || s.missiles.length > 20 || s.rockets.length > 30 || s.flares.length > 60) bad.push('too many things');
   const count = {};
   for (const e of s.enemies) {
@@ -150,6 +233,12 @@ function pilot(opt) {
       if (left !== null) tx = Math.max(s.cam + F.EDGE_X + 12, Math.min(tx, left - 90));
       if (top !== null) ty = Math.min(ty, top - 44);
       ty = Math.max(ty, s.camY + F.EDGE_T + 6);
+    }
+    // somebody tied up on a roof in the picture: down over him until he is up the rope (opt.noRescue: leave him)
+    if (!opt.noRescue) for (const o of s.props) {
+      if (o.k !== 'detainee' || o.gone || o.st !== 'tied' || !X.inView(s, o.x, o.y - 30, -16)) continue;
+      tx = o.x - F.ROPE_AT[0]; ty = o.y - F.HANDS - 50 - F.ROPE_AT[1];
+      break;
     }
     // (something in the way ahead: go over it)
     for (let k = 1; k <= 4; k++) if (X.rockAt(s.L, h.x + Math.sign(tx - h.x || 1) * (F.HW + 12 * k), h.y + F.HB + 4)) { ty = Math.min(ty, h.y - 30); break; }
@@ -221,7 +310,7 @@ function run(bot, o) {
     inp.viewW = s.viewW; inp.viewH = s.viewH;
     Sim.step(s, inp);
     for (const e of s.events) {
-      if (o.log && ['checkpoint', 'life_lost', 'go', 'qanya', 'scatter', 'sam_launch', 'decoyed', 'failsafe', 'clear', 'over'].includes(e.t)) log.push((t / 60).toFixed(1) + 's ' + e.t + (e.gate ? ' ' + e.gate : '') + (e.name ? ' ' + e.name : '') + (e.why ? ' ' + e.why : '') + (e.t === 'sam_launch' && e.decoy ? ' (at the flares)' : ''));
+      if (o.log && ['checkpoint', 'life_lost', 'go', 'qanya', 'scatter', 'sam_launch', 'decoyed', 'failsafe', 'clear', 'over', 'freed'].includes(e.t)) log.push((t / 60).toFixed(1) + 's ' + e.t + (e.gate ? ' ' + e.gate : '') + (e.name ? ' ' + e.name : '') + (e.why ? ' ' + e.why : '') + (e.t === 'sam_launch' && e.decoy ? ' (at the flares)' : ''));
       if (e.t === 'sam_launch') launches++;
       if (e.t === 'decoyed' || (e.t === 'sam_launch' && e.decoy)) decoys++;
       if (e.t === 'sam_boom' && e.shot) shotDown++;
@@ -245,9 +334,17 @@ for (const [vw, lanes, seed, stick] of [[WW(468), [0.18, 0.25], 1, true], [WW(38
   const o = run(pilot({ stick }), { viewW: vw, lanes, seed, seconds: 600, continues: 3, log: true, name: 'pilot ' + vw });
   const st = o.s.stats;
   console.log('pilot ' + vw + (stick ? ' (aim stick)' : ' (FIRE held)') + ': ' + o.s.status + ' at ' + o.s.time.toFixed(1) + 's, zone ' + o.s.zone + ', score ' + o.s.score + ', kills ' + st.kills + ', scattered ' + o.s.scattered +
-              ', deaths ' + st.deaths + ', continues ' + o.conts + ', plates lost ' + st.plates + ' ' + JSON.stringify(st.hurtBy) + ', rockets ' + st.grenades + ', failsafe ' + o.s.failsafe + ', missiles ' + o.launches + ' (' + o.decoys + ' to flares, ' + o.shotDown + ' shot down)');
+              ', deaths ' + st.deaths + ', continues ' + o.conts + ', plates lost ' + st.plates + ' ' + JSON.stringify(st.hurtBy) + ', rockets ' + st.grenades + ', failsafe ' + o.s.failsafe + ', missiles ' + o.launches + ' (' + o.decoys + ' to flares, ' + o.shotDown + ' shot down)' +
+              ', freed ' + st.freed + ' of ' + st.detainees + (Sim.results(o.s).liberator ? ' (Liberator)' : ''));
   if (vw === WW(468) && stick) console.log('  ' + o.log.join('\n  '));
   ok(o.s.status === 'clear', 'pilot ' + vw + ' clears the range');
+  ok(st.freed === 3, 'pilot ' + vw + ' lifts all three off the roofs (' + st.freed + ')');
+}
+// left on the roofs: no Liberator, and the results say somebody is still waiting on a roof
+{
+  const o = run(pilot({ stick: true, noRescue: true }), { viewW: WW(468), seed: 6, seconds: 600, continues: 3 });
+  ok(o.s.status === 'clear' && o.s.stats.freed < 3 && !Sim.results(o.s).liberator, 'not going for them: not all three lifted out by chance, no Liberator (' + o.s.status + ', freed ' + o.s.stats.freed + ')');
+  console.log('pilot leaving them: ' + o.s.status + ' at ' + o.s.time.toFixed(1) + 's, freed ' + o.s.stats.freed + ' of ' + o.s.stats.detainees);
 }
 // no flares, and no dodging: the missiles and the drones must matter
 for (const o2 of [{ noFlares: true }, { noFlares: true, stick: true }, { lateFlares: true, stick: true }, { noDodge: true }, { noFlares: true, noDodge: true }]) {

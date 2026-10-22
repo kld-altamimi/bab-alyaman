@@ -53,7 +53,12 @@ var Sim = Sim || require('./sim.js');
     LIGHT_LEN: 440, LIGHT_HALF: 0.075, LIGHT_SWEEP: 0.009, SPOT_T: 24, SPOT_LOSE: 50,   // a searchlight on the ground: in its beam long enough, it has the Apache
     SCREAM_GAP: 420,                             // the least time between two screams of «قنية سودا!»
     PANIC_T: 22,                                 // how long a man must stand in the searchlight before he runs
-    BEAM_LEN: 280, BEAM_HALF: 0.2                // the searchlight's reach and half its width (radians)
+    BEAM_LEN: 280, BEAM_HALF: 0.2,               // the searchlight's reach and half its width (radians)
+    // the people they keep tied up on the roofs (Khaled, 22 Oct 22:49: "there aren't any hostages to save in Taiz"; he chose
+    // a rescue from the air): held over one, no further to the side than RESCUE_DX and no higher over his hands than
+    // RESCUE_UP, the Apache lets a rope down to him in RESCUE_T (and takes it back up half as fast again when it moves off);
+    // he goes up it in LIFT_T. ROPE_AT: where it hangs from, under the airframe; HANDS: how far up him he takes it
+    RESCUE_DX: 30, RESCUE_UP: 72, RESCUE_T: 40, LIFT_T: 34, ROPE_AT: [-4, 11], HANDS: 30, RESCUE_ROCKETS: 5
   };
   F.RLOCK_BEEPS = [0, 8, 16];
   // what the rockets would sooner have (the pod locks on to the most worth it ahead of the nose, the nearest of equals)
@@ -1330,6 +1335,42 @@ var Sim = Sim || require('./sim.js');
         de.air = false; de.vy = 0; de.vx *= 0.965; de.x += de.vx * DT; de.y = groundAt(L, de.x); de.ang = slopeAt(L, de.x);
       }
     }
+    rescue(s);
+  }
+  // ------------------------------------------------------------------ the people tied up on the roofs
+  // (Khaled, 22 Oct 22:49: "there aren't any hostages to save in Taiz"; he chose a rescue from the air, three of them.) One
+  // on a roof in the lower town, one beside the old city's gate, one in the village, each with a lantern by him. Hold the
+  // Apache low over one: a rope goes down to him, he takes it and goes up it into the Apache (he climbs out with Yazeed in
+  // the courtyard at the end). Each is 500 and five rockets ("Take this"), and all three is the Liberator. (The roofs being
+  // stone, the Apache can come down over him only as far as his roof lets it: low beside him counts as well.)
+  function ropeAt(h) { return bodyAt(h, F.ROPE_AT); }
+  // is the Apache where the rope reaches him (b: where it hangs from)?
+  function overHim(b, o) { var dx = b.x - o.x, dy = (o.y - F.HANDS) - b.y; return Math.abs(dx) <= F.RESCUE_DX && dy >= -F.HANDS - 12 && dy <= F.RESCUE_UP; }
+  function rescue(s) {
+    var h = s.heli, p = s.p, ok = heliOK(s) && !s.intro && !s.ending && !s.lost, b = ok ? ropeAt(h) : null, i;
+    for (i = 0; i < s.props.length; i++) {
+      var o = s.props[i];
+      if (o.k !== 'detainee' || o.gone) continue;
+      if (o.st === 'tied') {
+        // (the first time one is well in the picture, a word on what to do)
+        if (!o.seen && inView(s, o.x, o.y - 24, -60)) { o.seen = true; ev(s, { t: 'captive', x: o.x, y: o.y }); }
+        var over = !!b && overHim(b, o), was = o.rope || 0;
+        o.rope = clamp(was + (over ? 1 : -1.5) / F.RESCUE_T, 0, 1);
+        if (over && !was) ev(s, { t: 'rope_down', x: b.x, y: b.y });
+        if (o.rope >= 1) {
+          o.st = 'lift'; o.t = 0;
+          s.stats.freed++;
+          (s.stats.rescued || (s.stats.rescued = [])).push(o.px);
+          s.score += 500;
+          p.grenades = Math.min(99, p.grenades + F.RESCUE_ROCKETS);
+          ev(s, { t: 'freed', x: o.x, y: o.y });
+          ev(s, { t: 'pickup', k: 'rockets', x: o.x, y: o.y - 24 });
+        }
+      } else if (o.st === 'lift') {
+        // (up the rope; o.t is counted with the other things standing in the level)
+        if (o.t >= F.LIFT_T || !ok) { o.st = 'aboard'; o.gone = true; }
+      }
+    }
   }
 
   // ------------------------------------------------------------------ what the rest of the game asks
@@ -1465,12 +1506,26 @@ var Sim = Sim || require('./sim.js');
       var f = smooth(E.t2 / BG.SETTLE_T);
       h.x = E.hx + (Q.pad - E.hx) * f; h.y = E.hy + (Q.y - 19 - E.hy) * f; h.vx = 0; h.vy = 0; h.tilt *= 0.9;
       p.x = h.x; p.y = h.y;
-      if (E.t2 >= BG.SETTLE_T) { E.st = 'out'; E.t2 = 0; h.st = 'landed'; s.yaz = { x: h.x + 12, y: Q.y - 18, face: 1, st: 'board', walkD: 0, t: 0, a: 0 }; ev(s, { t: 'touchdown', x: h.x, y: h.y }); }
+      if (E.t2 >= BG.SETTLE_T) {
+        E.st = 'out'; E.t2 = 0; h.st = 'landed'; s.yaz = { x: h.x + 12, y: Q.y - 18, face: 1, st: 'board', walkD: 0, t: 0, a: 0 };
+        // (and after him, whoever was lifted off the roofs on the way: out one by one, a few steps off the other way, and a wave)
+        E.men = [];
+        var nm = Math.min(3, (s.stats.rescued || []).length);
+        for (var mk = 0; mk < nm; mk++) E.men.push({ x: h.x - 4, y: Q.y - 18, a: 0, st: 'wait', t: -(30 + mk * 20), walkD: 0, to: h.x - 80 - mk * 24 });     // (clear of its tail)
+        ev(s, { t: 'touchdown', x: h.x, y: h.y });
+      }
     } else if (E.st === 'out') {
       E.t2++;
       var y = s.yaz;
       if (E.t2 < 22) { y.a = E.t2 / 22; y.y = Q.y - 18 + E.t2 * 18 / 22; y.st = 'board'; }
       else { y.a = 1; y.y = Q.y; y.st = 'walk'; y.face = 1; y.x += 46 * DT; y.walkD += 46 * DT; }
+      for (var mi = 0; E.men && mi < E.men.length; mi++) {
+        var m = E.men[mi];
+        if (++m.t < 0) continue;
+        if (m.t < 22) { m.st = 'board'; m.a = m.t / 22; m.y = Q.y - 18 + m.t * 18 / 22; }
+        else if (m.x > m.to) { m.st = 'walk'; m.a = 1; m.y = Q.y; m.x = Math.max(m.to, m.x - 34 * DT); m.walkD += 34 * DT; }
+        else { m.st = 'wave'; m.a = 1; m.y = Q.y; }
+      }
       if (E.t2 === 100) { s.status = 'clear'; s.clearT = 0; ev(s, { t: 'clear' }); }
     }
   }
@@ -1486,6 +1541,6 @@ var Sim = Sim || require('./sim.js');
   Sim.OP = OP;
   Sim.ext.fly = { create: create, player: player, man: man, step: step, hitHeli: hitHeli, shot: shot, blast: blast, groups: groups, sweep: sweep, rock: rock,
                   route: route, at: at, ahead: ahead, uOf: uOf, rockAt: rockAt, rocks: rocks, heliBox: heliBox, inView: inView, dark: dark, muzzle: muzzle, lamp: lamp, inBeam: inBeam,
-                  reach: reach, bodyAt: bodyAt, standY: standY, F: F };
+                  reach: reach, bodyAt: bodyAt, standY: standY, ropeAt: ropeAt, overHim: overHim, F: F };
 })();
 if (typeof module !== 'undefined') module.exports = Sim;

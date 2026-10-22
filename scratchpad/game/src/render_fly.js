@@ -1137,6 +1137,7 @@
       }
     }
     trails(s, paused);
+    captives(s);
     walker(s);
     drawHeli(s, paused);
     // the Apache in a searchlight's beam: lit up
@@ -1263,7 +1264,8 @@
       if (!paused && ++fq.t > 3) flashes.splice(i, 1);
     }
   }
-  // Yazeed on foot, in the opening: standing in the street, walking to the Apache, climbing in
+  // Yazeed on foot, in the opening: standing in the street, walking to the Apache, climbing in. (And at the end, in the
+  // courtyard, out after him whoever was lifted off the roofs on the way: a few steps off, then a wave of thanks.)
   function walker(s) {
     var y = s.yaz;
     if (!y || y.st === 'gone') return;
@@ -1271,7 +1273,56 @@
     var walk = (Math.floor(y.walkD / 8) % 2) ? 'yazeed_pass_side_fwd' : 'yazeed_run_side_fwd';
     if (y.st === 'board') K.spr('yazeed_jump_side_up', y.x, y.y, false, y.a);
     else K.spr(y.st === 'walk' ? walk : 'yazeed_stand_side_fwd', y.x, y.y, y.face < 0);
+    var men = s.ending && s.ending.men;
+    for (var i = 0; men && i < men.length; i++) {
+      var m = men[i];
+      if (m.t < 0) continue;
+      K.src(tint(s, { x: m.x, y: m.y, h: 34 }));
+      if (m.st === 'board') K.spr('det_freed', m.x, m.y, false, m.a);
+      else if (m.st === 'walk') K.spr((Math.floor(m.walkD / 7) % 2) ? 'det_walk1' : 'det_walk2', m.x, m.y, true);
+      else K.spr('det_freed', m.x, m.y - (((tick + i * 11) >> 4) % 2), false);
+    }
     K.src(null);
+  }
+  // the people tied up on the roofs (Khaled, 22 Oct: "there aren't any hostages to save in Taiz"), each in the light of a
+  // lantern by him, so that he shows at night (and wriggling at his ropes now and then); the Apache's rope coming down to
+  // him as it holds over him, as far as it has got; then up it he goes, and in. (Drawn before the Apache: under it.)
+  function captives(s) {
+    var h = s.heli, F = Sim.F, X = Sim.ext.fly, i;
+    for (i = 0; i < s.props.length; i++) {
+      var o = s.props[i];
+      if (o.k !== 'detainee' || o.gone || o.x < s.cam - 60 || o.x > s.cam + W + 60) continue;
+      var b = h ? X.ropeAt(h) : null, hy = o.y - F.HANDS;
+      if (o.st === 'tied') {
+        var lx = o.x + 12, ly = o.y, fl = 0.4 + 0.05 * Math.sin(tick * 0.31 + o.x) + 0.04 * Math.sin(tick * 0.83 + o.x * 0.1);
+        glow(lx, ly - 6, 34, [255, 196, 110], fl);
+        pool(lx - 4, ly, 30, [255, 190, 100], 0.22);
+        cx.fillStyle = '#2a1c10'; cx.fillRect(lx - 2, ly - 9, 5, 9); cx.fillRect(lx - 1, ly - 11, 3, 2);
+        cx.fillStyle = (tick >> 3) % 7 ? '#ffd27a' : '#ffe9b0'; cx.fillRect(lx - 1, ly - 7, 3, 5);
+        var wr = ((tick + Math.floor(o.x)) % 160) < 14 ? (((tick >> 1) % 2) ? 1 : -1) : 0;
+        K.src(null);
+        K.spr('det_tied', o.x + wr, o.y);
+        // the rope, down from under the Apache towards his hands as far as it has got
+        if (b && o.rope > 0) {
+          var ex = b.x + (o.x - b.x) * o.rope, ey = b.y + Math.max(4, hy - b.y) * o.rope;
+          rope(b.x, b.y, ex, ey);
+        }
+      } else if (o.st === 'lift' && b) {
+        // up the rope with it, into the Apache (gone from sight behind it at the top)
+        var f = smooth(o.t / F.LIFT_T), mx = o.x + (b.x - o.x) * f, my = o.y + (b.y + 40 - o.y) * f;
+        rope(b.x, b.y, mx + 1, my - F.HANDS);
+        K.src(null);
+        K.spr('det_freed', mx, my, false, f > 0.75 ? Math.max(0, 1 - (f - 0.75) / 0.25) : 1);
+      }
+    }
+  }
+  function smooth(t) { t = t < 0 ? 0 : (t > 1 ? 1 : t); return t * t * (3 - 2 * t); }
+  function rope(x0, y0, x1, y1) {
+    cx.save();
+    cx.strokeStyle = '#c9a46a'; cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(x1, y1); cx.stroke();
+    cx.fillStyle = '#e0c088'; cx.fillRect(Math.round(x1) - 1, Math.round(y1) - 1, 3, 3);
+    cx.restore();
   }
   // light about a lamp (added to what is there), and a flattened pool of it on what it falls on
   function glow(x, y, r, c, a) {

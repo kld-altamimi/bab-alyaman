@@ -117,7 +117,15 @@ var LEVEL_TAIZ = (function () {
     gates: gates,
     groups: groups,
     spawns: [],                 // (the generic ones: none. The Apache's are below)
-    props: [],
+    // the three they keep tied up on the roofs, each with a lantern by him (Khaled, 22 Oct 22:49: "there aren't any hostages
+    // to save in Taiz"; three, lifted out from the air: fly.js rescue). In the lower town on the tall house past the first
+    // fight's roofs; beside the old city's gate, between its water tank and its stair-head; in the village, left of the
+    // dish on the middle house, its two guards beside him
+    props: [
+      { k: 'detainee', x: 1736, plat: 'h127', zone: 0 },
+      { k: 'detainee', x: 3209, plat: 'h181', zone: 1 },
+      { k: 'detainee', x: 5841, plat: 'h239', zone: 2 }
+    ],
     fly: {
       arrive: true,             // (a continue from the first checkpoint: the Apache comes in from the left, over the street)
       // the opening, on foot in the street: Yazeed, the five across the street from him, the doors they run for, where the

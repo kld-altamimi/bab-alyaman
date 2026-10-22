@@ -382,7 +382,7 @@ var Render = (function () {
           pop(e.x, e.y - 50, T('FREED {0}', [500]), 's_lav');
           posts.push({ x: e.x, y: e.y });
           break;
-        case 'pickup': pop(e.x, e.y - 26, e.k === 'hmg' ? T('HEAVY MG') : (e.k === 'bean' || e.k === 'chilli' ? '+' + e.pts : T('GRENADES +5'))); break;
+        case 'pickup': pop(e.x, e.y - 26, e.k === 'hmg' ? T('HEAVY MG') : (e.k === 'bean' || e.k === 'chilli' ? '+' + e.pts : (e.k === 'rockets' ? T('ROCKETS +5') : T('GRENADES +5')))); break;
         // ---- Mocha
         case 'emerge': part('puff', e.x - 8, e.y - 2, { life: 9 }); part('puff', e.x + 8, e.y - 2, { life: 9, flip: true }); break;
         case 'fling': part('puff', e.x, e.y, { life: 7 }); break;
@@ -821,7 +821,7 @@ var Render = (function () {
         spr(gr ? 'crate_g' : 'crate_h', o.x, o.y + 1);
         if ((tick >> 4) % 2) text('s_org', gr ? 'G' : 'H', o.x - 2, o.y - 27);
       }
-      else if (o.k === 'detainee') {
+      else if (o.k === 'detainee' && !L.fly) {          // (Taiz's, on the roofs with their lanterns and the rope: render_fly.js)
         var dn = o.look || 'det';                       // (the Souq's shopkeepers have their own clothes)
         if (o.st === 'tied') spr(dn + '_tied', o.x, o.y);
         else if (o.st === 'freed') spr(dn + '_freed', o.x + 5, o.y);
@@ -1134,7 +1134,7 @@ var Render = (function () {
     text('tall', clock(s.time), mid - Math.floor(textW('tall', clock(s.time)) / 2), 5);
     text('s_lav', T('PAR {0}', [clock(s.L.par)]), mid, 30, 'c');
     var fx0 = W - (narrow ? 164 : 168);
-    if (!(s.L.fly && !s.stats.detainees)) {                       // (Taiz's test range has nobody to free yet)
+    if (!(s.L.fly && !s.stats.detainees)) {                       // (a flying mission with nobody to free has no count)
       tab(fx0, 6, tabW(T('FREED'), 30), T('FREED'));
       for (i = 0; i < Math.max(1, s.stats.detainees); i++) spr(i < s.stats.freed ? 'hud_pow_on' : 'hud_pow_off', fx0 + i * 8 - 1, 16);
     }

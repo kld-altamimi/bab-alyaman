@@ -547,6 +547,9 @@
         case 'emerge': Sound.sfx('door_creak', { gain: 0.7, pan: panOf(e.x) }); break;
         // out of a door on a roof or in the street, up through a hatch; a crate of drones opening, and one going up
         case 'enter': if (e.how === 'door') Sound.sfx('door_creak', { gain: 0.6, pan: panOf(e.x) }); else if (e.how === 'hatch') Sound.sfx('clang', { gain: 0.3, rate: 1.4, pan: panOf(e.x) }); break;
+        // the people tied up on the roofs (22 Oct): a word the first time one is in the picture; the rope going down to him
+        case 'captive': if (!flags.captiveTip) { flags.captiveTip = 1; after(20, function () { hint(T('Somebody is tied up on that roof! Hover low over him to lift him out')); }); } break;
+        case 'rope_down': if (gt - (flags.ropeT || -99) > 40) { flags.ropeT = gt; Sound.sfx('rope', { gain: 0.45, rate: 1.25, pan: panOf(e.x) }); } break;
         case 'crate_open':
           Sound.sfx('clang', { gain: 0.4, rate: 0.85, pan: panOf(e.x) });
           if (!flags.crateTip) { flags.crateTip = 1; after(16, function () { hint(T('A crate of drones! Hit it before it sends them all')); }); }

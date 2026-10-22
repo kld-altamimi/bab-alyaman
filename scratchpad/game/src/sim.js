@@ -131,7 +131,7 @@ var Sim = (function () {
       score: opts.score || 0, zoneScore: opts.score || 0,
       time: opts.time || 0,
       stats: opts.stats || { kills: 0, captures: 0, freed: 0, detainees: 0, shots: 0, hits: 0, plates: 0, deaths: 0, continues: 0, grenades: 0, streakBest: 0, hurtBy: {},
-                             knifed: 0, ranOver: 0, flips: 0, bossT: 0 },
+                             knifed: 0, ranOver: 0, flips: 0, bossT: 0, rescued: [] },          // (rescued: where each one freed so far was held)
       streak: 0, radio: opts.radio || 0,
       laneL: opts.lanes ? opts.lanes[0] : T.LANE_L, laneR: opts.lanes ? opts.lanes[1] : T.LANE_R,
       nextId: 1, alarmed: false, boatLine: false, mineSpotted: false, failsafe: 0, gateWait: 0, coverHits: 0, doorHits: 0, quietT: 0, hinted: {}, holdX: null, doorAt: 0, coverAt: 0,
@@ -171,13 +171,15 @@ var Sim = (function () {
     for (i = 0; i < L.props.length; i++) {
       var pr = L.props[i];
       if (pr.zone < zone) continue;
+      // (somebody freed before a continue is not tied up there again, to be counted twice: 22 Oct)
+      if (pr.k === 'detainee' && s.stats.rescued && s.stats.rescued.indexOf(pr.x) >= 0) continue;
       var plat = pr.plat ? platIndex(L, pr.plat) : -1;
       var o = { id: s.nextId++, k: pr.k, x: pr.x, y: surfaceY(L, plat, pr.x), plat: plat, t: 0, st: 'idle', gone: false };
       if (pr.k === 'drum') { o.hp = 2; o.paint = pr.paint; o.fuse = -1; }
       if (pr.k === 'mine') { o.fuse = -1; }
       if (pr.k === 'crate') { o.gives = pr.gives; }
       if (pr.k === 'rmine') { o.fuse = -1; }
-      if (pr.k === 'detainee') { o.st = 'tied'; o.vy = 0; if (pr.look) { o.look = pr.look; o.cx = o.x; o.cy = o.y; } if (pr.gives) o.gives = pr.gives; }      // (cx, cy: where his counter stays)
+      if (pr.k === 'detainee') { o.st = 'tied'; o.vy = 0; o.px = pr.x; if (pr.look) { o.look = pr.look; o.cx = o.x; o.cy = o.y; } if (pr.gives) o.gives = pr.gives; }      // (cx, cy: where his counter stays)
       if (pr.k === 'cover') {
         o.x0 = pr.x0; o.x1 = pr.x1; o.top = pr.top; o.openT = 0; o.art = pr.art || null;
         // (a barricade: cover that can be worn down, and that nobody gets past while it stands)
@@ -1192,6 +1194,7 @@ var Sim = (function () {
           if (near && s.status === 'play') {
             o.st = 'freed'; o.t = 0;
             s.stats.freed++;
+            (s.stats.rescued || (s.stats.rescued = [])).push(o.px);
             s.score += 500;
             if (s.radio < 3) { s.radio++; ev(s, { t: 'radio', n: s.radio }); }
             ev(s, o.look ? { t: 'freed', x: o.x, y: o.y, look: o.look } : { t: 'freed', x: o.x, y: o.y });
