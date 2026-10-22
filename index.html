@@ -578,7 +578,7 @@ html[lang="ar"] .fbq,html[lang="ar"] .fbthanks{text-transform:none}
 </div>
 
 <script>
-var BUILD = "0.13.70";
+var BUILD = "0.13.71";
 // the Radio meter: hidden until spending it is built (it still fills underneath; Khaled, 19 Oct)
 var RADIO_ON = false;
 // the two badges, Ace and Liberator, drawn here in pixels (Khaled, 19 Oct). Ace: a gold medal with a jambiya struck on
@@ -10540,8 +10540,9 @@ var Input = (function () {
     return true;
   }
   function playable(id) { var s = Menu.statuses(prefs.prog)[id]; return s === 'open' || s === 'cleared'; }
-  // built, but its road is not open yet: the card offers to skip ahead to it (a tap on the map still only reads it)
-  function skippable(id) { var m = Menu.mission(id); return !!(m && m.built && LEVELS[id] && !playable(id)); }
+  // built, but its road is not open yet: in developer mode the card offers to skip ahead to it (a tap on the map still
+  // only reads it); players see it locked until its road opens (Khaled, 22 Oct: Skip ahead for developers only)
+  function skippable(id) { var m = Menu.mission(id); return !!(prefs.dev && m && m.built && LEVELS[id] && !playable(id)); }
   function tapAt(q) {
     if (state === 'home') { if (quick) { quickGo(); return; } if (!woke) wakeUp(); else leaveHome(); return; }
     if (mv.rv) { finishReveal(); return; }
@@ -10623,7 +10624,7 @@ var Input = (function () {
       });
     } else best.textContent = m.built ? (p.runs ? T('Not cleared yet. Furthest: {0}.', [partsOf(m)[Math.min(p.reached, partsOf(m).length - 1)]]) : T('Not played yet.')) : '';
     best.hidden = !m.built;
-    var b = el('bPlay'), canPlay = s === 'open' || s === 'cleared', skip = !canPlay && m.built && !!LEVELS[id] && s !== 'soon';
+    var b = el('bPlay'), canPlay = s === 'open' || s === 'cleared', skip = prefs.dev && !canPlay && m.built && !!LEVELS[id] && s !== 'soon';
     b.disabled = !canPlay && !skip;
     b.textContent = T(s === 'cleared' ? 'Play again' : (s === 'open' ? 'Start mission' : (skip ? 'Skip ahead' : (s === 'soon' ? 'Coming soon' : 'Locked'))));
     // where it starts: any of its checkpoints, in developer mode only (players always start at the start; Khaled, 19 Oct)
