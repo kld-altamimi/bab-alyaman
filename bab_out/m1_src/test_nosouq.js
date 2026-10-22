@@ -1,6 +1,7 @@
 // test_nosouq.js - the release built without the Souq (build.py --no-souq, 21 Oct): the page has no Souq level, code,
-// stage pictures or music; with the Strait and the Coffee Port cleared, the Souq's card is the live game's (coming soon, the
-// Spice Cannon teaser, in English and Arabic, nothing to start, no start-from list even for a developer); the Strait and the
+// stage pictures or music; with the Strait and the Coffee Port cleared, the Souq's card shows it locked behind the Castle
+// (since 0.10.66 the Souq follows Taiz: Khaled, 22 Oct), and coming soon once the Castle is cleared (the Spice Cannon
+// teaser, in English and Arabic, nothing to start, no start-from list even for a developer); the Strait and the
 // Coffee Port still start with their music; and the Souq's music files are never asked for.
 const { chromium } = require('playwright');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -44,7 +45,11 @@ const SEED = () => {
   await sleep(600);
   const card = await page.evaluate(() => ({ st: Menu.statuses(window.__m1.prog()).zabid, name: document.getElementById('mName').textContent, boss: document.getElementById('mBoss').textContent,
     play: document.getElementById('bPlay').textContent, disabled: document.getElementById('bPlay').disabled, from: document.getElementById('mFromRow').hidden, dev: window.__m1.dev() }));
-  note(card.st === 'soon' && card.play === 'Coming soon' && card.disabled, 'the Souq is coming soon, nothing to start (' + card.st + ', "' + card.play + '", disabled ' + card.disabled + ')');
+  note(card.st === 'locked' && card.disabled, 'behind the Castle, the Souq is locked, nothing to start (' + card.st + ', "' + card.play + '", disabled ' + card.disabled + ')');
+  await page.evaluate(() => { window.__m1.prog().taiz = { reached: 3, cleared: true, best: { total: 50000, time: 400 }, runs: 1, stamped: true }; window.__m1.toMap('zabid'); });
+  await sleep(600);
+  const card2 = await page.evaluate(() => ({ st: Menu.statuses(window.__m1.prog()).zabid, play: document.getElementById('bPlay').textContent, disabled: document.getElementById('bPlay').disabled }));
+  note(card2.st === 'soon' && card2.play === 'Coming soon' && card2.disabled, 'with the Castle cleared, the Souq is coming soon, nothing to start (' + card2.st + ', "' + card2.play + '", disabled ' + card2.disabled + ')');
   note(card.boss === 'The Spice Cannon. It fires chilli. Keep your mouth shut.', 'its card has the live game\'s teaser: ' + card.boss);
   note(card.dev && card.from, 'even a developer gets no start-from list for it (developer ' + card.dev + ', list hidden ' + card.from + ')');
   await page.evaluate(() => window.__m1.setLang('ar'));

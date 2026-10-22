@@ -798,9 +798,21 @@
   // The home screen the way an arcade cabinet does it: until the first tap the picture only says TAP TO START, and
   // that tap wakes the sound (a browser allows none sooner) and brings the theme in; Start and Options appear then.
   var woke = false;
+  // The steps before a mission, each counted once a visit as `menu_step` (game-performance-R4; Khaled: now, 22 Oct):
+  // the title tapped (sound on, or the ?play screen's one tap), Start, the map, a mission card picked, the briefings.
+  // Players see nothing of it. `link` says whether the visit came in on a ?play link.
+  var stepsSeen = {}, cameOnPlay = /(?:^|[?&])play(?:[=&]|$)/.test(window.location.search || '');
+  function menuStep(name, extra) {
+    if (stepsSeen[name]) return;
+    stepsSeen[name] = true;
+    var p = { step: name, link: cameOnPlay ? 'play' : 'plain' };
+    if (extra) for (var k in extra) p[k] = extra[k];
+    if (window.HM) HM.track('menu_step', p);
+  }
   function wakeUp() {
     if (woke) return;
     woke = true;
+    menuStep('title');
     Sound.unlock(); menuMusic(); Sound.sfx('ui_select', { gain: 0.6 });
     panels.home.querySelector('.acts').hidden = false;
     if (state === 'home' && !coarse) { var b = el('bStart'); try { b.focus({ preventScroll: true }); } catch (e) {} }
@@ -816,6 +828,7 @@
   function quickGo() {
     if (!quick || quickGoing) return;
     quickGoing = true;
+    menuStep('title');
     Sound.unlock();
     Sound.want(musicFor('m1'));
     var ready = function () { return Sound.hasFailed() || (Sound.isReady() && Sound.hasTrack(musicFor('m1')[0])); };
@@ -1113,6 +1126,7 @@
   // Start: the map's march comes in as the picture goes dark (asked for before the sound is allowed, so that the first
   // tap starts the march and not the home screen's theme)
   function leaveHome() {
+    menuStep('start');
     Sound.menu('map'); Sound.unlock(); Sound.sfx('ui_select');
     transit(function () { toMap(); });
   }
@@ -1133,6 +1147,7 @@
     aim(mv.sel, true);
     card();
     Sound.sfx('paper', { gain: 0.8 });
+    menuStep('map', { mission: mv.sel });
   }
   function openOpts() {
     if (state !== 'home' && state !== 'map') return;
@@ -1164,7 +1179,7 @@
     if (!id || !Menu.mission(id) || id === mv.sel) return;
     mv.sel = id; mv.moved = false;
     aim(id, false);
-    if (!quiet) Sound.sfx('ui_move', { gain: 0.8 });
+    if (!quiet) { Sound.sfx('ui_move', { gain: 0.8 }); menuStep('card', { mission: id }); }
     card();
   }
   function finishReveal() {
@@ -1325,6 +1340,7 @@
   // ---- every briefing on one list, in the order the roads run
   function openBriefs() {
     if (state !== 'map') return;
+    menuStep('briefings');
     optsFrom = 'map';
     var st = Menu.statuses(prefs.prog), list = el('bList');
     list.textContent = '';
@@ -1406,6 +1422,28 @@
     };
     try { navigator.clipboard.writeText(all).then(said, byHand); } catch (e) { byHand(); }
   }
+  // ---- a word back from the player (Khaled, 22 Oct): on the results, whether they liked the mission (one vote a results
+  // screen, counted as `feedback`), and a way to say more on X: a post already addressed to the game's account
+  var fbVoted = false;
+  function feedbackReset() {
+    fbVoted = false;
+    el('bLike').classList.remove('picked'); el('bDislike').classList.remove('picked');
+    el('fbQ').hidden = false; el('fbThanks').hidden = true;
+  }
+  function vote(choice) {
+    if (fbVoted) return;
+    fbVoted = true;
+    Sound.unlock(); Sound.sfx('ui_select');
+    el(choice === 'like' ? 'bLike' : 'bDislike').classList.add('picked');
+    el('fbQ').hidden = true; el('fbThanks').hidden = false;
+    if (window.HM) HM.track('feedback', { mission: cur, choice: choice });
+  }
+  function feedbackOnX() {
+    Sound.unlock(); Sound.sfx('ui_select');
+    var m = Menu.mission(cur), text = '@BabAlYemenGame ' + T('Feedback on {0}: ', [m ? T(m.name) : '']);
+    if (window.HM) HM.track('feedback', { mission: cur, choice: 'x' });
+    try { window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (e) {}
+  }
   function showResults() {
     var r = Sim.results(sim), L = sim.L, pm = prefs.prog[cur], best = pm.best;
     shareLast = { id: cur, total: r.total, time: r.time };
@@ -1442,6 +1480,7 @@
     var fireWord = used.auto === 0 ? T('hold') : (used.hold === 0 ? T('auto') : T('{0}% hold, {1}% auto', [Math.round(used.hold * 100 / tot), Math.round(used.auto * 100 / tot)]));
     el('rMedals').textContent = (practice ? T('Medals are won on a run from the start with nothing skipped') : T('Ace: {0}. Liberator: {1}', [aceWord, libWord])) + (prefs.dev ? T('. Fire: {0}.', [fireWord]) : '.');
     fillReport();
+    feedbackReset();
     Sound.sea(false); Sound.loopsOff();
     setState('results');
     var cap = function (w) { return w.charAt(0).toUpperCase() + w.slice(1); };
@@ -1555,6 +1594,7 @@
     on('bAgain', function () { Sound.unlock(); Sound.sfx('ui_select'); begin(cur, run.from); });
     on('bShare', function (e) { shareGame('home', e.currentTarget); });
     on('bShare2', function (e) { shareGame('results', e.currentTarget); });
+    on('bLike', function () { vote('like'); }); on('bDislike', function () { vote('dislike'); }); on('bFbX', feedbackOnX);
     on('bSound', function () { setMuted(!prefs.muted); });
     on('bSound3', function () { setMuted(!prefs.muted); });
     var langs = document.querySelectorAll('[data-lang]');
