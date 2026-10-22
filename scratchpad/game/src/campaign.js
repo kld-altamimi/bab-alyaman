@@ -8,7 +8,8 @@
 //                                                     (Taiz)        (Ibb)                (Dhamar)
 //
 // One go through the campaign is six missions; the forks decide which six. A mission opens when any road into it has
-// been cleared. The Strait, the Coffee Port and the Souq are built so far: the others, once their road is open, wait as COMING SOON.
+// been cleared. Only the missions that are out (built: true) have roads, numbers and cards on the map; the others are a
+// dot with their name and place until they come out, so the order of the missions ahead stays open (Khaled, 22 Oct).
 //   name: what the mission is called (the big name, on the map and the card); place: where it is, written under it;
 //   stage: its number on the map (0 for the secret one); road: which way it lies; next: the roads out of it;
 //   brief: what the briefing says; parts: the checkpoints it is played in; boss: what waits at the end of it.

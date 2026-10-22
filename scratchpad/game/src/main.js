@@ -1160,8 +1160,8 @@
   function toMap(sel) {
     stopGame();
     var st = Menu.statuses(prefs.prog), due = null;
-    CAMPAIGN.forEach(function (m) { if (!due && prefs.prog[m.id].cleared && !prefs.prog[m.id].stamped) due = m.id; });
-    mv.sel = due || (sel && Menu.mission(sel) ? sel : Menu.here(st, prefs.last));
+    CAMPAIGN.forEach(function (m) { if (!due && m.built && prefs.prog[m.id].cleared && !prefs.prog[m.id].stamped) due = m.id; });
+    mv.sel = due || (sel && Menu.released(sel) ? sel : Menu.here(st, prefs.last));
     mv.rv = due ? { id: due, t: 0 } : null;
     mapT = 0; mv.moved = false;
     setState('map');
@@ -1197,7 +1197,7 @@
     else { mv.cam = clamp(mv.cam, 0, Menu.mapW() - W); mv.camY = clamp(mv.camY, 0, Menu.mapH() - H); }
   }
   function select(id, quiet) {
-    if (!id || !Menu.mission(id) || id === mv.sel) return;
+    if (!id || !Menu.released(id) || id === mv.sel) return;      // (a mission not out yet has no card)
     mv.sel = id; mv.moved = false;
     aim(id, false);
     if (!quiet) { Sound.sfx('ui_move', { gain: 0.8 }); menuStep('card', { mission: id }); }
@@ -1210,7 +1210,7 @@
     prefs.prog[id].stamped = true; savePrefs();
     // another clear still waiting for its stamp (an old save): give it its own minute
     var due = null;
-    CAMPAIGN.forEach(function (m) { if (!due && prefs.prog[m.id].cleared && !prefs.prog[m.id].stamped) due = m.id; });
+    CAMPAIGN.forEach(function (m) { if (!due && m.built && prefs.prog[m.id].cleared && !prefs.prog[m.id].stamped) due = m.id; });
     if (due) { mv.rv = { id: due, t: 0 }; select(due, true); }
     card();
   }
@@ -1224,7 +1224,7 @@
       mapT++;
       if (!drag || !drag.moved) { mv.cam += (mv.target - mv.cam) * 0.16; mv.camY += (mv.targetY - mv.camY) * 0.16; }
       if (mv.rv && state === 'map') {
-        var r = ++mv.rv.t, nx = Menu.mission(mv.rv.id).next;
+        var r = ++mv.rv.t, nx = Menu.mission(mv.rv.id).next.filter(Menu.released);     // (a road opens only to a mission that is out)
         if (r === 32) { Sound.sfx('stamp'); buzz(30); }
         if (r === 52 && nx.length) Sound.sfx('route', { gain: 0.8 });
         if (r === 112 && nx.length) Sound.sfx('radio', { gain: 0.7 });
@@ -1258,13 +1258,15 @@
     return true;
   }
   function playable(id) { var s = Menu.statuses(prefs.prog)[id]; return s === 'open' || s === 'cleared'; }
-  // built, but its road is not open yet: the card offers to skip ahead to it (a tap on the map still only reads it)
-  function skippable(id) { var m = Menu.mission(id); return !!(m && m.built && LEVELS[id] && !playable(id)); }
+  // built, but its road is not open yet: in developer mode the card offers to skip ahead to it (a tap on the map still
+  // only reads it); players see it locked until its road opens (Khaled, 22 Oct: Skip ahead for developers only)
+  function skippable(id) { var m = Menu.mission(id); return !!(prefs.dev && m && m.built && LEVELS[id] && !playable(id)); }
   function tapAt(q) {
     if (state === 'home') { if (quick) { quickGo(); return; } if (!woke) wakeUp(); else leaveHome(); return; }
     if (mv.rv) { finishReveal(); return; }
     var id = Menu.nodeAt(q[0], q[1], mv.cam, mv.camY);
     if (!id) return;
+    if (!Menu.released(id)) { Sound.sfx('ui_back', { gain: 0.7 }); return; }     // not out yet: only a dot, with no card
     if (id === mv.sel) { if (playable(id)) play(id); else Sound.sfx('ui_back', { gain: 0.7 }); }
     else select(id);
   }
@@ -1297,17 +1299,20 @@
   // a mission as a sentence says it: "the Coffee Port" (the map beside the card shows where it is)
   function called(m) { return Lang.rtl() ? T(m.name) : (/^The /.test(m.name) ? 'the ' + m.name.slice(4) : m.name); }
   function eyebrow(m, s) { return m.stage ? T('Mission {0} · {1} · {2}', [m.stage, T(m.road), T(STATE_WORD[s])]) : T('Secret mission · {0}', [T(STATE_WORD[s])]); }
+  // (only missions that are out are named as what comes next: the order of the rest is still open)
   function aheadText(m) {
-    var nx = m.next.map(Menu.mission);
-    if (!nx.length) return T('The end of the road. As far as anyone knows.');
-    if (nx.length === 1) return nx[0].secret ? T('This is the end of the road. Or is it?') : T('Next stop: {0}.', [called(nx[0])]);
+    var all = m.next.map(Menu.mission), nx = all.filter(function (q) { return q.built && !q.secret; });
+    if (!all.length) return T('The end of the road. As far as anyone knows.');
+    if (!nx.length) return all.every(function (q) { return q.secret; }) ? T('This is the end of the road. Or is it?') : T('The road on from here is still being drawn.');
+    if (nx.length === 1) return T('Next stop: {0}.', [called(nx[0])]);
     return T('A fork in the road: {0}.', [nx.map(function (q) { return T('the {0} to {1}', [Lang.rtl() ? T(q.road) : q.road.toLowerCase(), called(q)]); }).join(T(', or '))]);
   }
   function lockText(m, s) {
     if (s === 'soon') return T('The road here is open. The mission itself is still being built.');
     if (s !== 'locked' && s !== 'secret') return '';
-    var ins = Menu.before(m.id).map(function (id) { return called(Menu.mission(id)); });
-    return T('Clear {0} to open the road here{1}', [joinOr(ins), m.built && LEVELS[m.id] ? T(', or skip ahead and play it now.') : '.']);
+    var ins = Menu.before(m.id).filter(Menu.released).map(function (id) { return called(Menu.mission(id)); });
+    if (!ins.length) return '';
+    return T('Clear {0} to open the road here{1}', [joinOr(ins), prefs.dev && m.built && LEVELS[m.id] ? T(', or skip ahead and play it now.') : '.']);    // (skipping is for developers)
   }
   function partsOf(m) { return (LEVELS[m.id] ? LEVELS[m.id].zones.map(function (z) { return z.name; }) : m.parts).map(function (n) { return T(n); }); }
   // the mission card: what the selected mission is, how far you have got with it, and what you can do
@@ -1341,7 +1346,7 @@
       });
     } else best.textContent = m.built ? (p.runs ? T('Not cleared yet. Furthest: {0}.', [partsOf(m)[Math.min(p.reached, partsOf(m).length - 1)]]) : T('Not played yet.')) : '';
     best.hidden = !m.built;
-    var b = el('bPlay'), canPlay = s === 'open' || s === 'cleared', skip = !canPlay && m.built && !!LEVELS[id] && s !== 'soon';
+    var b = el('bPlay'), canPlay = s === 'open' || s === 'cleared', skip = prefs.dev && !canPlay && m.built && !!LEVELS[id] && s !== 'soon';
     b.disabled = !canPlay && !skip;
     b.textContent = T(s === 'cleared' ? 'Play again' : (s === 'open' ? 'Start mission' : (skip ? 'Skip ahead' : (s === 'soon' ? 'Coming soon' : 'Locked'))));
     // where it starts: any of its checkpoints, in developer mode only (players always start at the start; Khaled, 19 Oct)
@@ -1358,14 +1363,14 @@
     el('mNav').textContent = T(coarse ? 'Tap a mission to read it. Tap it again to start.' : 'Arrows move along the roads and across a fork, Enter starts, B lists every briefing, Escape goes back.');
   }
   function moreBelow() { var mb = panels.map.querySelector('.mbody'); mb.classList.toggle('more', mb.scrollHeight - mb.scrollTop > mb.clientHeight + 2); }
-  // ---- every briefing on one list, in the order the roads run
+  // ---- every briefing on one list, in the order the roads run: the missions that are out (the rest have no card yet)
   function openBriefs() {
     if (state !== 'map') return;
     menuStep('briefings');
     optsFrom = 'map';
     var st = Menu.statuses(prefs.prog), list = el('bList');
     list.textContent = '';
-    CAMPAIGN.forEach(function (m) {
+    CAMPAIGN.filter(function (m) { return m.built; }).sort(function (a, b) { return (a.stage || 8) - (b.stage || 8); }).forEach(function (m) {
       var s = st[m.id], li = document.createElement('li'), btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'brief-item' + (m.id === mv.sel ? ' here' : '') + ' st-' + s;
       btn.setAttribute('data-id', m.id);

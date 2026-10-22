@@ -15,6 +15,21 @@ var Menu = (function () {
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function mission(id) { return BY[id]; }
   function before(id) { return PREV[id] || []; }
+  // released: built and out in the game. Only these have roads, numbers and cards on the map; a mission not out yet is a
+  // dot with its name and place until it comes out, so the order of the missions ahead stays open (Khaled, 22 Oct)
+  function released(id) { return !!(BY[id] && BY[id].built); }
+  // the roads the map draws: [from, to, which of its roads], only where both ends are out (and not to the secret one
+  // while it is a secret)
+  function roads(show) {
+    var out = [];
+    CAMPAIGN.forEach(function (a) {
+      a.next.forEach(function (bid, k) {
+        if (!released(a.id) || !released(bid) || (BY[bid].secret && show[bid] === 'secret')) return;
+        out.push([a.id, bid, k]);
+      });
+    });
+    return out;
+  }
 
   // ------------------------------------------------------------------ where each mission stands
   // cleared | open (built, and a road to it is open) | soon (a road to it is open, it is not built yet) |
@@ -51,16 +66,17 @@ var Menu = (function () {
     var n = MAP.nodes[id];
     return { x: clamp(Math.round(n[0] - vis / 2), 0, MAP.w - W), y: clamp(Math.round(n[1] - H / 2 + 8), 0, MAP.h - H) };
   }
-  // keys: along the campaign a stage at a time (keeping to the road you are on where there is a choice), or across a fork
+  // keys: along the campaign a stage at a time (keeping to the road you are on where there is a choice), or across a fork;
+  // only to missions that are out
   function stageOf(m) { return m.stage || 8; }
   function stageStep(id, dir) {
-    var m = BY[id], s = stageOf(m) + dir, near = dir > 0 ? m.next : PREV[id], pick = null;
+    var m = BY[id], s = stageOf(m) + dir, near = (dir > 0 ? m.next : PREV[id]).filter(released), pick = null;
     for (var i = 0; i < near.length; i++) if (stageOf(BY[near[i]]) === s) { pick = near[i]; break; }
-    if (!pick) for (var j = 0; j < CAMPAIGN.length; j++) if (stageOf(CAMPAIGN[j]) === s) { pick = CAMPAIGN[j].id; break; }
+    if (!pick) for (var j = 0; j < CAMPAIGN.length; j++) if (released(CAMPAIGN[j].id) && stageOf(CAMPAIGN[j]) === s) { pick = CAMPAIGN[j].id; break; }
     return pick || id;
   }
   function laneStep(id, dir) {
-    var s = stageOf(BY[id]), same = CAMPAIGN.filter(function (m) { return stageOf(m) === s; });
+    var s = stageOf(BY[id]), same = CAMPAIGN.filter(function (m) { return released(m.id) && stageOf(m) === s; });
     if (same.length < 2) return id;
     var k = 0;
     for (var i = 0; i < same.length; i++) if (same[i].id === id) k = i;
@@ -146,7 +162,7 @@ var Menu = (function () {
     // during the reveal the places beyond the new clear show as they were, until their moment comes
     var show = {}, fresh = {};
     CAMPAIGN.forEach(function (q) { show[q.id] = st[q.id]; });
-    if (rv) BY[rv.id].next.forEach(function (nid) { fresh[nid] = true; if (rt < 112) show[nid] = BY[nid].secret ? 'secret' : 'locked'; });
+    if (rv) BY[rv.id].next.filter(released).forEach(function (nid) { fresh[nid] = true; if (rt < 112) show[nid] = BY[nid].secret ? 'secret' : 'locked'; });
     cam -= shakeX;
     cx.drawImage(R.image('map'), cam, camY, W, H, 0, 0, W, H);
     cx.save();
@@ -178,28 +194,26 @@ var Menu = (function () {
     cx.globalAlpha = 1;
     R.spr('menu_coffee', 470, 300, false, 0.9);         // somebody put his cup down on the map
     R.spr('menu_compass', 24, 44);
-    // the roads: gold out of every mission cleared, a faint dotted line where nobody has been yet
-    CAMPAIGN.forEach(function (a, ai) {
-      a.next.forEach(function (bid, k) {
-        var b = BY[bid];
-        if (b.secret && show[bid] === 'secret') return;          // (the map does not show the way there)
-        var open = show[a.id] === 'cleared', upto = 1;
-        if (rv && rv.id === a.id) { open = rt >= 50; upto = rt >= 50 ? clamp((rt - 50) / 60, 0, 1) : 1; }
-        leg(MAP.nodes[a.id], MAP.nodes[bid], (a.bow && a.bow[k]) || 0.14, open, upto, t);
-      });
+    // the roads: gold out of every mission cleared, a faint dotted line where nobody has been yet; none to a mission
+    // that is not out
+    roads(show).forEach(function (r) {
+      var a = BY[r[0]], open = show[a.id] === 'cleared', upto = 1;
+      if (rv && rv.id === a.id) { open = rt >= 50; upto = rt >= 50 ? clamp((rt - 50) / 60, 0, 1) : 1; }
+      leg(MAP.nodes[a.id], MAP.nodes[r[1]], (a.bow && a.bow[r[2]]) || 0.14, open, upto, t);
     });
-    // signposts where the road forks
+    // signposts where the road forks (where two roads out of it are drawn)
     CAMPAIGN.forEach(function (q) {
-      if (!q.sign) return;
+      if (!q.sign || !released(q.id) || q.next.filter(released).length < 2) return;
       var nn = MAP.nodes[q.id], wob = rv && rv.id === q.id && rt >= 96 && rt < 130 ? Math.round(Math.sin((rt - 96) / 2.2) * 2 * (1 - (rt - 96) / 34)) : 0;
       R.spr('menu_sign', nn[0] + q.sign[0] + wob, nn[1] + q.sign[1]);
     });
-    // the places themselves: in colour where the road is open, in the shade where it is not, and nothing where it is secret
+    // the places themselves: in colour where the road is open, in the shade where it is not (or the mission is not out
+    // yet), and nothing where it is secret
     CAMPAIGN.forEach(function (q) {
       var s = show[q.id], nn = MAP.nodes[q.id];
       if (s === 'secret') return;
       var x = nn[0] + q.land[0], y = nn[1] + q.land[1];
-      if (s === 'locked') { R.spr('menu_land_' + q.id + '_x', x, y); return; }
+      if (s === 'locked' || !released(q.id)) { R.spr('menu_land_' + q.id + '_x', x, y); return; }
       if (fresh[q.id] && rt >= 112 && rt < 136) {
         R.spr('menu_land_' + q.id + '_x', x, y);
         R.spr('menu_land_' + q.id, x, y, false, (rt - 112) / 24);
@@ -211,18 +225,19 @@ var Menu = (function () {
       R.spr('menu_scorpion', nn[0] + q.hq[0], nn[1] + q.hq[1]);
       if ((t >> 4) % 2 === 0) R.text('s_org', T('HQ'), nn[0] + q.hq[0] + 9, nn[1] + q.hq[1] - 3);
     });
-    // the badges, with the stage number on them
+    // the badges, with the stage number on them; a mission not out yet is a plain dot (no number: the order ahead is open)
     CAMPAIGN.forEach(function (q) {
       var s = show[q.id], nn = MAP.nodes[q.id], bad = s === 'cleared' ? 'clear' : (s === 'open' ? 'open' : 'lock');
+      if (!released(q.id) && s !== 'secret') { dot(nn[0], nn[1]); label(q, s, null); return; }
       var bob = s === 'open' && !o.calm && (t >> 4) % 2 ? -1 : 0, num = q.stage ? String(q.stage) : 'q';
       var pop = fresh[q.id] && rt >= 112 && rt < 122 ? 1 + 0.6 * (1 - (rt - 112) / 10) : 1;
       if (s === 'secret') cx.globalAlpha = 0.7;
       if (pop > 1) scaled('menu_badge' + num + '_' + bad, nn[0], nn[1], pop);
       else R.spr('menu_badge' + num + '_' + bad, nn[0], nn[1] + bob);
       cx.globalAlpha = 1;
-      if (s === 'secret' || s === 'soon' || s === 'locked') R.spr('menu_padlock', nn[0] + 7, nn[1] + 6);
+      if (s === 'secret' || s === 'locked') R.spr('menu_padlock', nn[0] + 7, nn[1] + 6);
       if (s === 'cleared') R.spr('menu_tick', nn[0] + 7, nn[1] + 6);
-      label(q, s, t, fresh[q.id] ? rt : -1, o.prog && o.prog[q.id]);
+      label(q, s, o.prog && o.prog[q.id]);
     });
     // CLEAR, stamped on each mission done (and, the first time, stamped while you watch)
     CAMPAIGN.forEach(function (q) {
@@ -255,6 +270,19 @@ var Menu = (function () {
     else { var hx = R.text('s_lav', head, 9, 7); R.text('s_org', tail, hx + 8, 7); }
   }
 
+  // a mission not out yet: a small plain dot in the colours of a locked badge (drawn once, then reused)
+  var DOT = null;
+  function dot(x, y) {
+    if (!DOT) {
+      DOT = document.createElement('canvas'); DOT.width = DOT.height = 7;
+      var g = DOT.getContext('2d'), pal = { a: INK, b: '#6a72b0', c: '#3c4278', d: '#262a52' };
+      ['..aaa..', '.abbba.', 'abcccda', 'abcccda', 'abccdda', '.addda.', '..aaa..'].forEach(function (row, j) {
+        for (var i = 0; i < row.length; i++) if (pal[row[i]]) { g.fillStyle = pal[row[i]]; g.fillRect(i, j, 1, 1); }
+      });
+    }
+    cx.drawImage(DOT, Math.round(x) - 3, Math.round(y) - 3);
+  }
+
   // a road between two missions: a dotted curve, bowed to one side (bow > 0 bends it to the right of the way it runs)
   function leg(a, b, bowK, open, upto, t) {
     var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, dx = b[0] - a[0], dy = b[1] - a[1], L = Math.sqrt(dx * dx + dy * dy);
@@ -274,19 +302,19 @@ var Menu = (function () {
     }
   }
 
-  // a mission's name on the map, and under it, smaller in effect (fainter), the place it is at; SOON under both while
-  // its road is open and it is not built yet. The secret one is only ???.
-  function label(m, s, t, rt, pg) {
-    var n = MAP.nodes[m.id], lb = m.label, x = n[0] + lb[0], y = n[1] + lb[1], secret = s === 'secret';
+  // a mission's name on the map, and under it, smaller in effect (fainter), the place it is at; both faded while its
+  // road is not open, or it is not out yet (then nothing more: no SOON, no badges). The secret one is only ???.
+  function label(m, s, pg) {
+    var n = MAP.nodes[m.id], lb = m.label, secret = s === 'secret', later = !secret && !released(m.id);
+    var pull = later ? 4 : 0, x = n[0] + lb[0] + (lb[2] === 'l' ? -pull : (lb[2] === 'r' ? pull : 0)), y = n[1] + lb[1] - (lb[2] === 'c' ? pull : 0);   // (a dot is smaller than a badge)
     var name = secret ? '???' : T(m.name).toUpperCase(), place = secret ? '' : T(m.place).toUpperCase();
-    var font = s === 'open' ? 's_org' : 's_lav', faded = secret || s === 'locked';
+    var font = s === 'open' ? 's_org' : 's_lav', faded = secret || later || s === 'locked';
     var w = R.textW(font, name), w2 = place ? R.textW('s_lav', place) : 0, lh = R.lineH('s_lav', name + place, 8);
     function at(ww) { return lb[2] === 'c' ? x - Math.floor(ww / 2) : (lb[2] === 'r' ? x - ww : x); }
     cx.globalAlpha = faded ? 0.72 : 1;
     R.text(font, name, at(w), y);
     if (place) { cx.globalAlpha = faded ? 0.5 : 0.78; R.text('s_lav', place, at(w2), y + lh); }
     cx.globalAlpha = 1;
-    if (s === 'soon' && ((t >> 5) % 2 === 0 || rt >= 0)) R.text('s_org', T('SOON'), at(R.textW('s_org', T('SOON'))), y + (place ? 2 * lh : lh));
     // its two badges, won or only their outlines, once it is open to be played
     if (m.built && pg && (s === 'open' || s === 'cleared')) {
       var ba = Badges.get('ace', 'mini', !!pg.ace), bl = Badges.get('lib', 'mini', !!pg.lib), by = y + (place ? 2 * lh : lh) - 1;
@@ -310,5 +338,6 @@ var Menu = (function () {
     if (!o.coarse && !o.wait) R.text('m_lav', T('ARROWS MOVE    Z FIRE    X JUMP    C BOMB'), mid, 132, 'c');
   }
   return { init: init, home: home, gate: gate, map: map, statuses: statuses, here: here, nodeAt: nodeAt, camFor: camFor, mission: mission, before: before,
+           released: released, roads: function (prog) { return roads(statuses(prog)); },
            stageStep: stageStep, laneStep: laneStep, mapW: function () { return MAP.w; }, mapH: function () { return MAP.h; } };
 })();
