@@ -15,7 +15,8 @@ const note = (ok, what) => { console.log((ok ? 'ok   ' : 'FAIL ') + what); if (!
   await page.route(/posthog|fonts\.(googleapis|gstatic)/, (r) => r.abort());
   await page.goto(BASE + '?internal=1');
   await page.waitForFunction(() => window.__m1 && window.__m1.state() === 'home', null, { timeout: 30000 });
-  note((await page.evaluate(() => typeof BUILD !== 'undefined' ? BUILD : '')) === '0.10.65', 'build string 0.10.65');
+  const want = process.env.WANT_BUILD || '0.10.65';
+  note((await page.evaluate(() => typeof BUILD !== 'undefined' ? BUILD : '')) === want, 'build string ' + want);
   await page.touchscreen.tap(422, 150);
   for (const [mission, lives, plates, wantLives] of [['m1', 1, 1, 3], ['mocha', 2, 1, 3], ['m1', 5, 2, 5]]) {
     await page.evaluate((m) => window.__m1.begin(m, 0), mission);
