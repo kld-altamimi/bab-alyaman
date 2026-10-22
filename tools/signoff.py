@@ -1,5 +1,6 @@
-# game-features' sign-off: checks a build of Bab al-Yemen against game-features' "must still work" checklist
-# (claude/topics/game-features-checklist.md in the Project, lines C1..C26) in headless Chromium (Python Playwright).
+# The sign-off: checks a build of Bab al-Yemen against the "must still work" checklist (game-development's since 23 Oct:
+# claude/topics/game-development-checklist.md in the Project, lines C1..C26; C27 is checked by the mission unit tests) in
+# headless Chromium (Python Playwright).
 # Everything outside the local server is blocked; the game's HM.track calls are recorded, never sent.
 # Usage: python3 tools/signoff.py <folder with index.html and audio/> <output folder> [--strict]
 #   --strict: the lines added with a live release must be there too: those marked [0.11.64], and C26 (the map) and
@@ -10,7 +11,7 @@ from playwright.async_api import async_playwright
 
 SITE, OUT = sys.argv[1], sys.argv[2]
 REQUIRE_064 = '--strict' in sys.argv
-R72_LIVE = False
+R72_LIVE = True             # (0.13.72's map and Skip ahead for developers, moved onto 0.14.75 as test 0.14.76)
 PORT = 8795
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
