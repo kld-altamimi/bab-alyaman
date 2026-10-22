@@ -533,7 +533,7 @@ html[lang="ar"] #stick::after{content:'حركة';letter-spacing:0}
 </div>
 
 <script>
-var BUILD = "0.10.51";
+var BUILD = "0.10.65";
 // the Radio meter: hidden until spending it is built (it still fills underneath; Khaled, 19 Oct)
 var RADIO_ON = false;
 // the two badges, Ace and Liberator, drawn here in pixels (Khaled, 19 Oct). Ace: a gold medal with a jambiya struck on
@@ -1513,6 +1513,16 @@ var Sim = (function () {
     ev(s, { t: 'slash', x: p.x + p.face * 15, y: p.y - (p.crouch ? 10 : 20), face: p.face, hit: what });
   }
 
+  // a checkpoint fills Yazeed back up: lives to the starting three (extra lives stay) and the armour plates, which are the
+  // 4x4's and the Apache's armour too, to full (Khaled, 22 Oct: more players through the Strait's coast road)
+  function refill(s) {
+    var p = s.p;
+    if (!p || p.dead) return;
+    var lives = Math.max(0, T.LIVES - p.lives), plates = Math.max(0, T.PLATES - p.plates);
+    if (!lives && !plates) return;
+    p.lives += lives; p.plates += plates;
+    ev(s, { t: 'refill', x: p.x, y: p.y, lives: lives, plates: plates });
+  }
   function hurtPlayer(s, fromX, why) {
     var p = s.p;
     if (p.inv > 0 || p.dead || s.status !== 'play') return false;
@@ -2477,7 +2487,7 @@ var Sim = (function () {
 
     var z2 = s.zone;
     while (z2 + 1 < L.zones.length && p.x >= L.zones[z2 + 1].x) z2++;
-    if (z2 !== s.zone) { s.zone = z2; s.zoneScore = s.score; ev(s, { t: 'checkpoint', zone: z2, name: L.zones[z2].name }); }
+    if (z2 !== s.zone) { s.zone = z2; s.zoneScore = s.score; ev(s, { t: 'checkpoint', zone: z2, name: L.zones[z2].name }); refill(s); }
   }
   // the rooftops: a man walking in where there is a gap between two houses comes in on the roof beyond it instead
   function offPits(L, x, dir) {
@@ -2580,7 +2590,7 @@ var Sim = (function () {
     knifeTarget: knifeTarget,
     // for the files that add to the game: the car section and the boss
     ext: X,
-    _: { ev: ev, explode: explode, hurtPlayer: hurtPlayer, killEnemy: killEnemy, hurtEnemy: hurtEnemy, spawnEnemy: spawnEnemy, standDown: standDown, groupOf: groupOf,
+    _: { ev: ev, refill: refill, explode: explode, hurtPlayer: hurtPlayer, killEnemy: killEnemy, hurtEnemy: hurtEnemy, spawnEnemy: spawnEnemy, standDown: standDown, groupOf: groupOf,
          landing: landing, follow: follow, floorUnder: floorUnder, inBox: inBox, platIndex: platIndex, enemyFire: enemyFire, stepPlayer: stepPlayer,
          addCloud: addCloud, burstSack: burstSack, hitBar: hitBar, barGone: barGone, inCloud: inCloud, offPits: offPits }
   };
@@ -3701,7 +3711,7 @@ if (typeof module !== 'undefined') module.exports = Sim;
 var Render = (function () {
   'use strict';
   var A = null, F = null, IMG = {}, cv = null, cx = null, W = 468, H = 216;
-  var parts = [], decals = [], posts = [], popups = [], shake = 0, flashT = 0, tick = 0;
+  var parts = [], decals = [], posts = [], popups = [], shake = 0, flashT = 0, tick = 0, refillT = 0;
   var achoo = { t: -999, x: 0 };                  // (the last ACHOO! put up over a Dhanab: when, and where)
   var banner = null, hint = null, goT = 0, behindT = 0, zoneT = 0, zoneName = '';
   var spin = {}, gunAng = 2.2, duckT = 0;
@@ -3722,7 +3732,7 @@ var Render = (function () {
   }
   function reset() {
     parts.length = 0; decals.length = 0; posts.length = 0; popups.length = 0; shake = 0; banner = null; hint = null; goT = 0; behindT = 0; zoneT = 0;
-    spin = {}; gunAng = 2.2; duckT = 0; flashT = 0; achoo.t = -999;
+    spin = {}; gunAng = 2.2; duckT = 0; flashT = 0; achoo.t = -999; refillT = 0;
   }
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
@@ -4001,6 +4011,7 @@ var Render = (function () {
     flashT = big ? 3 : flashT;
   }
   function onEvents(s, events) {
+    for (var ri = 0; ri < events.length; ri++) if (events[ri].t === 'refill') refillT = 60;      // (a checkpoint refill: the HUD glints)
     for (var i = 0; i < events.length; i++) {
       var e = events[i], p = s.p, k;
       switch (e.t) {
@@ -4763,6 +4774,9 @@ var Render = (function () {
     spr('hud_portrait', 5, 5);
     text('m_lav', T('YAZEED'), 30, 6);
     for (i = 0; i < 3; i++) spr(i < p.plates ? 'hud_plate_on' : 'hud_plate_off', 30 + i * 9, 17);
+    var glint = refillT > 0 && ((refillT >> 2) & 1);        // a checkpoint refill: the plates and the heads glint gold for a second
+    if (refillT > 0 && !paused) refillT--;
+    if (glint) { cx.fillStyle = 'rgba(255,194,46,0.45)'; cx.fillRect(29, 16, 27, 9); }
     text('m_lav', ('0000000' + Math.min(9999999, s.score)).slice(-7), 60, 17);
     var ax = narrow ? 108 : 118, aw = tabW(T('ARMS'), 28), bw2 = tabW(T('BOMB'), 28);
     var clockL = mid - Math.floor(textW('tall', '0:00') / 2);        // the two tabs stay clear of the clock
@@ -4790,6 +4804,7 @@ var Render = (function () {
             cx.drawImage(hd, hx + i * (hd.width + 2), hy);
           }
         } else { cx.drawImage(hd, hx, hy); text('m_org', '=' + lv, hx + hd.width + 3, hy + 2); }
+        if (glint && lv) { cx.fillStyle = 'rgba(255,194,46,0.45)'; cx.fillRect(hx - 1, hy - 1, Math.min(lv, 4) * (hd.width + 2) + 1, hd.height + 2); }
       }
     }
     for (i = 0; RADIO_ON && i < 3; i++) {
@@ -6131,6 +6146,7 @@ var Input = (function () {
           break;
         case 'weapon_empty': speak('ann_pistol', { pri: 6 }); break;
         case 'plate_lost': Sound.sfx('plate'); buzz(35); break;
+        case 'refill': after(10, function () { Sound.sfx('pick_gren', { gain: 0.7 }); }); break;      // (a checkpoint refill)
         case 'low_armour': after(14, function () { Sound.sfx('low'); }); break;
         case 'life_lost': Sound.sfx('life'); buzz([40, 30, 90]); break;
         case 'alarm': speak('grunt_alarm', { pri: 5, wait: true, who: WHO[whoIs(e)] }); break;
