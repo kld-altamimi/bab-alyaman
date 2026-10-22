@@ -176,7 +176,7 @@ var Sim = Sim || require('./sim.js');
         x = it.x + i * (it.gap || 24);
         var kind = (it.kinds && it.kinds[i % it.kinds.length]) || 'rifle';
         var e = I.spawnEnemy(s, { g: 'ROAD', k: kind, post: 1, look: ['worried', 'youth', 'angry', 'qat'][(i + (it.x >> 3)) % 4] }, x);
-        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : Math.round((10 + Math.floor(s.rand() * 40) + i * 6) * T.FIRST));          // (R5: T.FIRST, T.GAP, sim.js) e.noKnife = true;
+        e.ext = 'drive'; e.face = -1; e.st = 'wait'; e.cd = (kind === 'bomber' ? 2 : Math.round((10 + Math.floor(s.rand() * 40) + i * 6) * T.FIRST)); e.noKnife = true; e.first = false;      // (R5: T.FIRST, T.GAP, sim.js; no guarded first aim on the road)
         if (it.march) { e.march = true; e.cd = 9999; }
       }
       if (!s.hinted.ram) { s.hinted.ram = 1; ev(s, { t: 'hint', k: 'ram' }); }

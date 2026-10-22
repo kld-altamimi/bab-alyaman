@@ -210,6 +210,10 @@ var Sim = (function () {
     e.slot = s.slotN * 12;
     if (sp.covered) e.cd += Math.round(60 * T.FIRST);
     if (sp.k === 'rifle') e.band = 96 + s.rand() * 78;
+    // his first attack gets made: once he has begun to aim (or to wind up) the first time, nothing stops him until it's
+    // made, and he flashes meanwhile, as at the edge (Khaled, 23 Oct: "still feels no one is trying to shoot me": most
+    // of them died the moment they stepped in, before they could aim)
+    if (sp.k === 'rifle' || sp.k === 'bomber') e.first = true;
     if (sp.k === 'bomber') e.band = 150 + s.rand() * 60;
     if (sp.k === 'door') { e.band = 8; e.cd = Math.round((60 + Math.floor(s.rand() * 30)) * T.FIRST); e.door = T.DOOR_HITS; e.bashCd = 0; }
     if (sp.k === 'cook') { e.band = 70 + s.rand() * 40; e.cd = Math.round((40 + Math.floor(s.rand() * 30)) * T.FIRST); e.swingCd = 0; }
@@ -578,7 +582,8 @@ var Sim = (function () {
   // anywhere in the middle, a walker only once he is properly in.
   function inMiddle(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
   function inReach(s, x) { return inMiddle(s, x); }
-  function guarded(s, e) { return !!e && e.alive && e.hostile && !e.ext && (!inMiddle(s, e.x) || e.emerge > 0); }
+  // (and a man making his first attack: see spawnEnemy)
+  function guarded(s, e) { return !!e && e.alive && e.hostile && ((!e.ext && (!inMiddle(s, e.x) || e.emerge > 0)) || (e.first && (e.st === 'aim' || e.st === 'wind'))); }
   function staged(s, e) { return e.post ? inMiddle(s, e.x) : (e.x >= s.cam + s.viewW * s.laneL - 1 && e.x <= s.cam + s.viewW * (1 - s.laneR) + 1); }
 
   function enemyFire(s, e, aimed, yOff) {
@@ -618,7 +623,7 @@ var Sim = (function () {
     // the two edges of the screen are for walking through, not for standing in
     var inL = s.cam + s.viewW * s.laneL + e.slot, inR = s.cam + s.viewW * (1 - s.laneR) - e.slot;
     if (e.x > inR) { moved = -1; speed = KIND[e.k].lane; } else if (e.x < inL) { moved = 1; speed = KIND[e.k].lane; }
-    else if (!e.arrived) { e.arrived = true; e.cd = Math.max(e.cd, Math.round((T.SETTLE + Math.floor(s.rand() * 20)) * T.FIRST)); }
+    else if (!e.arrived) { e.arrived = true; e.cd = Math.min(e.cd, 4 + Math.floor(s.rand() * 10)); }
     // nor is the far side of somebody else's sandbags: only the man posted there may use them. A walker who finds them
     // between himself and Yazeed keeps coming until he is through.
     // (it only matters while Yazeed is on the outside of them: once he is in among the bags they stop nothing of his)
@@ -744,10 +749,10 @@ var Sim = (function () {
         e.moving = mv;
         e.moveT = mv ? (e.moveT || 0) + 1 : 0;
         if (e.cd > 0) e.cd--;
-        if (e.cd <= 0 && ad < T.SIGHT && staged(s, e) && (!mv || e.moveT > 80 || Math.abs(p.y - e.y) > 22)) { e.st = 'aim'; e.stT = 0; e.moveT = 0; e.moving = 0; ev(s, { t: 'tell', k: 'rifle', x: e.x, y: e.y }); }
+        if (e.cd <= 0 && ad < T.SIGHT && staged(s, e) && (!mv || e.first || e.moveT > 80 || Math.abs(p.y - e.y) > 22)) { e.st = 'aim'; e.stT = 0; e.moveT = 0; e.moving = 0; ev(s, { t: 'tell', k: 'rifle', x: e.x, y: e.y }); }
       } else if (e.st === 'aim') {
         if (e.covered) upFromCover(s, e);
-        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; }
+        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {
         if (e.covered) upFromCover(s, e);
         if (e.stT % 8 === 1) {
@@ -768,6 +773,7 @@ var Sim = (function () {
         if (!mv2 && e.cd <= 0 && ad < T.SIGHT && ad > 26 && staged(s, e)) { e.st = 'wind'; e.stT = 0; e.lit = true; ev(s, { t: 'tell', k: 'bomber', x: e.x, y: e.y }); }
       } else if (e.st === 'wind') {
         if (e.stT >= 38) {
+          e.first = false;
           var Tf = 0.86 + ad / 640, tx = p.x + p.vx * 0.22, sy = e.y - 40, ty = p.y - 2;
           var vx = (tx - (e.x - e.face * 4)) / Tf, vy = (ty - sy - 0.5 * T.DYN_G * Tf * Tf) / Tf;
           if (vx > 270) vx = 270; if (vx < -270) vx = -270;

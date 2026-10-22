@@ -252,8 +252,8 @@ var Sim = Sim || require('./sim.js');
     e.ext = 'fly'; e.air = false;
     if (!q.plat) { e.y = q.y != null ? q.y : Sim.groundY(L, x); e.plat = -1; }          // (in the street, or on the road)
     e.px = e.x; e.py = e.y;
-    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
-    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 === 0;
+    e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = (q.k === 'rifle' ? 4 + Math.floor(s.rand() * 10) : Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST)) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
+    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; the first burst gets made, as on foot)
     if (q.k === 'sam') e.cd = Math.round((8 + Math.floor(s.rand() * 16)) * T.FIRST) + (q.cd || 0);          // (the missile man does not hang about)
     if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
     if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = Math.round((30 + Math.floor(s.rand() * 30)) * T.FIRST); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
@@ -327,7 +327,7 @@ var Sim = Sim || require('./sim.js');
     for (k = 0; k < Q.men.length; k++) {
       var mx = Q.men[k], e = I.spawnEnemy(s, { g: 'Z0', k: 'rifle', post: 1, look: looks[k % looks.length] }, mx), best = Q.doors[0];
       for (var d = 0; d < Q.doors.length; d++) if (Math.abs(Q.doors[d] - mx - 10) < Math.abs(best - mx - 10)) best = Q.doors[d];
-      e.ext = 'fly'; e.intro = true; e.plat = -1; e.y = Q.street; e.st = 'aim'; e.stT = 0; e.face = -1; e.px = e.x; e.py = e.y; e.u = 0; e.exitX = best; e.brave = false;
+      e.ext = 'fly'; e.intro = true; e.first = false; e.plat = -1; e.y = Q.street; e.st = 'aim'; e.stT = 0; e.face = -1; e.px = e.x; e.py = e.y; e.u = 0; e.exitX = best; e.brave = false;
     }
   }
   function introMan(s, e) {
@@ -710,7 +710,9 @@ var Sim = Sim || require('./sim.js');
     if (e.k === 'launcher') { launcher(s, e, G); return; }
     if (e.k === 'light') { light(s, e, G); return; }
     if (e.st === 'panic') { flee(s, e); return; }
-    if (!G.awake || !e.seen) return;
+    // (a man at his post acts once he is in the picture, without waiting for his fight to wake: the chin gun was killing
+    // most of them before it did; 23 Oct)
+    if (!e.seen || (!G.awake && !e.post)) return;
     var dx = h.x - e.x, dy = h.y - e.y, d = Math.sqrt(dx * dx + dy * dy);
     if (e.k !== 'aa') e.face = dx >= 0 ? 1 : -1;
     // the first of them to see it says what it is: «قنية سودا!», the black jinn (and if he is not one of the brave ones, he
@@ -736,7 +738,7 @@ var Sim = Sim || require('./sim.js');
         if (e.cd > 0) e.cd--;
         else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { e.st = 'aim'; e.stT = 0; }
       } else if (e.st === 'aim') {
-        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; }
+        if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {
         if (e.stT % 8 === 1) {
           var mx = e.x + e.face * 14, my = e.y - 26, tx = h.x - mx, ty = h.y - my, tl = Math.sqrt(tx * tx + ty * ty) || 1, sp = (s.rand() - 0.5) * 0.08;
