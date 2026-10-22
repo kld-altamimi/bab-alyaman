@@ -1,14 +1,16 @@
 # game-features' sign-off: checks a build of Bab al-Yemen against game-features' "must still work" checklist
-# (claude/topics/game-features-checklist.md in the Project, lines C1..C25) in headless Chromium (Python Playwright).
+# (claude/topics/game-features-checklist.md in the Project, lines C1..C26) in headless Chromium (Python Playwright).
 # Everything outside the local server is blocked; the game's HM.track calls are recorded, never sent.
 # Usage: python3 tools/signoff.py <folder with index.html and audio/> <output folder> [--strict]
-#   --strict: the lines marked [0.10.64] must be there too (every build made after 0.10.64 is live).
+#   --strict: the lines added with a live release must be there too: those marked [0.11.64], and C26 (the map) and
+#   C8's Skip ahead for developers once R72_LIVE below is True (set when they go live; test build 0.13.72).
 # Writes <output folder>/signoff.txt (one PASS / FAIL per line, with what was seen) and screenshots.
 import asyncio, functools, http.server, json, re, sys, threading, urllib.parse
 from playwright.async_api import async_playwright
 
 SITE, OUT = sys.argv[1], sys.argv[2]
 REQUIRE_064 = '--strict' in sys.argv
+R72_LIVE = False
 PORT = 8795
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -16,6 +18,8 @@ srv = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), functools.partial(Q, 
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 SRC = open(f'{SITE}/index.html', encoding='utf-8').read()
 HAS_064 = "HM.track('menu_step'" in SRC
+HAS_MAP = 'function released(id)' in SRC          # the map change: roads and cards only for missions that are out
+HAS_SKIPDEV = 'skip = prefs.dev && !canPlay' in SRC  # the card's Skip ahead only with Developer on
 BUILD = (re.search(r'var BUILD = "([^"]+)"', SRC) or [None, '?'])[1]
 LIVE = 'https://kld-altamimi.github.io/bab-alyaman/'
 
@@ -212,7 +216,7 @@ async def case_plain_flow(browser):
     m = await wait_state(pg, 'map', 5000)
     add('C6', m, f"Start -> map={m}")
     await pg.wait_for_timeout(800)
-    n = await pg.evaluate("CAMPAIGN.length")
+    n = await pg.evaluate("CAMPAIGN.filter(m => m.built).length" if HAS_MAP else "CAMPAIGN.length")
     cardv = {b: await vis(pg, b) for b in ('mName', 'mBrief', 'mCps', 'mBoss', 'bPlay', 'bHome', 'bBriefs', 'bOpts2')}
     await pg.screenshot(path=f'{OUT}/C7_map_card.png')
     add('C7', all(cardv.values()), f"the card's parts shown: {all(cardv.values())} {'' if all(cardv.values()) else cardv}")
@@ -240,7 +244,7 @@ async def case_plain_flow(browser):
     await pg.evaluate(f"document.querySelector('#bList .brief-item[data-id=\"{pick}\"]').click()")
     bm = await wait_state(pg, 'map', 3000)
     sel1 = await pg.evaluate("__m1.menu().sel")
-    add('C7', br and len(items) == n and bm and sel1 == pick, f"briefings list: {len(items)} of the campaign's {n} missions, picking '{pick}' -> map with it selected={sel1 == pick}")
+    add('C7', br and len(items) == n and bm and sel1 == pick, f"briefings list: {len(items)} of the campaign's {n} {'missions that are out' if HAS_MAP else 'missions'}, picking '{pick}' -> map with it selected={sel1 == pick}")
     # a second visit to each step: no second event
     await click(pg, 'bBriefs'); await wait_state(pg, 'brief', 3000)
     other = next((i for i in items if i not in (sel0, pick)), None)
@@ -402,6 +406,79 @@ async def case_results(browser):
     add('C13', mp, f"Advance -> map={mp}")
     add('C7', stamped and rv is None, f"new clear stamped={stamped}, no second stamp on the next visit={rv is None}")
     await evs(pg); done('results', errs); await ctx.close()
+
+# C8 (Skip ahead): a mission that is out but whose road isn't open offers Skip ahead only with Developer on
+async def case_skip(browser):
+    if not HAS_SKIPDEV:
+        if REQUIRE_064 and R72_LIVE: add('C8', False, "the card's Skip ahead for developers only: not in this build")
+        return
+    ctx, pg, errs = await new_page(browser, PHONE)
+    await load(pg, '?internal=1')
+    await wake(pg, PHONE)
+    await click(pg, 'bStart'); await wait_state(pg, 'map', 5000); await pg.wait_for_timeout(500)
+    await click(pg, 'bBriefs'); await wait_state(pg, 'brief', 3000)
+    tgt = await pg.evaluate("(() => { const st = Menu.statuses(__m1.prog()), m = CAMPAIGN.find(q => q.built && st[q.id] === 'locked'); return m ? m.id : null; })()")
+    await pg.evaluate(f"document.querySelector('#bList .brief-item[data-id=\"{tgt}\"]').click()"); await wait_state(pg, 'map', 3000)
+    await pg.wait_for_timeout(300)
+    look = "[document.getElementById('bPlay').textContent.trim(), document.getElementById('bPlay').disabled, document.getElementById('mAhead').textContent]"
+    off = await pg.evaluate(look)
+    await pg.keyboard.press('Enter'); await pg.wait_for_timeout(800)
+    st_enter = await pg.evaluate("__m1.state()")
+    await pg.evaluate("__m1.setDev(true)"); await pg.wait_for_timeout(200)
+    on = await pg.evaluate(look)
+    await pg.evaluate("__m1.setDev(false)"); await pg.wait_for_timeout(200)
+    off_skip, on_skip = 'skip' in off[2].lower(), 'skip' in on[2].lower()
+    ok = off[0] == 'Locked' and off[1] and not off_skip and st_enter == 'map' and on[0] == 'Skip ahead' and not on[1] and on_skip
+    add('C8', ok, f"'{tgt}' (out, road not open): Developer off -> '{off[0]}' disabled={off[1]}, its text offers to skip={off_skip}, Enter -> {st_enter}; "
+                  f"Developer on -> '{on[0]}' disabled={on[1]}, its text offers to skip={on_skip}")
+    await evs(pg); done('skip', errs); await ctx.close()
+
+# C26: roads, numbers and cards only for the missions that are out; the rest are a dot with their name and place
+async def case_map(browser):
+    if not HAS_MAP: return
+    ctx, pg, errs = await new_page(browser, PHONE)
+    await load(pg, '?internal=1')
+    await wake(pg, PHONE)
+    await click(pg, 'bStart'); await wait_state(pg, 'map', 5000); await pg.wait_for_timeout(600)
+    info = await pg.evaluate("""(() => { const by = id => CAMPAIGN.find(m => m.id === id), out = CAMPAIGN.filter(m => m.built);
+      return { out: out.map(m => m.id), later: CAMPAIGN.filter(m => !m.built && !m.secret).map(m => m.id),
+               want: out.reduce((a, m) => a.concat(m.next.filter(n => by(n).built && !by(n).secret).map(n => m.id + '>' + n)), []).sort(),
+               got: Menu.roads(__m1.prog()).map(r => r[0] + '>' + r[1]).sort(),
+               words: CAMPAIGN.filter(m => !m.built).reduce((a, m) => a.concat([m.name.replace(/^The /, ''), m.place]), []) }; })()""")
+    out, later = info['out'], info['later']
+    add('C26', info['got'] == info['want'], f"roads drawn {info['got']} (every road between two missions that are out, and no other)")
+    await pg.screenshot(path=f'{OUT}/C26_map.png')
+    # two taps on a mission that is not out: it opens nothing
+    sel0 = await pg.evaluate("__m1.menu().sel")
+    if later:
+        tgt = later[0]
+        pt = await pg.evaluate(f"""(() => {{ const n = ATLAS.menu.map.nodes['{tgt}'], W = __m1.width();
+          __m1.look(Math.max(0, Math.min(Menu.mapW() - W, n[0] - 100)), Math.max(0, Math.min(Menu.mapH() - 216, n[1] - 108)));
+          const g = __m1.geo(), m = __m1.menu(); return [g.cx0 + (n[0] - m.cam) * g.cw / W, g.cy0 + (n[1] - m.camY) * g.ch / 216]; }})()""")
+        await pg.wait_for_timeout(300)
+        await pg.screenshot(path=f'{OUT}/C26_map_later.png')
+        for _ in range(2):
+            await pg.touchscreen.tap(pt[0], pt[1]); await pg.wait_for_timeout(300)
+        st, sel1 = await pg.evaluate("[__m1.state(), __m1.menu().sel]")
+        add('C26', st == 'map' and sel1 == sel0, f"two taps on '{tgt}' (not out): on the map={st == 'map'}, the card still shows '{sel1}'")
+    # the briefings list: the missions that are out, in the order of the roads
+    await click(pg, 'bBriefs'); await wait_state(pg, 'brief', 3000)
+    items = await pg.evaluate("[...document.querySelectorAll('#bList .brief-item')].map(b => b.getAttribute('data-id'))")
+    want = await pg.evaluate("CAMPAIGN.filter(m => m.built).sort((a, b) => (a.stage || 8) - (b.stage || 8)).map(m => m.id)")
+    add('C26', items == want, f"briefings list {items} (the missions that are out, by stage: {want})")
+    # the last one out: its card names nothing that is not out
+    last = want[-1]
+    await pg.evaluate(f"document.querySelector('#bList .brief-item[data-id=\"{last}\"]').click()"); await wait_state(pg, 'map', 3000)
+    await pg.wait_for_timeout(300)
+    said = (await text(pg, 'mEye')) + ' / ' + (await text(pg, 'mAhead'))
+    named = [w for w in info['words'] if w in said]
+    add('C26', not named, f"the card of '{last}': '{said.strip()}' (missions not out named: {named or 'none'})")
+    # the arrow keys only go to missions that are out
+    seen = []
+    for k in ('ArrowRight', 'ArrowUp', 'ArrowDown', 'ArrowLeft'):
+        await pg.keyboard.press(k); await pg.wait_for_timeout(150); seen.append(await pg.evaluate("__m1.menu().sel"))
+    add('C26', all(s in out for s in seen) and seen[-1] != last, f"arrow keys from '{last}' (right, up, down, left): {seen}")
+    await evs(pg); done('map', errs); await ctx.close()
 
 async def case_practice(browser):
     ctx, pg, errs = await new_page(browser, PHONE)
@@ -589,7 +666,7 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         for c in (case_play_new, case_play_desktop, case_play_upright, case_play_returning, case_params, case_plain_flow, case_settings,
-                  case_pause, case_over, case_results, case_practice, case_share_home, case_fps, case_old_save, case_lang, case_arabic):
+                  case_pause, case_over, case_results, case_skip, case_map, case_practice, case_share_home, case_fps, case_old_save, case_lang, case_arabic):
             try:
                 await c(browser)
             except Exception as e:
@@ -601,11 +678,14 @@ async def main():
     add('C21', all(e in events_seen for e in flow), f"seen while playing: {sorted(e for e in events_seen)}")
     srv.shutdown()
     lines = []
-    for n in range(1, 26):
+    for n in range(1, 27):
         cid = f'C{n}'
         marked = cid in ('C12', 'C14', 'C23', 'C24')
         if marked and not HAS_064:
-            status = 'FAIL (missing)' if REQUIRE_064 else 'n/a (0.10.64 lines not in this build)'
+            status = 'FAIL (missing)' if REQUIRE_064 else 'n/a (0.11.64 lines not in this build)'
+            lines.append(f"{cid}: {status}"); continue
+        if cid == 'C26' and not HAS_MAP:
+            status = 'FAIL (missing)' if REQUIRE_064 and R72_LIVE else 'n/a (the map change is not in this build)'
             lines.append(f"{cid}: {status}"); continue
         got = checks.get(cid, [])
         status = 'PASS' if got and all(ok for ok, _ in got) else ('NOT CHECKED' if not got else 'FAIL')
@@ -613,7 +693,7 @@ async def main():
         for ok, note in got: lines.append(f"    {'ok ' if ok else 'BAD'} {note}")
     errs = {k: v for k, v in errors.items() if v}
     lines.append(f"page errors: {json.dumps(errs, ensure_ascii=False) if errs else 'none'}")
-    head = f"build {BUILD} ({'with' if HAS_064 else 'without'} the 0.10.64 lines)"
+    head = f"build {BUILD} ({'with' if HAS_064 else 'without'} the 0.11.64 lines, {'with' if HAS_SKIPDEV else 'without'} Skip ahead for developers, {'with' if HAS_MAP else 'without'} the map change)"
     print(head); print('\n'.join(lines))
     with open(f'{OUT}/signoff.txt', 'w', encoding='utf-8') as f: f.write(head + '\n' + '\n'.join(lines) + '\n')
 
