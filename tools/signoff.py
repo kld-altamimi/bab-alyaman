@@ -3,15 +3,15 @@
 # headless Chromium (Python Playwright).
 # Everything outside the local server is blocked; the game's HM.track calls are recorded, never sent.
 # Usage: python3 tools/signoff.py <folder with index.html and audio/> <output folder> [--strict]
-#   --strict: the lines added with a live release must be there too: those marked [0.11.64], and C26 (the map) and
-#   C8's Skip ahead for developers once R72_LIVE below is True (set when they go live; test build 0.13.72).
+#   --strict: the lines added with a live release must be there too: those marked [0.11.64], and C26 (the map) once
+#   R72_LIVE below is True (set when it goes live; test build 0.14.77).
 # Writes <output folder>/signoff.txt (one PASS / FAIL per line, with what was seen) and screenshots.
 import asyncio, functools, http.server, json, re, sys, threading, urllib.parse
 from playwright.async_api import async_playwright
 
 SITE, OUT = sys.argv[1], sys.argv[2]
 REQUIRE_064 = '--strict' in sys.argv
-R72_LIVE = True             # (0.13.72's map and Skip ahead for developers, moved onto 0.14.75 as test 0.14.76)
+R72_LIVE = True             # (0.13.72's map, moved onto 0.14.75 as test 0.14.77)
 PORT = 8795
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -20,7 +20,7 @@ threading.Thread(target=srv.serve_forever, daemon=True).start()
 SRC = open(f'{SITE}/index.html', encoding='utf-8').read()
 HAS_064 = "HM.track('menu_step'" in SRC
 HAS_MAP = 'function released(id)' in SRC          # the map change: roads and cards only for missions that are out
-HAS_SKIPDEV = 'skip = prefs.dev && !canPlay' in SRC  # the card's Skip ahead only with Developer on
+HAS_SKIPDEV = 'skip = prefs.dev && !canPlay' in SRC  # the card's Skip ahead only with Developer on (0.13.72; not kept: Khaled, 23 Oct)
 BUILD = (re.search(r'var BUILD = "([^"]+)"', SRC) or [None, '?'])[1]
 LIVE = 'https://kld-altamimi.github.io/bab-alyaman/'
 
@@ -408,11 +408,9 @@ async def case_results(browser):
     add('C7', stamped and rv is None, f"new clear stamped={stamped}, no second stamp on the next visit={rv is None}")
     await evs(pg); done('results', errs); await ctx.close()
 
-# C8 (Skip ahead): a mission that is out but whose road isn't open offers Skip ahead only with Developer on
+# C8 (Skip ahead): a mission that is out but whose road isn't open offers Skip ahead to everyone (Khaled, 23 Oct: it
+# stays for players for now). A build that makes it developers-only (0.13.72) is checked that way instead.
 async def case_skip(browser):
-    if not HAS_SKIPDEV:
-        if REQUIRE_064 and R72_LIVE: add('C8', False, "the card's Skip ahead for developers only: not in this build")
-        return
     ctx, pg, errs = await new_page(browser, PHONE)
     await load(pg, '?internal=1')
     await wake(pg, PHONE)
@@ -423,14 +421,20 @@ async def case_skip(browser):
     await pg.wait_for_timeout(300)
     look = "[document.getElementById('bPlay').textContent.trim(), document.getElementById('bPlay').disabled, document.getElementById('mAhead').textContent]"
     off = await pg.evaluate(look)
-    await pg.keyboard.press('Enter'); await pg.wait_for_timeout(800)
-    st_enter = await pg.evaluate("__m1.state()")
+    st_enter = 'not pressed'
+    if HAS_SKIPDEV:      # (developers only: Enter on the locked card starts nothing)
+        await pg.keyboard.press('Enter'); await pg.wait_for_timeout(800)
+        st_enter = await pg.evaluate("__m1.state()")
     await pg.evaluate("__m1.setDev(true)"); await pg.wait_for_timeout(200)
     on = await pg.evaluate(look)
     await pg.evaluate("__m1.setDev(false)"); await pg.wait_for_timeout(200)
     off_skip, on_skip = 'skip' in off[2].lower(), 'skip' in on[2].lower()
-    ok = off[0] == 'Locked' and off[1] and not off_skip and st_enter == 'map' and on[0] == 'Skip ahead' and not on[1] and on_skip
-    add('C8', ok, f"'{tgt}' (out, road not open): Developer off -> '{off[0]}' disabled={off[1]}, its text offers to skip={off_skip}, Enter -> {st_enter}; "
+    if HAS_SKIPDEV:
+        ok = off[0] == 'Locked' and off[1] and not off_skip and st_enter == 'map' and on[0] == 'Skip ahead' and not on[1] and on_skip
+    else:
+        ok = off[0] == 'Skip ahead' and not off[1] and off_skip and on[0] == 'Skip ahead' and not on[1] and on_skip
+    add('C8', ok, f"'{tgt}' (out, road not open), Skip ahead {'for developers only' if HAS_SKIPDEV else 'for everyone'}: "
+                  f"Developer off -> '{off[0]}' disabled={off[1]}, its text offers to skip={off_skip}, Enter -> {st_enter}; "
                   f"Developer on -> '{on[0]}' disabled={on[1]}, its text offers to skip={on_skip}")
     await evs(pg); done('skip', errs); await ctx.close()
 
@@ -694,7 +698,7 @@ async def main():
         for ok, note in got: lines.append(f"    {'ok ' if ok else 'BAD'} {note}")
     errs = {k: v for k, v in errors.items() if v}
     lines.append(f"page errors: {json.dumps(errs, ensure_ascii=False) if errs else 'none'}")
-    head = f"build {BUILD} ({'with' if HAS_064 else 'without'} the 0.11.64 lines, {'with' if HAS_SKIPDEV else 'without'} Skip ahead for developers, {'with' if HAS_MAP else 'without'} the map change)"
+    head = f"build {BUILD} ({'with' if HAS_064 else 'without'} the 0.11.64 lines, Skip ahead {'for developers only' if HAS_SKIPDEV else 'for everyone'}, {'with' if HAS_MAP else 'without'} the map change)"
     print(head); print('\n'.join(lines))
     with open(f'{OUT}/signoff.txt', 'w', encoding='utf-8') as f: f.write(head + '\n' + '\n'.join(lines) + '\n')
 
