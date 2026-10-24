@@ -30,10 +30,19 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     const gy = q.gy != null ? q.gy : Sim.groundY(L, q.x);
     ok(gy >= STAGE.world.VERGE && gy <= 184, q.size + ' at ' + q.x + ' stands on the verge or the road (' + gy + ')');
   }
+  // a posted man must stand in the middle of his gate's held screen, outside the lanes the others walk in by, at every
+  // width a phone gives (the screen stops at the gate's line halfway across, or at the level's end if that comes first)
+  const HOLD = 0.5, LANE_L = 0.18, LANE_R = 0.25;
   for (const sp of L.spawns) {
     if (!sp.post) continue;
     const gate = L.gates.find(g => g.groups.includes(sp.g));
-    ok(gate && sp.x >= gate.x - 133 && sp.x <= gate.x + 106, 'posted ' + sp.g + ' ' + sp.k + ' at ' + sp.x + ' staged at his fight');
+    let inside = !!gate;
+    for (const vw of [384, 420, 468]) {
+      if (!gate) break;
+      const cam = Math.min(gate.x - vw * HOLD, L.endRight - vw);
+      if (sp.x < cam + vw * LANE_L || sp.x > cam + vw * (1 - LANE_R)) inside = false;
+    }
+    ok(inside, 'posted ' + sp.g + ' ' + sp.k + ' at ' + sp.x + ' staged in the middle of his fight\'s screen');
     if (sp.plat) { const pl = L.plats.find(p => p.id === sp.plat); ok(pl && Sim.platY(pl, sp.x) !== null, 'posted ' + sp.g + ' at ' + sp.x + ' on ' + sp.plat); }
   }
   for (const k in L.groups) ok(L.gates.some(g => g.groups.includes(k)), 'group ' + k + ' has a fight');

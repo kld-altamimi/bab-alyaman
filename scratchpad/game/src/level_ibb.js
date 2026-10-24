@@ -1,15 +1,21 @@
 // level_ibb.js - Ibb, the Green Valleys (Mission 4), built zone by zone (Khaled, 24 Oct: he plays each one as it is
-// painted). Zone 1, Wadi al-Sahul: the valley road up from Taiz, the morning after rain. The billboard at the start plays
+// painted). Zone 2, Jibla (below), follows. Zone 1, Wadi al-Sahul: the valley road up from Taiz, the morning after rain. The billboard at the start plays
 // statement C; the Zanabeel's checkpoint across the road (sandbags, a booth with their flag, a set on a crate playing the
 // first lines of statement A); a stone farmhouse (its yard wall, its store, its roof); a roadside shop (its awning, its
 // roof, its set playing the next lines); a minibus that has given up, which turns out to be full of them. The screens are
 // scenery (render_ibb.js): the nearest one in the picture is the one heard, shots pass them and nothing breaks them
-// (Khaled, 24 Oct). The mission ends at the end of the zones painted so far. Only test builds have it (build.py --ibb).
+// (Khaled, 24 Oct). Zone 2, Jibla: Queen Arwa's old town on its mountainside, the street along its foot, the town and
+// the mosque up the slope behind (the mosque is background only: nothing is staged near it). Houses with a stepped alley
+// up to a roof; the school, the Zanabeel's "course" now, its yard open to the street, sets playing statement B, the
+// walkway along its upper floor, and the teacher tied to the flagpole (the mission's somebody to free); more houses and a
+// second alley; a last shop; the way out toward the terraces. (The children in the classrooms come once Khaled has seen
+// how: the classrooms stay shut until then.) The mission ends at the end of the zones painted so far. Only test builds
+// have it (build.py --ibb).
 // The ground is the road: flat, the walk line at 184. Platforms are the tops of things as mock/stage_ibb_z1.py paints
 // them (gen/stage_ibb.json; unit_ibb.js checks that the two agree).
 var LEVEL_IBB = (function () {
   'use strict';
-  var Z1 = 0, END = 1280;                // where the zones start (one so far), and where the painted road ends
+  var Z1 = 0, Z2 = 1280, END = 2640;    // where the zones start (two so far), and where the painted street ends
   var VERGE = 160;                       // the gravel verge behind the road: the screens stand on it
   var L = {
     id: 'ibb',
@@ -23,13 +29,13 @@ var LEVEL_IBB = (function () {
     freedNote: 'the teacher is still at the flagpole',         // (the brief's; the teacher comes with zone 2)
     width: END,
     height: 216,
-    par: 60,
+    par: 110,
     start: 96,
     exitX: END - 40,
     restX: END - 20,
     endRight: END,
     ground: { step: 4, y: [184] },
-    world: { Z1: Z1, END: END, ROAD_Y: 184 },
+    world: { Z1: Z1, Z2: Z2, END: END, ROAD_Y: 184 },
     // one-way platforms: land on them from above, drop through with down + jump
     plats: [
       // the checkpoint: the sandbags on the road, the booth's roof (from the sandbags)
@@ -44,16 +50,41 @@ var LEVEL_IBB = (function () {
       { id: 'shoproof', pts: [[817, 119], [951, 119]] },
       // the minibus: the luggage on its rack, the jerrycans by its back door
       { id: 'busrack', pts: [[1112, 127], [1164, 125], [1196, 129]] },
-      { id: 'cans', pts: [[1214, 162], [1221, 162]] }
+      { id: 'cans', pts: [[1214, 162], [1221, 162]] },
+      // Jibla: the first house's roof, the alley's steps up to the second's, the school's steps, its walkway and roof,
+      // the upper street's alley (climbing to the left) up to the fourth house's roof, the low wall at the gap, the last roof
+      { id: 'h1roof', pts: [[1337, 85], [1419, 85]] },
+      { id: 'alleyA1', pts: [[1422, 157], [1437, 157]] },
+      { id: 'alleyA2', pts: [[1434, 143], [1449, 143]] },
+      { id: 'alleyA3', pts: [[1446, 129], [1461, 129]] },
+      { id: 'alleyA4', pts: [[1458, 115], [1473, 115]] },
+      { id: 'h2roof', pts: [[1477, 85], [1567, 85]] },
+      { id: 'schoolstep1', pts: [[1668, 157], [1683, 157]] },
+      { id: 'schoolstep2', pts: [[1680, 145], [1695, 145]] },
+      { id: 'schoolstep3', pts: [[1692, 133], [1707, 133]] },
+      { id: 'walkway', pts: [[1704, 122], [2024, 122]] },
+      { id: 'schoolroof', pts: [[1708, 78], [2024, 78]] },
+      { id: 'h4roof', pts: [[2051, 85], [2139, 85]] },
+      { id: 'alleyB4', pts: [[2144, 115], [2159, 115]] },
+      { id: 'alleyB3', pts: [[2156, 129], [2171, 129]] },
+      { id: 'alleyB2', pts: [[2168, 143], [2183, 143]] },
+      { id: 'alleyB1', pts: [[2180, 157], [2195, 157]] },
+      { id: 'lowwall', pts: [[2284, 149], [2386, 149]] },
+      { id: 'h6roof', pts: [[2391, 85], [2485, 85]] }
     ],
     zones: [
-      { x: Z1, name: 'Wadi al-Sahul', spawn: 96 }
+      { x: Z1, name: 'Wadi al-Sahul', spawn: 96 },
+      { x: Z2, name: 'Jibla', spawn: Z2 + 30 }
     ],
     gates: [
       { id: 'cp', x: 560, groups: ['A', 'A2'] },
       { id: 'farm', x: 800, groups: ['B', 'B2'] },
       { id: 'shop', x: 1000, groups: ['C', 'C2'] },
-      { id: 'bus', x: 1170, groups: ['D', 'D2'] }
+      { id: 'bus', x: 1170, groups: ['D', 'D2'] },
+      { id: 'alley', x: 1560, groups: ['E', 'E2'] },
+      { id: 'school', x: 1880, groups: ['F', 'F2'] },
+      { id: 'upper', x: 2200, groups: ['G', 'G2'] },
+      { id: 'out', x: 2540, groups: ['H', 'H2'] }
     ],
     groups: {
       A: { zone: 0, trig: 300 },
@@ -63,10 +94,20 @@ var LEVEL_IBB = (function () {
       C: { zone: 0, trig: 840 },
       C2: { zone: 0, after: 'C', delay: 40, lastManSurrenders: true },
       D: { zone: 0, trig: 1010 },
-      D2: { zone: 0, after: 'D', delay: 30, lastManSurrenders: true }
+      D2: { zone: 0, after: 'D', delay: 30, lastManSurrenders: true },
+      E: { zone: 1, trig: 1390 },
+      E2: { zone: 1, after: 'E', delay: 40, lastManSurrenders: true },
+      F: { zone: 1, trig: 1700 },
+      F2: { zone: 1, after: 'F', delay: 40, lastManSurrenders: true },
+      G: { zone: 1, trig: 2030 },
+      G2: { zone: 1, after: 'G', delay: 40, lastManSurrenders: true },
+      H: { zone: 1, trig: 2390 },
+      H2: { zone: 1, after: 'H', delay: 30, lastManSurrenders: true }
     },
     // k: rifle | bomber | door. enter: 1 from the right edge, -1 from the left. door: out of the doorway at x.
-    // A man at a post stands inside the middle of his gate's held screen: 133 px left of the gate to 106 right of it.
+    // A man at a post stands inside the middle of his gate's held screen, outside the lanes the others walk in by, at every
+    // width: 133 px left of the gate to 106 right of it, and near the end, where the screen stops at the level's end
+    // rather than at the gate, inside that screen's middle (unit_ibb.js works it out for each gate).
     spawns: [
       // ---- the checkpoint: one on the sandbags, one on the booth, one by the drums; then out of the booth
       { g: 'A', k: 'rifle', x: 486, plat: 'sandbags', post: 1, look: 'angry' },
@@ -105,18 +146,59 @@ var LEVEL_IBB = (function () {
       { g: 'D2', k: 'bomber', door: 1, x: 1149, delay: 80 },
       { g: 'D2', k: 'rifle', door: 1, x: 1149, delay: 120, look: 'angry' },
       { g: 'D2', k: 'rifle', door: 1, x: 1149, delay: 160, look: 'qat' },
-      { g: 'D2', k: 'rifle', door: 1, x: 1149, delay: 200, look: 'youth' }
+      { g: 'D2', k: 'rifle', door: 1, x: 1149, delay: 200, look: 'youth' },
+      // ---- Jibla, the alley: one on its steps, one on the roof it climbs to, one in the street; then out of the tall house
+      { g: 'E', k: 'rifle', x: 1452, plat: 'alleyA3', post: 1, look: 'angry' },
+      { g: 'E', k: 'rifle', x: 1528, plat: 'h2roof', post: 1, look: 'qat' },
+      { g: 'E', k: 'rifle', x: 1630, post: 1, look: 'youth' },
+      { g: 'E', k: 'bomber', enter: 1, delay: 80 },
+      { g: 'E2', k: 'rifle', door: 1, x: 1597, delay: 0, look: 'worried' },
+      { g: 'E2', k: 'door', enter: 1, delay: 30, tag: 'd' },
+      { g: 'E2', k: 'rifle', enter: 1, delay: 30, dx: 34, behind: 'd', look: 'angry' },
+      { g: 'E2', k: 'rifle', enter: -1, delay: 120, look: 'qat' },
+      // ---- the school: two on the walkway, one on the roof, one in the yard; then out of the office, and more
+      { g: 'F', k: 'rifle', x: 1790, plat: 'walkway', post: 1, look: 'angry' },
+      { g: 'F', k: 'rifle', x: 1934, plat: 'walkway', post: 1, look: 'youth' },
+      { g: 'F', k: 'bomber', x: 1876, plat: 'schoolroof', post: 1 },
+      { g: 'F', k: 'rifle', x: 1966, post: 1, look: 'qat' },
+      { g: 'F2', k: 'rifle', door: 1, x: 2011, delay: 0, look: 'worried' },
+      { g: 'F2', k: 'rifle', door: 1, x: 2011, delay: 60, look: 'angry' },
+      { g: 'F2', k: 'door', enter: 1, delay: 40, tag: 'd' },
+      { g: 'F2', k: 'rifle', enter: 1, delay: 40, dx: 34, behind: 'd', look: 'youth' },
+      { g: 'F2', k: 'rifle', enter: -1, delay: 140, look: 'qat' },
+      // ---- the upper street: on the roof, on the alley's steps, out of two doors
+      { g: 'G', k: 'rifle', x: 2100, plat: 'h4roof', post: 1, look: 'qat' },
+      { g: 'G', k: 'rifle', x: 2163, plat: 'alleyB3', post: 1, look: 'angry' },
+      { g: 'G', k: 'rifle', x: 2280, post: 1, look: 'worried' },
+      { g: 'G2', k: 'rifle', door: 1, x: 2078, delay: 0, look: 'youth' },
+      { g: 'G2', k: 'rifle', door: 1, x: 2237, delay: 40, look: 'angry' },
+      { g: 'G2', k: 'bomber', enter: 1, delay: 70 },
+      { g: 'G2', k: 'rifle', enter: -1, delay: 130, look: 'qat' },
+      // ---- the way out: one on the last roof, two in the street; then more from the terraces
+      { g: 'H', k: 'rifle', x: 2440, plat: 'h6roof', post: 1, look: 'angry' },
+      { g: 'H', k: 'rifle', x: 2474, post: 1, look: 'youth' },
+      { g: 'H', k: 'rifle', x: 2512, post: 1, look: 'qat' },
+      { g: 'H2', k: 'rifle', enter: 1, delay: 0, look: 'worried' },
+      { g: 'H2', k: 'bomber', enter: 1, delay: 50 },
+      { g: 'H2', k: 'rifle', enter: 1, delay: 100, look: 'angry' }
     ],
     props: [
       { k: 'crate', x: 340, gives: 'gren', zone: 0 },
-      { k: 'crate', x: 734, plat: 'store', gives: 'hmg', zone: 0 }
+      { k: 'crate', x: 734, plat: 'store', gives: 'hmg', zone: 0 },
+      { k: 'crate', x: 1500, plat: 'h2roof', gives: 'gren', zone: 1 },
+      { k: 'detainee', x: 1856, zone: 1 },                   // the teacher, tied to his own flagpole
+      { k: 'crate', x: 2120, plat: 'h4roof', gives: 'hmg', zone: 1 }
     ],
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
     // is told in pieces, a few lines a set, through the zones); they stand on the verge behind the road
     screens: [
       { x: 120, size: 'board', zone: 0, gy: VERGE + 4, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4', 'sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
       { x: 548, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_important', 'sp_A2', 'sp_A3', 'sp_A4'] },
-      { x: 860, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_A5', 'sp_A6', 'sp_A7', 'sp_A8'] }
+      { x: 860, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_A5', 'sp_A6', 'sp_A7', 'sp_A8'] },
+      { x: 1372, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_ops', 'sp_end', 'sp_A11'] },
+      { x: 1800, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_B2', 'sp_B3'] },
+      { x: 1912, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_B4', 'sp_B5', 'sp_B6', 'sp_end'] },
+      { x: 2430, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4'] }
     ]
   };
   return L;

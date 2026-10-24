@@ -10,6 +10,7 @@ MOCK = '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchp
 sys.path.insert(0, MOCK)
 import stage_ibb as I              # noqa: E402
 import stage_ibb_z1 as Z1          # noqa: E402
+import stage_ibb_z2 as Z2          # noqa: E402
 
 OUT = os.path.join(HERE, '..', 'art', 'out')
 GEN = os.path.join(HERE, '..', 'gen')
@@ -34,7 +35,10 @@ def first_row(L):
 B = I.backgrounds()
 z1 = Z1.play_z1()                  # (fills I.PLATS and I.INFO)
 f1 = Z1.fore_z1()
-zones = [('i_z1', 0, Z1.W1, z1)]
+z2 = Z2.play_z2()                  # (adds zone 2's platforms, and I.INFO['z2'])
+f2 = Z2.fore_z2()
+b2 = Z2.back_town()
+zones = [('i_z1', 0, Z1.W1, z1), ('i_z2', Z2.X0, Z2.END2, z2)]
 play = []
 for name, a, b, L in zones:
     w, h = save(name, L)
@@ -44,18 +48,23 @@ save('i_far', B['far'])
 save('i_mid', B['mid'])
 ft = max(0, first_row(f1) - 1)
 fw, fh = save('if_z1', f1, ft)
-fore = [dict(img='if_z1', x=0, w=fw, y=ft, h=fh)]
+ft2 = max(0, first_row(f2) - 1)
+fw2, fh2 = save('if_z2', f2, ft2)
+fore = [dict(img='if_z1', x=0, w=fw, y=ft, h=fh), dict(img='if_z2', x=int(Z2.X0 * 1.25), w=fw2, y=ft2, h=fh2)]
+bw, bh = save('i_back2', b2)
+back = [dict(img='i_back2', x=Z2.BACK_X, w=bw, y=0, h=bh)]
 layers = {
     'sky': dict(img='i_sky', w=pics['i_sky'][0], h=pics['i_sky'][1], y=0, par=0.15, wrap=True),
     'far': dict(img='i_far', w=pics['i_far'][0], h=pics['i_far'][1], y=B['far_y'], par=0.3, wrap=True),
     'mid': dict(img='i_mid', w=pics['i_mid'][0], h=pics['i_mid'][1], y=B['mid_y'], par=0.55, wrap=True),
+    'back': dict(par=0.7, strips=back),
     'play': dict(par=1.0, strips=play),
     'fore': dict(par=1.25, strips=fore),
 }
 END = zones[-1][2]
-world = dict(Z1=0, END=END, ROAD_Y=I.WALK, VERGE=Z1.VERGE, ROAD_TOP=Z1.ROAD_TOP)
+world = dict(Z1=0, Z2=Z2.X0, END=END, ROAD_Y=I.WALK, VERGE=Z1.VERGE, ROAD_TOP=Z1.ROAD_TOP)
 out = dict(layers=layers, world=world, fixed={}, ground=dict(step=4, y=[I.WALK]), plats=I.PLATS, info=I.INFO,
-           pictures=[z[0] for z in zones] + ['i_sky', 'i_far', 'i_mid', 'if_z1'])
+           pictures=[z[0] for z in zones] + ['i_sky', 'i_far', 'i_mid', 'i_back2', 'if_z1', 'if_z2'])
 json.dump(out, open(os.path.join(GEN, 'stage_ibb.json'), 'w'), separators=(',', ':'), default=int)
 tot = 0
 for n in out['pictures']:

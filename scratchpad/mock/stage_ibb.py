@@ -407,8 +407,12 @@ def compose(cam, S, w=SW, fore=True):
     wrap(S['sky'], 0.15, 0)
     wrap(S['far'], 0.3, S['far_y'])
     wrap(S['mid'], 0.55, S['mid_y'])
+    for bx, B in S.get('backs', []):                  # (the town up the mountainside: Jibla's, at 0.7)
+        out.paste(B, bx - int(cam * 0.7), 0)
     if 'play' in S:
         out.paste(S['play'], -int(cam), 0)
+    for px_, P in S.get('plays', []):
+        out.paste(P, px_ - int(cam), 0)
     if fore and 'fore' in S:
         out.paste(S['fore'], -int(cam * 1.25), 0)
     return out

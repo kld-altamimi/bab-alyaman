@@ -767,6 +767,7 @@ var Render = (function () {
     cx.translate(sx, 0);
     // it comes up out of the sea, behind the beach
     if (b && b.kind === 'boat' && b.st === 'intro') { cx.save(); cx.translate(-cam, sy); drawBoss(s, b, paused); cx.restore(); }
+    if (!own && ly.back) stripLayer(ly.back, s.cam, sy);       // (a town on the slope behind the street, at its own pace: Ibb's Jibla)
     if (!own) stripLayer(ly.play, s.cam, sy);
     cx.translate(-cam, sy - camY);
 
