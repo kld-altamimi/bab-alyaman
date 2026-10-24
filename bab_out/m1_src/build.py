@@ -43,12 +43,13 @@ SOUQ_CODE = ('level_zabid', 'tailor', 'render_tailor')
 # --ibb (24 Oct): a test build with Ibb in it (Mission 4, while it is being built: its plan's stages one at a time). Its
 # level, its screens' code and its sheet go in, its lines (audio/speech_ibb.mp3) are listed, and on the map it is out,
 # with the road from Taiz to it (the Souq off the road, as at Ibb's release). Without it, none of Ibb is in the page.
+# Its painted zones come as a stage of their own (gen/stage_ibb.json, tools/export_ibb.py; 24 Oct: zone by zone).
 IBB = '--ibb' in sys.argv
 IBB_CODE = ('level_ibb', 'render_ibb')
 pics = ['atlas', 'font', 'sky', 'far', 'sea', 'play_a', 'road', 'r2b', 'sand', 'b2r', 'play_b', 'fore', 'fore_road', 'fore_sand', 'fore_b', 'map']
-for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid')):
+for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid'), ('ibb', 'ibb')):
     f = GAME + 'gen/stage_%s.json' % art
-    if not os.path.exists(f) or (NO_SOUQ and art == 'zabid'):
+    if not os.path.exists(f) or (NO_SOUQ and art == 'zabid') or (not IBB and art == 'ibb'):
         continue
     st = json.load(open(f))
     atlas['stages'][art] = dict(layers=st['layers'], world=st['world'], fixed=st['fixed'])

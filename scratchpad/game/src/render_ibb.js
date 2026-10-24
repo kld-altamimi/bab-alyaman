@@ -1,5 +1,6 @@
 // render_ibb.js - Ibb's screens (Render.bosses.ibb): the Spokesman on the billboard and on the shops' sets, talking.
-// The level lists them (L.screens: { x, size: 'board' | 'tv', zone, lines }); they are the scenery's, not the fight's:
+// The level lists them (L.screens: { x, size: 'board' | 'tv', zone, lines, gy }: gy, where its feet are, when it stands
+// on the verge behind the road rather than on the floor where the fight is); they are the scenery's, not the fight's:
 // shots pass them and nothing breaks them (Khaled, 24 Oct: people want to hear him). The pictures are a sheet of their
 // own (art/out/ibb.png, tools/ibb_sprites.py).
 //   the billboard on its two legs; a shop's set on a crate. His face, the mouth going with the line when that screen is
@@ -32,7 +33,7 @@
       st.L = L; st.at = [];
       (L.screens || []).forEach(function (q, i) {
         var plat = q.plat ? Sim._.platIndex(L, q.plat) : -1;
-        st.at.push({ i: i, x: q.x, y: Sim.surfaceY(L, plat, q.x), big: q.size === 'board', lines: q.lines || [], li: 0 });
+        st.at.push({ i: i, x: q.x, y: q.gy != null ? q.gy : Sim.surfaceY(L, plat, q.x), big: q.size === 'board', lines: q.lines || [], li: 0 });
       });
     }
     return st.at;

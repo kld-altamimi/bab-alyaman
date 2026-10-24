@@ -762,7 +762,7 @@ var Render = (function () {
     var ks = s.viewW && Math.abs(W / s.viewW - 1) > 0.002 ? W / s.viewW : 1;
     if (ks !== 1) { cx.save(); cx.scale(ks, ks); }
     if (own) bosses.fly.back(s, paused, K);
-    else { wrapLayer(ly.sky, s.cam); if (ly.sea) wrapLayer(ly.sea, s.cam); wrapLayer(ly.far, s.cam); }
+    else { wrapLayer(ly.sky, s.cam); if (ly.sea) wrapLayer(ly.sea, s.cam); wrapLayer(ly.far, s.cam); if (ly.mid) wrapLayer(ly.mid, s.cam); }   // (mid: nearer hills, Ibb)
     cx.save();
     cx.translate(sx, 0);
     // it comes up out of the sea, behind the beach

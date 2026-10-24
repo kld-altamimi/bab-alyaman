@@ -1,8 +1,8 @@
-// unit_ibb.js - Ibb's test range (level_ibb.js), checked without a screen: its own sense (every line its screens play
-// recorded, every screen on the ground inside the level, every posted man staged at his fight, the fights in order, the
-// way out past the last one), every checkpoint starting a game, a bot fighting its way through the whole range at both
-// fire settings, and the same seed giving the same game. (Its screens are scenery, drawn and voiced by render_ibb.js:
-// nothing in the simulation touches them, and nothing breaks them.)
+// unit_ibb.js - Ibb (level_ibb.js), built zone by zone, checked without a screen: its own sense (every line its screens
+// play recorded, every screen standing inside the level, every posted man staged at his fight, the fights in order, the
+// way out past the last one), its platforms where the painting has them (gen/stage_ibb.json), every checkpoint starting a
+// game, a bot fighting its way through the zones painted so far at both fire settings, and the same seed giving the same
+// game. (Its screens are scenery, drawn and voiced by render_ibb.js: nothing in the simulation touches them.)
 'use strict';
 const path = require('path');
 const fs = require('fs');
@@ -13,6 +13,7 @@ require(path.join(__dirname, '../src/roaster.js'));
 require(path.join(__dirname, '../src/fly.js'));
 const IBB = require(path.join(__dirname, '../src/level_ibb.js'));
 const AUDIO = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/audio.json'), 'utf8'));
+const STAGE = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/stage_ibb.json'), 'utf8'));
 let fails = 0;
 function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
 
@@ -26,7 +27,8 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(q.x > 60 && q.x < L.endRight - 30, q.size + ' at ' + q.x + ' inside the level');
     ok(q.lines.length > 0, q.size + ' at ' + q.x + ' has lines');
     for (const id of q.lines) ok(!!lines[id], q.size + ' at ' + q.x + ': line ' + id + ' recorded');
-    ok(Math.abs(Sim.groundY(L, q.x) - 184) < 0.01, q.size + ' at ' + q.x + ' stands on the quay\'s floor');
+    const gy = q.gy != null ? q.gy : Sim.groundY(L, q.x);
+    ok(gy >= STAGE.world.VERGE && gy <= 184, q.size + ' at ' + q.x + ' stands on the verge or the road (' + gy + ')');
   }
   for (const sp of L.spawns) {
     if (!sp.post) continue;
@@ -37,7 +39,13 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
   for (const k in L.groups) ok(L.gates.some(g => g.groups.includes(k)), 'group ' + k + ' has a fight');
   for (let i = 1; i < L.gates.length; i++) ok(L.gates[i].x > L.gates[i - 1].x, 'fights in order ' + L.gates[i].id);
   ok(L.exitX > L.gates[L.gates.length - 1].x, 'the way out is past the last fight');
-  ok(L.props.filter(q => q.k === 'detainee').length === 1, 'somebody to free');
+  ok(L.props.filter(q => q.k === 'detainee').length <= 1, 'one to free at most (the teacher comes with zone 2)');
+  ok(L.art === 'ibb' && L.endRight <= STAGE.world.END, 'the level ends where the painted road ends (' + STAGE.world.END + ')');
+  for (const pl of L.plats) {
+    const pp = STAGE.plats[pl.id];
+    ok(!!pp && JSON.stringify(pp) === JSON.stringify(pl.pts), 'platform ' + pl.id + ' where the painting has it');
+  }
+  for (const id in STAGE.plats) ok(L.plats.some(pl => pl.id === id), 'painted top ' + id + ' is a platform');
   for (let z = 0; z < L.zones.length; z++) {
     const s = Sim.create(L, { viewW: 468, zone: z });
     ok(s.status === 'play' && Math.abs(s.p.x - L.zones[z].spawn) < 1, 'zone ' + z + ' (' + L.zones[z].name + ') starts a game');

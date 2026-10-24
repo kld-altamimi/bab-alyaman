@@ -848,9 +848,19 @@ def minibus(L, x, seed=41):
             Rp.px(xx, roof - 9 - int(round(2.5 * np.sin((xx - x0) / 6.0))), 0.80)
     put_tone(L, Rp, SIGNY, dither=0)
     plat('busrack', [(x0 + 12, roof - 14), (x0 + 64, roof - 16), (x1 - 8, roof - 12)])
+    # yellow jerrycans stacked by its back door: a step up to the rack
+    Jc = Tone(L.w, L.h)
+    for (jx, jb) in ((x1 + 6, WALK + 1), (x1 + 15, WALK + 1), (x1 + 10, WALK - 10)):
+        for j in range(11):
+            for i in range(8):
+                t = 0.66 - 0.26 * (i / 7.0) + 0.12 * (j == 0) - 0.10 * (j == 10) + 0.06 * ((j % 4) == 2)
+                Jc.px(jx + i, jb - 11 + j, t)
+        Jc.px(jx + 5, jb - 12, 0.40); Jc.px(jx + 6, jb - 12, 0.40)
+    put_tone(L, Jc, SIGNY, dither=0.2)
+    plat('cans', [(x1 + 10, WALK - 22), (x1 + 17, WALK - 22)])
     # the warning triangle set out behind
     Tr = Tone(L.w, L.h)
-    tx = x1 + 24
+    tx = x1 + 44
     for j in range(8):
         for i in range(-j // 2 - 1, j // 2 + 2):
             if abs(i) >= j // 2 or j == 7:
