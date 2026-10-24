@@ -32,8 +32,11 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
 5. Copy the built `index.html` to a test branch, never straight to `main`; `main` changes only when Khaled says push.
 
 ## Notes
-- Before every build, check game-features' list of things that must keep working
-  (`claude/topics/game-features-checklist.md` in the project; `tools/signoff.py` on `main` once 0.10.64 is live).
+- Before every build, read the must-still-work checklist (`claude/topics/game-development-checklist.md` in the
+  project); `python3 tools/signoff.py <site folder> <out> --strict` on `main` checks it on the built site folder.
 - Build numbers are shared across branches: use the highest number seen plus one.
-- Other chats edit `index.html` on `main` directly. Port their changes into these sources before building, or the
-  build wipes them.
+- Since 23 Oct only the Game Development chat changes the game, here in the sources. A change made straight in
+  `index.html` must be ported into these sources before the next build, or the build wipes it.
+- Art: `scratchpad/game/tools/export_art.py` redraws every sheet (`art/out/`, `gen/atlas.json`) from the scripts; it
+  is deterministic, so after an art change compare the sheets with the last ones and check only the frames you meant
+  moved (24 Oct: the Roaster's edits changed its 33 `rst_*` frames and nothing else).

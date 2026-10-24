@@ -55,9 +55,10 @@
     if (paused) return;
     if ((b.st === 'steamtell' || b.st === 'pourtell') && tick % 3 === 0) K.part('wisp', x + R.GRILLE[0] - 4, y + R.GRILLE[1] - 2, { life: 14, vx: -40, vy: -20 });
     if (b.st === 'lobtell' && tick % 4 === 0) K.part('wisp', x - 6, y - R.TOP - 2, { life: 16, vx: (Math.random() - 0.5) * 20, vy: -40 });
-    // smoke from the chimney (or what is left of it), darker the more it is hurt
-    var cy = b.phase === 1 ? y - 101 : y - 69;
-    if (tick % (b.st === 'lungetell' || b.st === 'lunge' ? 2 : 6) === 0) K.part('smoke', x + 38 + (Math.random() - 0.5) * 4, cy, { life: 34, vx: 12 + (b.vx || 0) * -0.2, vy: -46 });
+    // smoke from the stack's bent pipe (or, once it has gone, the stub where it stood), darker the more it is hurt
+    // (24 Oct: the short stack with the chaff cyclone; mocha_sprites.roaster_chimney)
+    var sx = b.phase === 1 ? x + 69 : x + 52, cy = b.phase === 1 ? y - 88 : y - 62;
+    if (tick % (b.st === 'lungetell' || b.st === 'lunge' ? 2 : 6) === 0) K.part('smoke', sx + (Math.random() - 0.5) * 4, cy, { life: 34, vx: 12 + (b.vx || 0) * -0.2, vy: -46 });
     if (b.phase >= 2 && tick % 9 === 0) K.part('wisp', x + (Math.random() - 0.5) * 80, y - 30 - Math.random() * 30, { life: 20, vy: -40, vx: (Math.random() - 0.5) * 20 });
     if (b.phase === 3 && tick % 5 === 0) K.part('ember', x - 10 + (Math.random() - 0.5) * 50, y - 50, { life: 14, vx: (Math.random() - 0.5) * 60, vy: -60, g: 300 });
     if (Math.abs(b.vx || 0) > 50 && tick % 3 === 0) K.part('puff', x + (b.vx < 0 ? R.HW - 6 : -R.HW + 6), y - 3, { life: 9, flip: b.vx > 0 });
@@ -68,7 +69,7 @@
       case 'boss_intro': K.shake(4); break;
       case 'boss_phase':
         K.embers(e.x, e.y, 18, 320);
-        K.pop(e.x, e.y - 20, e.n === 2 ? 'THERE GOES THE CHIMNEY' : 'THE DRUM HAS CRACKED', 's_lav');
+        K.pop(e.x, e.y - 20, T(e.n === 2 ? 'THERE GOES THE CHIMNEY' : 'THE DRUM HAS CRACKED'), 's_lav');   // (in Arabic too since 24 Oct)
         if (e.n === 2) K.part('piece', e.x, e.y, { life: 90, vx: 70, vy: -260, g: 600, spin: 0.3, name: 'rst_chimney', oy: 0 });
         else K.part('piece', e.x, e.y - 10, { life: 90, vx: -60, vy: -280, g: 600, spin: -0.25, name: 'rst_hopper', oy: 0 });
         K.shake(12); K.flash(2);

@@ -94,9 +94,14 @@ def quartermaster(act='stand', bob=0):
 
 # ------------------------------------------------------------------ the Big Roaster, in parts
 # Coordinates are from the middle of the tracks at the ground (the tank's anchor), x to the left negative (it faces left).
-# The renderer stacks: tracks, body (hull, cab and the chimney's foot), drum, hopper, chimney, the quartermaster.
-RW, RH_ = 132, 104                       # the canvas each part is painted on
-OX, OY = 66, 100                         # where the anchor falls on it
+# The renderer stacks: tracks, body (hull, platform and the stack's foot), drum, hopper, chimney, the quartermaster.
+# 24 Oct, Khaled's five small edits (approved 22 Oct; drawn first in tools/roaster_minor.py), so it reads as a roastery
+# on tracks, not a locomotive: 1 a short stack with the chaff cyclone on it; 2 the plough off, a cooling tray out front
+# with its stirring arm, and the spout bent down into a chute over it; 3 five big road wheels instead of six small ones;
+# 4 the cab cut down to an open platform with a railing, green-bean sacks on the deck; 5 a sight glass and a trier on
+# the drum, its front end cap a faceplate with the bean door. What it does is unchanged (roaster.js).
+RW, RH_ = 180, 104                       # the canvas each part is painted on (wider since the tray stands out in front)
+OX, OY = 90, 100                         # where the anchor falls on it
 OLIVE = P.OLIVE
 COP = SM.COPPER
 IRONR = SM.IRON
@@ -123,16 +128,16 @@ def _part(layers, outline=True):
 
 
 def roaster_tracks(k):
-    """The tracks: a long loop of links over six road wheels and the sprockets; k (0..2) moves the links along."""
+    """The tracks: a long loop of links over five big road wheels with dished hubs; k (0..2) moves the links along."""
     T = _canvas()
     W_ = _canvas()
-    x0, x1, top, bot = OX - 58, OX + 58, OY - 18, OY - 1
+    x0, x1, top, bot = OX - 58, OX + 58, OY - 20, OY - 1
     for x in range(x0, x1 + 1):
         for y in range(top, bot + 1):
             # the loop: rounded at both ends
-            if x < x0 + 8 and (x - (x0 + 8)) ** 2 + (y - (top + bot) / 2.0) ** 2 * 3.2 > 64:
+            if x < x0 + 9 and (x - (x0 + 9)) ** 2 + (y - (top + bot) / 2.0) ** 2 * 2.6 > 81:
                 continue
-            if x > x1 - 8 and (x - (x1 - 8)) ** 2 + (y - (top + bot) / 2.0) ** 2 * 3.2 > 64:
+            if x > x1 - 9 and (x - (x1 - 9)) ** 2 + (y - (top + bot) / 2.0) ** 2 * 2.6 > 81:
                 continue
             edge = y in (top, bot) or y in (top + 1, bot - 1)
             link = ((x + k * 2) // 3) % 2
@@ -140,21 +145,23 @@ def roaster_tracks(k):
             if not edge:
                 t = 0.14
             T.px(x, y, t)
-    for wx in range(x0 + 10, x1 - 8, 19):
-        for a in range(0, 360, 6):
-            for rr in (4.5, 5.5):
-                W_.px(wx + rr * np.cos(np.radians(a)), OY - 9 + rr * np.sin(np.radians(a)), 0.56 if rr < 5 else 0.36)
-        W_.rect(wx - 1, OY - 10, wx + 1, OY - 8, 0.80)
-        for a in range(0, 360, 90):
-            ang = np.radians(a + k * 30)
-            W_.px(wx + 3 * np.cos(ang), OY - 9 + 3 * np.sin(ang), 0.24)
+    # five road wheels, big, with a dished hub and five spoke holes that turn
+    for wx in range(x0 + 12, x1 - 8, 23):
+        for a in range(0, 360, 4):
+            for rr in (5.5, 6.5, 7.5):
+                W_.px(wx + rr * np.cos(np.radians(a)), OY - 10 + rr * np.sin(np.radians(a)), 0.60 if rr < 6 else (0.42 if rr < 7 else 0.30))
+        W_.rect(wx - 1, OY - 11, wx + 1, OY - 9, 0.84)
+        for a in range(0, 360, 72):
+            ang = np.radians(a + k * 24)
+            W_.px(wx + 4 * np.cos(ang), OY - 10 + 4 * np.sin(ang), 0.22)
     return _part([(T, IRONR, 0.2), (W_, IRONR, 0.2)])
 
 
 def roaster_body(phase):
     """The hull: olive plate with rust, mudguards over the tracks, a sloped front with the steam grille and the low
-    chute, the scorpion stencilled on its side, and the cab at the back with its bulkhead. Phase 2 and 3: dents, scorch
-    marks, a plate hanging off."""
+    chute, the scorpion stencilled on its side; the open platform at the back with its railing and the green-bean
+    sacks; the cooling tray out front on its bracket, beans heaped in it and the stirring arm over them. Phase 2 and 3:
+    scorch marks."""
     T = _canvas()            # olive plate
     K = _canvas()            # iron fittings
     R = _canvas()            # rust
@@ -185,28 +192,24 @@ def roaster_body(phase):
     # the low chute under the grille
     K.rect(OX - 60, OY - 12, OX - 50, OY - 6, 0.30)
     K.rect(OX - 60, OY - 12, OX - 50, OY - 12, 0.66)
-    # the cab's bulkhead at the back, open on top
+    # the platform at the back: the bulkhead cut down to knee height, a railing above it (an open platform, not a cab)
     for x in range(OX + 26, OX + 56):
-        for y in range(OY - 62, top + 1):
+        for y in range(OY - 50, top + 1):
             u = (x - (OX + 26)) / 30.0
             t = 0.58 - 0.20 * u + 0.04 * ((x + y) % 2)
-            if y == OY - 62:
+            if y == OY - 50:
                 t = 0.90
             T.px(x, y, t)
-    K.rect(OX + 28, OY - 58, OX + 50, OY - 56, 0.30)               # the slot he looks out of
+    K.rect(OX + 26, OY - 60, OX + 56, OY - 59, 0.72)                  # the top rail
+    for x in (OX + 27, OX + 41, OX + 55):
+        K.rect(x, OY - 59, x, OY - 51, 0.50)                           # its posts
+    K.rect(OX + 26, OY - 55, OX + 56, OY - 55, 0.40)                  # the middle rail
     # rust streaks
     for x in range(OX - 54, OX + 54, 7):
         for y in range(top + 4, bot - 2):
             if (x * 3 + y) % 5 == 0:
                 R.px(x + (y % 2), y, 0.48)
-    # the plough at the front: iron bars raked forward, toothed at the foot
-    for i in range(5):
-        for j in range(18):
-            K.px(OX - 60 - j * 0.35 - i * 2, OY - 20 + j, 0.56 - 0.06 * i + (0.24 if j == 0 else 0))
-    for i in range(4):
-        K.px(OX - 67 - i * 2, OY - 2, 0.70)
-        K.px(OX - 66 - i * 2, OY - 3, 0.40)
-    # a pressure gauge by the cab, and copper pipes along the hull to the grille
+    # a pressure gauge by the platform, and copper pipes along the hull to the grille
     G = _canvas()
     gx, gy = OX + 44, OY - 28
     G.rect(gx - 3, gy - 3, gx + 3, gy + 3, 0.94)
@@ -233,6 +236,46 @@ def roaster_body(phase):
         Hz.px(x, OY - 15, 0.9 if (x // 3) % 2 else 0.1)
         Hz.px(x, OY - 14, 0.9 if ((x + 1) // 3) % 2 else 0.1)
     layers = [(T, OLIVE, 0.35), (R, P.RUST, 0.2), (K, IRONR, 0.2), (Pp, COP, 0.2), (G, SM.LIME, 0), (Sc, SM.LIME, 0), (Hz, SM.CRANE, 0)]
+    # the cooling tray: a wide shallow pan out in front on an iron bracket, its rim bright, the beans showing over it,
+    # a stirring arm sweeping over them from a post with the motor on top
+    Tr = _canvas()
+    Bk = _canvas()
+    Bn = _canvas()
+    tx0, tx1, ty = OX - 86, OX - 58, OY - 26
+    for x in range(tx0, tx1 + 1):
+        u = (x - tx0) / float(tx1 - tx0)
+        for y in range(ty - 6, ty + 2):
+            v = (y - (ty - 6)) / 7.0
+            t = 0.58 - 0.26 * v - 0.12 * u + 0.04 * ((x + y) % 2)
+            if y == ty - 6:
+                t = 0.95                                             # the rim
+            if y == ty - 5:
+                t = 0.22                                             # the dark inside, just over the rim
+            if x in (tx0, tx1):
+                t += 0.2
+            Tr.px(x, y, t)
+    for i in range(13):                                              # the beans heaped in it
+        Bn.px(tx0 + 2 + i * 2 + (i % 2), ty - 6 - (i % 3 == 1), 0.5 + 0.25 * (i % 2))
+        Bn.px(tx0 + 3 + i * 2, ty - 5, 0.35)
+    mx = (tx0 + tx1) // 2
+    Bk.rect(tx0 + 3, ty - 8, tx1 - 3, ty - 8, 0.74)                 # the stirring arm, over the pan
+    Bk.rect(tx0 + 3, ty - 7, tx1 - 3, ty - 7, 0.40)
+    Bk.rect(mx, ty - 15, mx + 1, ty - 8, 0.56)                        # its post...
+    Bk.rect(mx - 3, ty - 19, mx + 4, ty - 15, 0.70)                   # ...and the motor
+    Bk.rect(mx - 3, ty - 19, mx + 4, ty - 19, 0.92)
+    Bk.rect(OX - 62, ty - 1, OX - 56, ty + 1, 0.5)                    # the bracket from the hull
+    for i in range(12):
+        Bk.px(OX - 72 + i * 0.9, ty + 2 + i, 0.44)                    # and a strut down to the mudguard
+    layers += [(Tr, COP, 0.3), (Bn, SM.BEAN, 0.2), (Bk, IRONR, 0.2)]
+    # green-bean sacks on the deck behind him
+    Sk = _canvas()
+    for (sx, sy, w_, h_) in ((OX + 46, OY - 60, 11, 10), (OX + 49, OY - 69, 9, 9)):
+        for x in range(sx, sx + w_):
+            for y in range(sy, sy + h_):
+                u = (x - sx) / float(w_)
+                Sk.px(x, y, 0.62 - 0.3 * u + 0.05 * ((x + y) % 2) - (0.2 if y == sy + h_ - 1 else 0))
+        Sk.rect(sx + 2, sy - 1, sx + w_ - 3, sy - 1, 0.34)              # the tied neck
+    layers.append((Sk, SM.SACK, 0.3))
     if phase >= 2:
         S_ = _canvas()
         for (cx, cy, r) in ((OX - 20, OY - 30, 6), (OX + 12, OY - 24, 5), (OX + 40, OY - 50, 4)) if phase == 3 else ((OX - 18, OY - 30, 5),):
@@ -246,7 +289,9 @@ def roaster_body(phase):
 
 def roaster_drum(k, cracked=False):
     """The roaster's copper drum, lying on top of the hull: lit from the upper left, banded with iron and turning (k
-    moves its rivets round), the spout at its front end. Cracked: split, and glowing through the splits."""
+    moves its rivets round); at its front a square chute bent down over the cooling tray (the high spray comes out of
+    it), a sight glass and a trier on its front band, and the end cap squared off into a faceplate with the round bean
+    door. Cracked: split, and glowing through the splits."""
     C = _canvas()
     K = _canvas()
     cx, cy, r, x0, x1 = OX - 6, OY - 46, 15, OX - 42, OX + 30
@@ -270,20 +315,38 @@ def roaster_drum(k, cracked=False):
             K.px(bx + 1, y, 0.26)
             if (y + k * 3) % 6 == 0:
                 K.px(bx, y, 0.86)
-    # the spout at the front, a little below the middle (the high spray comes out of it)
+    # the discharge chute: a square duct from the drum's front, bent down toward the cooling tray
     B_ = _canvas()
-    for x in range(OX - 56, x0 - 1):
-        fl = int(np.clip((OX - 48 - x) * 0.6, 0, 4))                 # flaring toward the mouth
-        for y in range(OY - 35 - fl, OY - 28 + fl):
-            v = (y - (OY - 35 - fl)) / float(7 + 2 * fl)
-            B_.px(x, y, 0.40 + 0.50 * np.exp(-((v - 0.3) / 0.25) ** 2))
-    for y in range(OY - 39, OY - 23):
-        B_.px(OX - 57, y, 0.30)
-        B_.px(OX - 56, y, 0.62)
+    for i in range(14):
+        xx = x0 - 2 - i
+        yy = OY - 35 + i * 0.45
+        for j in range(7):
+            B_.px(xx, yy + j, 0.40 + 0.5 * np.exp(-((j - 2) / 2.0) ** 2))
+        B_.px(xx, yy, 0.92)
+    B_.rect(x0 - 18, OY - 30, x0 - 15, OY - 29, 0.8)                 # its lip, over the tray
+    B_.rect(x0 - 18, OY - 28, x0 - 16, OY - 27, 0.3)
     # the crank on its side
     for a in range(0, 360, 15):
         K.px(x1 - 18 + 6 * np.cos(np.radians(a + k * 20)), cy + 2 + 6 * np.sin(np.radians(a + k * 20)) * 0.9, 0.62)
     layers = [(C, COP, 0.3), (K, IRONR, 0.2), (B_, SM.CRANE, 0.3)]
+    # the sight glass by the front band, the trier (the sampling scoop's brass handle) under it, and the faceplate
+    Gl = _canvas()
+    for a in range(0, 360, 8):
+        for rr in (2.0, 3.0):
+            Gl.px(x0 + 14 + rr * np.cos(np.radians(a)), cy - 6 + rr * np.sin(np.radians(a)), 0.9 if rr < 2.5 else 0.5)
+    Gl.px(x0 + 14, cy - 6, 0.7)
+    Gl.px(x0 + 13, cy - 7, 0.98)
+    Tt = _canvas()
+    Tt.rect(x0 + 12, cy + 5, x0 + 17, cy + 6, 0.8)                    # the trier's handle
+    Tt.rect(x0 + 10, cy + 5, x0 + 11, cy + 6, 0.98)                    # its brass knob
+    Fp = _canvas()
+    for y in range(cy - r - 1, cy + r + 2):
+        for i in range(4):
+            Fp.px(x0 - 1 - i, y, 0.44 - 0.08 * i + 0.2 * (y < cy - 6))
+    for a in range(0, 360, 10):
+        Fp.px(x0 - 3 + 2.0 * np.cos(np.radians(a)) * 0.5, cy + 5.5 * np.sin(np.radians(a)), 0.9)   # the door's ring
+    Fp.rect(x0 - 4, cy - 1, x0 - 3, cy + 1, 0.98)                                                    # its handle
+    layers += [(Fp, IRONR, 0.2), (Gl, SM.GLASS, 0.2), (Tt, SM.CRANE, 0.3)]
     if cracked:
         F = _canvas()
         for (sx, sy, ln, d) in ((cx - 18, cy - 8, 14, 1), (cx + 6, cy - 10, 16, -1), (cx - 4, cy + 4, 12, 1)):
@@ -307,31 +370,63 @@ def roaster_hopper():
 
 
 def roaster_chimney(stub=False):
-    """The chimney at the back, a cap on it; or, once it has been shot off, the stub."""
+    """The stack at the back: short, with the chaff cyclone on it (a fat can, a cone under it into the stack, a thin
+    pipe out of its top bent back and down: a roastery's exhaust, not a funnel); or, once it has been shot off, the
+    stub where it stood. (Its smoke comes out of the pipe's end, x+69 y-88, or the stub's top, x+52 y-62:
+    render_roaster.js.)"""
     T = _canvas()
-    topy = OY - 66 if stub else OY - 98
-    for y in range(topy, OY - 42):
-        for x in range(OX + 34, OX + 43):
-            u = (x - (OX + 34)) / 8.0
-            T.px(x, y, 0.70 - 0.46 * u + 0.04 * ((y // 6) % 2) + (0.14 if (y - topy) % 14 == 6 else 0))
     if stub:
-        for x in range(OX + 33, OX + 44):
+        topy = OY - 60
+        for y in range(topy, OY - 42):
+            for x in range(OX + 48, OX + 57):
+                u = (x - (OX + 48)) / 8.0
+                T.px(x, y, 0.70 - 0.46 * u + 0.04 * ((y // 6) % 2))
+        for x in range(OX + 47, OX + 58):
             T.px(x, topy + (x % 3), 0.20)
-    else:
-        T.rect(OX + 31, topy - 3, OX + 46, topy, 0.56)
-        T.rect(OX + 31, topy - 3, OX + 46, topy - 3, 0.86)
+        return _part([(T, IRONR, 0.3)])
+    topy = OY - 70
+    for y in range(topy, OY - 42):
+        for x in range(OX + 48, OX + 57):
+            u = (x - (OX + 48)) / 8.0
+            T.px(x, y, 0.70 - 0.46 * u + 0.04 * ((y // 6) % 2))
+    cx0, cx1 = OX + 43, OX + 63
+    for y in range(topy - 8, topy + 1):                      # the cone, narrowing to the stack
+        v = (y - (topy - 8)) / 8.0
+        half = 10.5 - 6 * v
+        for x in range(int(OX + 52.5 - half), int(OX + 52.5 + half) + 1):
+            u = (x - (OX + 52.5 - half)) / (2 * half + 0.01)
+            T.px(x, y, 0.62 - 0.4 * u)
+    for y in range(topy - 22, topy - 8):                     # the can
+        for x in range(cx0, cx1 + 1):
+            u = (x - cx0) / float(cx1 - cx0)
+            T.px(x, y, 0.74 - 0.5 * u + (0.1 if y in (topy - 22, topy - 13) else 0))
+    T.rect(cx0 - 1, topy - 23, cx1 + 1, topy - 23, 0.9)
+    T.rect(cx0 - 1, topy - 22, cx0 - 1, topy - 8, 0.4)
+    T.rect(cx1 + 1, topy - 22, cx1 + 1, topy - 8, 0.4)
+    for y in range(topy - 29, topy - 23):                    # the thin pipe out of the top...
+        T.px(OX + 53, y, 0.76)
+        T.px(OX + 54, y, 0.5)
+        T.px(OX + 55, y, 0.3)
+    for x in range(OX + 53, OX + 70):                        # ...bent back and down
+        T.px(x, topy - 30, 0.76)
+        T.px(x, topy - 29, 0.5)
+        T.px(x, topy - 28, 0.3)
+    for y in range(topy - 30, topy - 19):
+        T.px(OX + 68, y, 0.6)
+        T.px(OX + 69, y, 0.42)
+        T.px(OX + 70, y, 0.28)
     return _part([(T, IRONR, 0.3)])
 
 
 def roaster_qm(shout=False):
-    """The quartermaster in his cab, head and shoulders over the bulkhead, a hand on the lever."""
+    """The quartermaster on his open platform, his coat going down behind the railing, a hand on the lever."""
     p = ms3.pal('olive', 'black', 'white', 'skin3')
     p['L'] = '#6c3818'
     L = [(ms3.MARSHAL['torso'], 4, 13, p), (FACES['cook'], 14, 5, p), (WRAPS['pot'], 13, 0, p, INK2)]
     if shout:
         L.append(at('arm_raise_fl', (4, 0), p))
     im, fx, fy = compose(L, foot=(17, 30))
-    im = im.crop((0, 0, im.width, min(im.height, 26)))
+    im = im.crop((0, 0, im.width, min(im.height, 34)))
     return im, fx, 0                                  # (anchored at the top of his head)
 
 
