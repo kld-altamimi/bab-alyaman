@@ -17,6 +17,7 @@ var Render = (function () {
   // (at night in Taiz the men, Yazeed and the smoke are drawn from a copy of the sprites graded for the night, unless the
   // searchlight is on them: render_fly.js says which, through its tint(); SRC is the copy, or null for the sprites themselves)
   var SRC = null;
+  var sub = null;                       // the line on the screen now (main.js's), for a screen whose mouth goes with it (Ibb)
 
   function init(canvas, atlas, fonts, images) {
     cv = canvas; A = atlas; F = fonts; IMG = images;
@@ -749,6 +750,7 @@ var Render = (function () {
   // ------------------------------------------------------------------ one frame
   function draw(s, ui) {
     tick++;
+    sub = ui.sub || null;
     var p = s.p, L = s.L, i, cam = Math.round(s.cam), camY = Math.round(s.camY || 0), sx = 0, sy = 0, paused = !!ui.paused;
     if (shake > 0) {
       if (!opts.calm) { sx = Math.round((Math.random() - 0.5) * Math.min(4, shake * 0.5)); sy = Math.round((Math.random() - 0.5) * Math.min(3, shake * 0.4)); }
@@ -870,8 +872,10 @@ var Render = (function () {
       var rx = (e.st === 'burst' && e.stT % 8 < 3) || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
       // a man behind the bags keeps his head down, and comes up over a few frames to aim
       var down = e.covered && e.hostile ? (Sim.ducked(e) ? 9 : (e.st === 'aim' && e.stT < 4 ? 9 - e.stT * 3 : 0)) : 0;
-      if (e.st === 'stagger') rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
-      spr(name, e.x + rx, e.y + down, flip, 1, down);
+      if (e.st === 'stagger' || (e.st === 'flinch' && e.stT < 14)) rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
+      // (a man a mission dresses up itself draws himself when it wants: Ibb's men chanting under a speaker, or flinching)
+      var dc = e.deco && bosses[e.deco];
+      if (!(dc && dc.pose && dc.pose(s, e, K, name, rx, down, flip))) spr(name, e.x + rx, e.y + down, flip, 1, down);
       // still coming in, out at the edge: he flashes, and nothing hurts him yet
       if (Sim.guarded(s, e) && (tick >> 2) % 2 && A.frames[name.replace('!', '') + '!']) {
         cx.globalAlpha = 0.42; spr(name.replace('!', '') + '!', e.x + rx, e.y + down, flip, 1, down); cx.globalAlpha = 1;
@@ -883,6 +887,7 @@ var Render = (function () {
       }
       if (e.k === 'bomber' && e.st === 'wind' && (tick >> 1) % 2) spr('fx_spark2', e.x - e.face * 4, e.y - 46);
       if (e.st === 'surr' && !e.captured && (tick >> 4) % 2) text('s_lav', T('WALK IN'), e.x, e.y - 50, 'c');
+      if (dc && dc.mark) dc.mark(s, e, K);                           // (and what goes over him: Ibb's speech bubble)
     }
     SRC = null;
     // the sandbags stand in front of whoever hides behind them
@@ -1234,9 +1239,16 @@ var Render = (function () {
     ctx: function () { return cx; }, tick: function () { return tick; }, W: function () { return W; }, H: H,
     shake: function (v) { shake = Math.max(shake, v); }, flash: function (v) { flashT = Math.max(flashT, v); },
     frame: function (n) { return A.frames[n]; }, rig: function (n) { return A.rig && A.rig[n]; },
-    src: function (c) { SRC = c || null; }
+    src: function (c) { SRC = c || null; },
+    sub: function () { return sub; }
   };
-  return { init: init, resize: resize, reset: reset, draw: draw, onEvents: onEvents, setBanner: setBanner, setHint: setHint, text: text, textW: textW, lineH: lineH, arTune: arTune, arBitmap: arBitmap, spr: spr, opts: opts, bosses: bosses,
+  // a mission's own lines that run by themselves (Ibb's screens and speakers): the next one to say, when nobody else is
+  // talking (main.js asks, and says it)
+  function talk(s) {
+    for (var k in bosses) if (bosses[k].talk) { var t = bosses[k].talk(s, K); if (t) return t; }
+    return null;
+  }
+  return { init: init, resize: resize, reset: reset, draw: draw, onEvents: onEvents, setBanner: setBanner, setHint: setHint, text: text, textW: textW, lineH: lineH, arTune: arTune, arBitmap: arBitmap, spr: spr, opts: opts, bosses: bosses, talk: talk,
            width: function () { return W; }, height: function () { return H; }, zoom: function () { return zoom; },
            hudCanvas: function () { return zoom !== 1 ? hudCv : null; },
            clear: function (c) {

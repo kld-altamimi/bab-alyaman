@@ -4,12 +4,15 @@
 // page: a browser will not allow it sooner.
 // Music: the stage theme and the battery's in play (startMusic), the home screen's theme and the map's march in the
 // menus (menu), the mission jingles; one loop at a time, the menus' crossfading into each other.
+// A mission's own spoken lines (Ibb's Spokesman, since 24 Oct) come the same way as its music: a file of their own,
+// fetched with the mission (want()), laid out as the voices are and spoken through voice() like any other line.
 var Sound = (function () {
   'use strict';
   var ctx = null, out = null, gMusic = null, gSfx = null, gVoice = null, man = null;
   var raw = {}, pre = {}, bufs = {}, shift = {}, last = {}, live = 0, loopSrc = null, seaSrc = null, jingleSrc = null, voiceNow = null;
   var muted = false, failed = false, flip = {}, names = [], all = [], wanted = {}, nDone = 0, how = '', off = null;
   var pendingMusic = null, pendingSea = false, endNode = null, counts = {}, loops = {}, track = 'strait';
+  var said = {}, spoken = {};          // a mission's own lines by id (each knows its file), and those files
   var MIN_GAP = { shot_hmg: 0.04, shot_side: 0.045, eshot: 0.05, hit_body: 0.05, hit_sand: 0.07, clang: 0.05, step: 0.09, boom_s: 0.07, boom_m: 0.1, coin: 0.06, ricochet: 0.12, land: 0.08, tick: 0.05,
                  heavy_shot: 0.06, ram: 0.05, crash: 0.15, dive: 0.1, whistle: 0.08, lock: 0.1, smash_crate: 0.1, smash_bags: 0.1, car_land: 0.12, knife: 0.05, boom_big: 0.3,
                  gun30: 0.045, hedp: 0.09, beep: 0.04, rbeep: 0.03 };
@@ -38,7 +41,7 @@ var Sound = (function () {
     if (bufs[n] || !keep(n)) return;
     bufs[n] = buf;
     nDone++;
-    if (n === 'sfx' || n === 'voices') {
+    if (n === 'sfx' || n === 'voices' || spoken[n]) {
       // a click near the start of the file says how far the decoder has shifted everything
       var d = buf.getChannelData(0), m = Math.min(d.length, Math.floor(buf.sampleRate * 0.3));
       shift[n] = 0;
@@ -63,17 +66,27 @@ var Sound = (function () {
     ['title', 'map'].forEach(function (k) { if (man.music[k]) names.push(man.music[k].file); });
     all = names.slice();
     for (var k in man.music) if (all.indexOf(man.music[k].file) < 0) all.push(man.music[k].file);
+    for (var sk in man.speech || {}) {
+      var sp = man.speech[sk];
+      spoken[sp.file] = true;
+      if (all.indexOf(sp.file) < 0) all.push(sp.file);
+      for (var lid in sp.lines) { var ln = sp.lines[lid]; said[lid] = { at: ln.at, who: ln.who, text: ln.text, m: ln.m, f: sp.file }; }
+    }
     var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     try { if (OAC) off = new OAC(2, 2, 44100); } catch (e) { off = null; }
     how = off ? 'early' : 'on tap';
     names.forEach(fetchOne);
   }
   // the music a mission needs ('strait', 'battery', ...): fetched and decoded if it is not yet; the other missions'
-  // music is let go (the menus', the jingles, the effects and the voices never are)
+  // music is let go (the menus', the jingles, the effects and the voices never are). 'speech:<mission>' asks for that
+  // mission's own lines the same way.
   function want(tracks) {
     if (!man) return;
     var w = {};
-    (tracks || []).forEach(function (k) { if (man.music[k]) w[man.music[k].file] = true; });
+    (tracks || []).forEach(function (k) {
+      if (man.music[k]) w[man.music[k].file] = true;
+      else if (k.indexOf('speech:') === 0 && man.speech && man.speech[k.slice(7)]) w[man.speech[k.slice(7)].file] = true;
+    });
     for (var n in bufs) if (!w[n] && names.indexOf(n) < 0) { delete bufs[n]; nDone--; }
     for (var r in raw) if (!w[r] && names.indexOf(r) < 0) { delete raw[r]; delete pre[r]; }
     wanted = w;
@@ -159,17 +172,18 @@ var Sound = (function () {
     h.s.onended = function () { live--; };
   }
   // one spoken line at a time; a new one cuts the old one off. Returns how long it runs, in seconds.
+  function lineOf(id) { return man ? man.voices[id] || said[id] || null : null; }
   function voice(id, o) {
-    var v = man && man.voices[id];
+    var v = lineOf(id), f = v && v.f ? v.f : 'voices';
     if (!v) return 0;
     o = o || {};
     var len = v.at[1] / (o.rate || 1);
-    if (!ctx || !bufs.voices || ctx.state !== 'running') return len;
+    if (!ctx || !bufs[f] || ctx.state !== 'running') return len;
     if (voiceNow && !o.over) {
       try { voiceNow.g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); voiceNow.s.stop(ctx.currentTime + 0.06); } catch (e) {}
       voiceNow = null;
     }
-    var h = play(bufs.voices, v.at[0] + shift.voices, v.at[1] + 0.01, gVoice, { gain: o.gain == null ? 1 : o.gain, rate: o.rate || 1, pan: o.pan });
+    var h = play(bufs[f], v.at[0] + shift[f], v.at[1] + 0.01, gVoice, { gain: o.gain == null ? 1 : o.gain, rate: o.rate || 1, pan: o.pan });
     counts[id] = (counts[id] || 0) + 1;
     if (!o.over) {
       voiceNow = h;
@@ -184,6 +198,15 @@ var Sound = (function () {
     return len;
   }
 
+  // the line being spoken stops where it is (a screen shot in the middle of a sentence), and the rest comes back up
+  function hush() {
+    if (!ctx || !voiceNow) return;
+    try { voiceNow.g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); voiceNow.s.stop(ctx.currentTime + 0.06); } catch (e) {}
+    voiceNow = null;
+    var t = ctx.currentTime;
+    gMusic.gain.cancelScheduledValues(t); gMusic.gain.setTargetAtTime(MUSIC * vol.music, t, 0.12);
+    gSfx.gain.cancelScheduledValues(t); gSfx.gain.setTargetAtTime(SFX * vol.sfx, t, 0.1);
+  }
   function fadeOut(h, len) {
     try {
       var t = ctx.currentTime;
@@ -311,12 +334,12 @@ var Sound = (function () {
     return { state: ctx ? ctx.state : 'not started', rate: ctx ? ctx.sampleRate : 0, ready: isReady(), failed: failed, decoded: nDone + '/' + all.length, how: how,
              session: !!navigator.audioSession, latency: ctx && ctx.baseLatency != null ? Math.round(ctx.baseLatency * 1000) : null };
   }
-  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
+  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, hush: hush, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
            track: function () { return track; },
            // which loop is sounding now ('title', 'map', 'strait', 'battery', 'mocha', 'roaster'), or null
            playing: function () { return loopSrc ? loopSrc.track : null; },
            setMuted: setMuted, isMuted: function () { return muted; }, setVolume: setVolume, getVolume: getVolume, pause: pause, info: info, isReady: isReady, hasFailed: function () { return failed; },
-           lineOf: function (id) { return man && man.voices[id]; },
+           lineOf: lineOf,
            // for tests: the last node before the loudspeaker, and how often each sound has been asked for
            tap: function () { return { ctx: ctx, node: endNode, music: gMusic, sfx: gSfx, voice: gVoice }; }, counts: function () { return counts; } };
 })();

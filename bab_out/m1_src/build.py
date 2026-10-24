@@ -40,6 +40,11 @@ grounds = {'m1': ground}
 # and clips, unused (laying them out again would move everything else in them).
 NO_SOUQ = '--no-souq' in sys.argv
 SOUQ_CODE = ('level_zabid', 'tailor', 'render_tailor')
+# --ibb (24 Oct): a test build with Ibb in it (Mission 4, while it is being built: its plan's stages one at a time). Its
+# level, its code and its sheet go in, its lines (audio/speech_ibb.mp3) are listed, and on the map it is out, with the
+# road from Taiz to it (the Souq off the road, as at Ibb's release). Without it, none of Ibb is in the page.
+IBB = '--ibb' in sys.argv
+IBB_CODE = ('level_ibb', 'ibb', 'render_ibb')
 pics = ['atlas', 'font', 'sky', 'far', 'sea', 'play_a', 'road', 'r2b', 'sand', 'b2r', 'play_b', 'fore', 'fore_road', 'fore_sand', 'fore_b', 'map']
 for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid')):
     f = GAME + 'gen/stage_%s.json' % art
@@ -56,6 +61,10 @@ TAIZ_SHEET = GAME + 'gen/taiz_sprites.json'
 if os.path.exists(TAIZ_SHEET) and os.path.exists(GAME + 'art/out/taiz.png'):
     atlas['taiz'] = json.load(open(TAIZ_SHEET))
     pics.append('taiz')
+IBB_SHEET = GAME + 'gen/ibb_sprites.json'
+if IBB:
+    atlas['ibb'] = json.load(open(IBB_SHEET))
+    pics.append('ibb')
 # Taiz's painted stage (21 Oct, the full level: tools/export_taiz.py): its pieces on one sheet, and where everything is
 TAIZ_STAGE = GAME + 'gen/stage_taiz.json'
 stage_taiz = None
@@ -100,6 +109,8 @@ for n in pics:
     images[n] = 'data:image/%s;base64,' % kind + base64.b64encode(pic).decode()
 # the page only needs the lines the game can speak
 audio_small = dict(audio)
+if not IBB:
+    audio_small.pop('speech', None)
 if NO_SOUQ:
     audio_small['music'] = {k: v for k, v in audio['music'].items() if k not in ('souq', 'tailor')}
 
@@ -124,10 +135,16 @@ data = '\n'.join([
     'var IMAGES = %s;' % js(images),
 ])
 code = []
-for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'menu', 'audio', 'input', 'main'):
-    if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE):
+for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'ibb', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'menu', 'audio', 'input', 'main'):
+    if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE) or (not IBB and f in IBB_CODE):
         continue
     src = read(GAME + 'src/%s.js' % f)
+    if IBB and f == 'campaign':
+        # Ibb out, and the road from Taiz going to it
+        for old, new in (("name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: false,", "name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: true,"),
+                         ("name: 'The Castle', place: 'Taiz', road: 'Mountain road', built: true, next: ['zabid'],", "name: 'The Castle', place: 'Taiz', road: 'Mountain road', built: true, next: ['ibb'],")):
+            assert src.count(old) == 1, old
+            src = src.replace(old, new)
     if NO_SOUQ and f == 'campaign':
         # the Souq's card as the live game shows it (0.8.44): not built, and the teaser it has always had
         for old, new in (("name: 'The Souq', place: 'Zabid', road: 'Coast road', built: true,", "name: 'The Souq', place: 'Zabid', road: 'Coast road', built: false,"),
@@ -164,8 +181,8 @@ SKELETON = '''<!doctype html>
 wrapped = SKELETON + page + ('\n' + LOCAL if '--local-fonts' in sys.argv else '') + '\n</body>\n</html>\n'
 open(SITE + 'index.html', 'w', encoding='utf-8').write(wrapped)
 aud = sum(os.path.getsize(SITE + 'audio/' + f) for f in os.listdir(SITE + 'audio'))
-print('build "%s"%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64), sound files %.2f MB; title in first 8 KB: %s'
-      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, aud / 1048576, '<title>' in page[:8000]))
+print('build "%s"%s%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64), sound files %.2f MB; title in first 8 KB: %s'
+      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', ' WITH IBB' if IBB else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, aud / 1048576, '<title>' in page[:8000]))
 if NO_SOUQ:
     # the music the page can ask for (the folder keeps every file; copy only these to the repo)
     print('music files this page uses:', sorted(set(v['file'] for v in audio_small['music'].values())))

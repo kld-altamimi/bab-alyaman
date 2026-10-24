@@ -27,7 +27,8 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
 ## Building
 1. Run `./link_workspace.sh` once: it links the original workspace paths to this checkout.
 2. Put the MP3s from `main`'s `audio/` into `/home/claude/bab_out/m1/audio/` (or rebuild them with `snd/`).
-3. `python3 bab_out/m1_src/build.py --bump --local-fonts` (add `--no-souq` while the Souq stays off the live game).
+3. `python3 bab_out/m1_src/build.py --bump --local-fonts` (add `--no-souq` while the Souq stays off the live game; add
+   `--ibb` only for Ibb's test builds: its level, code and sheet, its lines, and the map's road from Taiz to it).
 4. Test: `node scratchpad/game/tools/unit.js` (and the other `unit*.js`), then the browser tests in `bab_out/m1_src/`.
 5. Copy the built `index.html` to a test branch, never straight to `main`; `main` changes only when Khaled says push.
 
@@ -40,3 +41,7 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
 - Art: `scratchpad/game/tools/export_art.py` redraws every sheet (`art/out/`, `gen/atlas.json`) from the scripts; it
   is deterministic, so after an art change compare the sheets with the last ones and check only the frames you meant
   moved (24 Oct: the Roaster's edits changed its 33 `rst_*` frames and nothing else).
+- Ibb (Mission 4, being built in stages, 24 Oct): `tools/ibb_sprites.py --sheet` writes its sheet (`art/out/ibb.png`,
+  `gen/ibb_sprites.json`); `snd/add_speech.py` writes the Spokesman's lines to `audio/speech_ibb.mp3` (a file the game
+  fetches only with Ibb, as it does a mission's music) and lists them in `gen/audio.json` (`speech.ibb`, each line with
+  its mouth shapes); `tools/unit_ibb.js` checks the speakers and screens; `snap_ibb.js` takes pictures of the range.

@@ -56,11 +56,13 @@ var CAMPAIGN = (function () {
       brief: 'A city on the slopes of a mountain, with a castle above it and the Zanabeel inside the castle. Everything in Taiz is uphill, so Salem has borrowed a helicopter.',
       parts: ['The lower town', 'The old market', 'The castle road', 'The keep'],
       boss: 'The Castle Gun: an old cannon the Zanabeel found in the castle, with a new engine bolted on.' },
-    { id: 'ibb', stage: 5, name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: false, next: ['dhamar'], bow: [-0.12],
+    // (Mission 4 since 24 Oct, after Taiz: Khaled. Its brief is game-direction's, approved; built: true only in a test
+    // build for now, build.py --ibb, which also gives it the road from Taiz)
+    { id: 'ibb', stage: 4, name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: false, next: ['dhamar'], bow: [-0.12],
       label: [13, -3, 'l'], land: [-28, -2], stamp: [28, 16],
-      brief: 'The greenest place in Yemen: terraces, waterfalls and rain. Yazeed has never been this wet, and the Zanabeel have never been this muddy.',
-      parts: ['The valley road', 'The waterfall', 'The terraces', 'The town'],
-      boss: 'The Mud Tank, which got stuck in the valley last week and has been firing at everyone ever since.' },
+      brief: 'The greenest place in Yemen, and the loudest: a screen in every shop, a speaker on every pole, and the Zanabeel\'s Spokesman on all of them, announcing a victory. Salem will not drive in this noise, so you walk.',
+      parts: ['Wadi al-Sahul', 'Jibla', 'The terraces', 'Sumara pass'],
+      boss: 'Brigadier Breaking, the Zanabeel\'s spokesman: on every screen in Ibb, and on five podiums at the top of the pass. He is very fast, and he never stops talking.' },
     { id: 'dhamar', stage: 6, name: 'The Wadi', place: 'Dhamar', road: 'Mountain road', built: false, next: ['sanaa'], bow: [0.12],
       label: [-12, -3, 'r'], land: [28, 8], stamp: [26, 22],
       brief: 'A dry riverbed across the high plain, a convoy that will not let you pass, and a road with room for one of you. Salem says he has driven worse.',
