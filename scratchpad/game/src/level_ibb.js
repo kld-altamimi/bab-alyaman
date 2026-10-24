@@ -1,10 +1,9 @@
-// level_ibb.js - Ibb, the Green Valleys (Mission 4). Stage 2 of its plan (24 Oct): a test range for the new pieces,
-// the Spokesman's speakers and screens, laid out on the Coffee Port's quay and warehouses (borrowed: Ibb's own stage is
-// stage 3). Zone 1: the billboard that opens the mission, then three fights, two of them round a speaker (the first one
-// with the hint) and one round a shop's set. Zone 2: sets and speakers together, indoors, and somebody tied up at the end.
-// Only test builds have it (build.py --ibb); the live game does not.
-// The screens' and speakers' lines are the Spokesman's (gen/audio.json, speech.ibb): each plays two to five of them in
-// turn, and the nearest one on screen is the one heard.
+// level_ibb.js - Ibb, the Green Valleys (Mission 4), while it is being built: a test range for the Spokesman's screens,
+// laid out on the Coffee Port's quay and warehouses (borrowed: Ibb's own stage comes with stage 3 of its plan). The
+// billboard that opens the mission plays statement C; the shops' sets, by the fights further on, play a few lines each;
+// the nearest one in the picture is the one heard (render_ibb.js). Nothing breaks them: they are scenery (Khaled, 24 Oct:
+// people want to hear him; the speakers on poles, and their mechanic, were dropped the same day). Six ordinary fights,
+// and somebody tied up at the end. Only test builds have it (build.py --ibb); the live game does not.
 var LEVEL_IBB = (function () {
   'use strict';
   var Q = 0, WH = 1232, END = 2464;
@@ -45,8 +44,8 @@ var LEVEL_IBB = (function () {
       { id: 'pile2', pts: [[2180, 162], [2242, 162]] }
     ],
     zones: [
-      { x: Q, name: 'The speakers', spawn: 96 },
-      { x: WH, name: 'The screens', spawn: WH - 40, indoor: true }
+      { x: Q, name: 'The quay', spawn: 96 },
+      { x: WH, name: 'The warehouses', spawn: WH - 40, indoor: true }
     ],
     gates: [
       { id: 'a', x: 560, groups: ['A'] },
@@ -58,20 +57,20 @@ var LEVEL_IBB = (function () {
     ],
     groups: {
       A: { zone: 0, trig: 260 },
-      B: { zone: 0, trig: 680 },
+      B: { zone: 0, trig: 680, lastManSurrenders: true },
       C: { zone: 0, trig: 940, lastManSurrenders: true },
-      D: { zone: 1, trig: 1260, lastManSurrenders: true },
-      E: { zone: 1, trig: 1850 },
-      F: { zone: 1, trig: 2160 }
+      D: { zone: 1, trig: 1260 },
+      E: { zone: 1, trig: 1850, lastManSurrenders: true },
+      F: { zone: 1, trig: 2160, lastManSurrenders: true }
     },
     // (a man at a post stands inside the middle of his gate's held screen: 133 px left of the gate to 106 right of it)
     spawns: [
-      // ---- the first speaker, at the dhow's bow: three chanting, one more walking in
+      // ---- at the dhow's bow: three at their posts, one more walking in
       { g: 'A', k: 'rifle', x: 432, post: 1, look: 'worried' },
       { g: 'A', k: 'rifle', x: 492, post: 1, look: 'youth' },
       { g: 'A', k: 'rifle', x: 548, plat: 'deck', post: 1, look: 'qat' },
       { g: 'A', k: 'rifle', enter: 1, delay: 110, look: 'angry' },
-      // ---- the second, by the crane: one on its arm and a bomber in its cab, two on the quay, one from behind
+      // ---- by the crane: one on its arm and a bomber in its cab, two on the quay, one from behind
       { g: 'B', k: 'rifle', x: 774, plat: 'crane', post: 1, look: 'angry' },
       { g: 'B', k: 'bomber', x: 780, plat: 'cab', post: 1 },
       { g: 'B', k: 'rifle', x: 812, post: 1, look: 'worried' },
@@ -86,12 +85,12 @@ var LEVEL_IBB = (function () {
       { g: 'D', k: 'rifle', x: 1386, post: 1, look: 'worried' },
       { g: 'D', k: 'rifle', x: 1482, plat: 'sk2', post: 1, look: 'angry' },
       { g: 'D', k: 'bomber', enter: 1, delay: 80 },
-      // ---- a set under the gallery and a speaker past its end
+      // ---- a set under the gallery, and the men past its end
       { g: 'E', k: 'rifle', x: 2040, post: 1, look: 'worried' },
       { g: 'E', k: 'rifle', x: 2098, post: 1, look: 'qat' },
       { g: 'E', k: 'rifle', x: 2124, post: 1, look: 'angry' },
       { g: 'E', k: 'bomber', enter: 1, delay: 70 },
-      // ---- the last speaker, and the man they are holding
+      // ---- the man they are holding
       { g: 'F', k: 'rifle', x: 2252, post: 1, look: 'youth' },
       { g: 'F', k: 'rifle', x: 2312, post: 1, look: 'worried' },
       { g: 'F', k: 'rifle', enter: 1, delay: 40, look: 'qat' },
@@ -102,19 +101,13 @@ var LEVEL_IBB = (function () {
       { k: 'crate', x: 1560, plat: 'gallery', gives: 'hmg', zone: 1 },
       { k: 'detainee', x: 2338, zone: 1 }
     ],
-    // the Spokesman's loudspeakers: each where its group stands (g), and the lines it plays
-    speakers: [
-      { x: 458, g: 'A', zone: 0, hint: true, lines: ['sp_important', 'sp_A2', 'sp_A3', 'sp_A4'] },
-      { x: 842, g: 'B', zone: 0, lines: ['sp_A5', 'sp_A6', 'sp_A7', 'sp_A8'] },
-      { x: 2068, g: 'E', zone: 1, lines: ['sp_ops', 'sp_end', 'sp_A11'] },      // (clear of the warehouse's pillar, in front of the picture)
-      { x: 2282, g: 'F', zone: 1, lines: ['sp_important', 'sp_E2', 'sp_E3', 'sp_E4', 'sp_E5'] }
-    ],
-    // and his screens: the billboard (statement C, the warning, whole) and the shops' sets
+    // his screens: the billboard (statement C, the warning, whole) and the shops' sets, each with the lines it plays
     screens: [
       { x: 120, size: 'board', zone: 0, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4', 'sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
       { x: 1032, size: 'tv', zone: 0, lines: ['sp_important', 'sp_B2', 'sp_B3'] },
       { x: 1338, size: 'tv', zone: 1, lines: ['sp_B4', 'sp_B5', 'sp_B6', 'sp_end'] },
-      { x: 1890, size: 'tv', zone: 1, lines: ['sp_important', 'sp_D2', 'sp_D3', 'sp_D4', 'sp_D5', 'sp_D6'] }
+      { x: 1890, size: 'tv', zone: 1, lines: ['sp_important', 'sp_D2', 'sp_D3', 'sp_D4', 'sp_D5', 'sp_D6'] },
+      { x: 2282, size: 'tv', zone: 1, lines: ['sp_A2', 'sp_A3', 'sp_A4', 'sp_A6', 'sp_A7', 'sp_A8', 'sp_A11'] }
     ]
   };
   return L;

@@ -255,10 +255,8 @@
       if (pri <= line.pri) return;                 // a bark never talks over its equal
     }
     var dur = Sound.voice(id, { gain: o.gain });
-    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri, src: o.src, at: gt };
+    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri };
   }
-  // (Ibb) the screen or the speaker saying the line now has just been shot or taken over: he stops mid-word
-  function cutOff(src) { if (line && line.src != null && line.src === src) { Sound.hush(); line = null; } }
   function yelp(e) {
     if (gt - (flags.yelpAt || -99) < 9) return;
     flags.yelpAt = gt;
@@ -274,8 +272,7 @@
     drone: 'Shoot the little drones before they dive', mine: 'A red flag marks a mine: hop over it', mount: 'Walk up to the 4x4 to get in',
     vent: 'A vent hisses before it blows: wait, then cross',
     spice: 'Crouch and shoot a spice sack: the Zanabeel cannot fight while they sneeze', sneeze: 'Keep out of the chilli: you cannot shoot while you sneeze',
-    bar: 'Grenades break a barricade fastest. So does a drum', gap: 'Jump the gaps between the roofs',
-    speaker: 'Walk into a speaker to take it over. Or shoot its horns'
+    bar: 'Grenades break a barricade fastest. So does a drum', gap: 'Jump the gaps between the roofs'
   };
 
   function react(ev) {
@@ -395,7 +392,6 @@
           if (e.k === 'quartermaster') { speak('qm_surrender', { pri: 7, who: 'QUARTERMASTER' }); after(200, function () { speak('uncle_cheque', { pri: 3, wait: true, keep: true }); }); break; }
           if (e.k === 'tailor') { speak('tl_surrender', { pri: 7, wait: true }); break; }
           if (whoIs(e) === 'cmdr') { speak('cmdr_surrender', { pri: 7, who: 'COMMANDER' }); break; }      // (the mission ends before the Uncle could call)
-          if (manOf(e.id) && manOf(e.id).why === 'speaker') break;          // (Ibb: a speaker taken over has its own word for it)
           flags.surr = (flags.surr || 0) + 1;
           speak(flags.surr % 2 ? 'grunt_twice' : 'grunt_monday', { pri: 3, who: WHO[whoIs(e)] });
           break;
@@ -453,25 +449,6 @@
         case 'wrap_hop': Sound.sfx('jump', { gain: 0.35, rate: 1.3, pan: panOf(e.x) }); break;
         case 'boat': after(34, function () { speak('yazeed_boat', { pri: 1 }); }); break;
         case 'hint': if (HINTS[e.k]) hint(T(HINTS[e.k])); break;
-
-        // ---- Ibb: the speakers on their poles and the screens
-        case 'spk_hit': Sound.sfx('clang', { gain: 0.7, rate: 1.25, pan: panOf(e.x) }); break;
-        case 'spk_dead':
-          cutOff(e.src);
-          Sound.sfx('part_off', { gain: 0.8, pan: panOf(e.x) }); Sound.sfx('hiss', { gain: 0.5, rate: 1.6, pan: panOf(e.x) });
-          break;
-        case 'spk_hijack':
-          // what comes out of it now is the announcer's, and the men under it believe every word
-          cutOff(e.src);
-          Sound.sfx('radio', { gain: 0.8 });
-          after(8, function () { speak('ann_complete', { pri: 6, who: 'ANNOUNCER' }); });
-          if (!flags.hijacked) { flags.hijacked = 1; after(14, function () { speak('grunt_already', { pri: 5, wait: true, keep: true, who: 'RIFLEMAN' }); }); }
-          break;
-        case 'scr_hit': Sound.sfx('hit_sand', { gain: 0.5, rate: 1.4, pan: panOf(e.x) }); break;
-        case 'scr_dead':
-          cutOff(e.src);
-          Sound.sfx(e.big ? 'crash' : 'pop', { gain: e.big ? 0.8 : 1, pan: panOf(e.x) }); Sound.sfx('hiss', { gain: 0.45, rate: 1.9, pan: panOf(e.x) });
-          break;
 
         // ---- the coast road
         case 'horn': Sound.sfx(e.k === 'truck' ? 'horn_truck' : 'horn_shass', { pan: panOf(e.x) }); break;
@@ -673,7 +650,6 @@
   function bossSays(k, moment) {
     (BOSSLINES[k || 'boat'][moment] || []).forEach(function (q) { after(q[0], function () { speak(q[1], { pri: q[2], wait: true, keep: true, who: q[3] }); }); });
   }
-  function manOf(id) { if (id != null) for (var i = 0; i < sim.enemies.length; i++) if (sim.enemies[i].id === id) return sim.enemies[i]; return null; }
   function whoIs(e) {
     if (e.id != null) for (var i = 0; i < sim.enemies.length; i++) if (sim.enemies[i].id === e.id) return sim.enemies[i].k;
     // the alarm does not say who raised it: take the nearest man to where it came from
@@ -719,7 +695,7 @@
     if (line && gt >= line.until) line = null;
     if (!line && queue.length) { var q = queue.shift(); if (gt - q.at < 200 || q.o.keep) speak(q.id, q.o); }      // (unless its moment has passed: a story line's never does)
     if (hintLine && gt >= hintLine.until) hintLine = null;
-    // a mission's own talk (Ibb's screens and speakers): its next line, when nobody else is saying anything
+    // a mission's own talk (Ibb's screens): its next line, when nobody else is saying anything
     if (!line && !queue.length && sim.status === 'play' && !sim.p.dead) { var tk = Render.talk(sim); if (tk) speak(tk.id, tk.o); }
     // nobody has shown the lock yet: say so once, after a good while of holding the trigger down by hand
     if (!flags.lockTip && prefs.scheme === 'hold' && geo.G && geo.G.shown && Input.lockCount() === 0 && Input.heldTicks() > 420 && !hintLine && sim.status === 'play') {

@@ -198,15 +198,6 @@ var Sound = (function () {
     return len;
   }
 
-  // the line being spoken stops where it is (a screen shot in the middle of a sentence), and the rest comes back up
-  function hush() {
-    if (!ctx || !voiceNow) return;
-    try { voiceNow.g.gain.setTargetAtTime(0, ctx.currentTime, 0.01); voiceNow.s.stop(ctx.currentTime + 0.06); } catch (e) {}
-    voiceNow = null;
-    var t = ctx.currentTime;
-    gMusic.gain.cancelScheduledValues(t); gMusic.gain.setTargetAtTime(MUSIC * vol.music, t, 0.12);
-    gSfx.gain.cancelScheduledValues(t); gSfx.gain.setTargetAtTime(SFX * vol.sfx, t, 0.1);
-  }
   function fadeOut(h, len) {
     try {
       var t = ctx.currentTime;
@@ -334,7 +325,7 @@ var Sound = (function () {
     return { state: ctx ? ctx.state : 'not started', rate: ctx ? ctx.sampleRate : 0, ready: isReady(), failed: failed, decoded: nDone + '/' + all.length, how: how,
              session: !!navigator.audioSession, latency: ctx && ctx.baseLatency != null ? Math.round(ctx.baseLatency * 1000) : null };
   }
-  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, hush: hush, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
+  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
            track: function () { return track; },
            // which loop is sounding now ('title', 'map', 'strait', 'battery', 'mocha', 'roaster'), or null
            playing: function () { return loopSrc ? loopSrc.track : null; },

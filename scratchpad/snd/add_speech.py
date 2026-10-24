@@ -1,7 +1,7 @@
 # add_speech.py - a mission's own spoken lines, in a file of their own that the game fetches only with that mission (as
 # it does a mission's music), so nobody pays for them who never goes there. Ibb (stage 2, 24 Oct): the Spokesman's five
-# statements, line by line (the screens and the speakers play them; the nearest one carries the voice and the subtitle),
-# and the rifleman's answer to a speaker taken over. Each line also gets the shape of his mouth, a frame every 1/15 s
+# statements, line by line (the screens play them; the nearest one carries the voice and the subtitle). Each line
+# also gets the shape of his mouth, a frame every 1/15 s
 # (0 shut, 1 half, 2 wide), measured off its own loudness, for the screen that is saying it.
 # The file is laid out as voices.mp3 is (a click, then the clips), so the game lines it up the same way.
 #   python3 add_speech.py              -> audio/speech_ibb.mp3, and gen/audio.json's 'speech' gains 'ibb'
@@ -76,10 +76,6 @@ if __name__ == '__main__':
         y = S.line(bab, seed)
         clips.append((lid, y))
         meta[lid] = dict(who=WHO, text=en, m=mouth_track(y))
-    # the rifleman under a speaker that has just said MISSION COMPLETE! (his line is the announcer's, asked back)
-    y = V.level(V.dry(V.CAST['grunt'].say('ta-*maam ta-*maam ? . *bi-ha-*saa-raaa ?', seed=41, final=7), seed=5))
-    clips.append(('grunt_already', y))
-    meta['grunt_already'] = dict(who='RIFLEMAN', text='Mission complete? Already?')
     strip, at = sprite(clips)
     write_wav('out/tmp/speech_ibb.wav', strip)
     # (at half the rate the voices use: his lines come through a television and stop at 4.2 kHz anyway; a fifth smaller)

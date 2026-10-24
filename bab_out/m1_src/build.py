@@ -41,10 +41,10 @@ grounds = {'m1': ground}
 NO_SOUQ = '--no-souq' in sys.argv
 SOUQ_CODE = ('level_zabid', 'tailor', 'render_tailor')
 # --ibb (24 Oct): a test build with Ibb in it (Mission 4, while it is being built: its plan's stages one at a time). Its
-# level, its code and its sheet go in, its lines (audio/speech_ibb.mp3) are listed, and on the map it is out, with the
-# road from Taiz to it (the Souq off the road, as at Ibb's release). Without it, none of Ibb is in the page.
+# level, its screens' code and its sheet go in, its lines (audio/speech_ibb.mp3) are listed, and on the map it is out,
+# with the road from Taiz to it (the Souq off the road, as at Ibb's release). Without it, none of Ibb is in the page.
 IBB = '--ibb' in sys.argv
-IBB_CODE = ('level_ibb', 'ibb', 'render_ibb')
+IBB_CODE = ('level_ibb', 'render_ibb')
 pics = ['atlas', 'font', 'sky', 'far', 'sea', 'play_a', 'road', 'r2b', 'sand', 'b2r', 'play_b', 'fore', 'fore_road', 'fore_sand', 'fore_b', 'map']
 for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid')):
     f = GAME + 'gen/stage_%s.json' % art
@@ -135,7 +135,7 @@ data = '\n'.join([
     'var IMAGES = %s;' % js(images),
 ])
 code = []
-for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'ibb', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'menu', 'audio', 'input', 'main'):
+for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'menu', 'audio', 'input', 'main'):
     if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE) or (not IBB and f in IBB_CODE):
         continue
     src = read(GAME + 'src/%s.js' % f)

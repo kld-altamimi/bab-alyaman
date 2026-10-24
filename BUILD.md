@@ -44,4 +44,4 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
 - Ibb (Mission 4, being built in stages, 24 Oct): `tools/ibb_sprites.py --sheet` writes its sheet (`art/out/ibb.png`,
   `gen/ibb_sprites.json`); `snd/add_speech.py` writes the Spokesman's lines to `audio/speech_ibb.mp3` (a file the game
   fetches only with Ibb, as it does a mission's music) and lists them in `gen/audio.json` (`speech.ibb`, each line with
-  its mouth shapes); `tools/unit_ibb.js` checks the speakers and screens; `snap_ibb.js` takes pictures of the range.
+  its mouth shapes); `tools/unit_ibb.js` checks the test range; `snap_ibb.js` and `rt_ibb.js` picture it and play it.

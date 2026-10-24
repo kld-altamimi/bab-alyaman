@@ -518,11 +518,11 @@ var Sim = (function () {
   function lastMan(s, G) {
     if (G.hostile !== 1 || G.pending.length) return;
     var flag = s.L.groups[G.id].lastManSurrenders;
-    if (s.L.groups[G.id].noSurrender || G.noSurr) return;          // (G.noSurr: Ibb, men under a speaker that is playing never give up)
+    if (s.L.groups[G.id].noSurrender) return;
     for (var i = 0; i < s.enemies.length; i++) {
       var e = s.enemies[i];
       if (e.g !== G.id || !e.alive || !e.hostile) continue;
-      if ((e.k === 'door' && e.door > 0) || e.air || e.st === 'stagger' || e.st === 'sneeze' || e.st === 'flinch') return;
+      if ((e.k === 'door' && e.door > 0) || e.air || e.st === 'stagger' || e.st === 'sneeze') return;
       if (!flag && s.rand() > 0.3) return;
       if (e.k === 'bomber' && e.lit) return;
       e.st = 'shock'; e.stT = 0;
@@ -700,11 +700,6 @@ var Sim = (function () {
       if (e.covered) upFromCover(s, e);
       if (e.stT % T.SNEEZE_EVERY === 6) ev(s, { t: 'achoo', x: e.x, y: e.y - e.h + 4, id: e.id, k: e.k, face: e.face });
       if (e.stT >= T.SNEEZE_T) { e.st = e.post ? 'wait' : 'walk'; e.stT = 0; e.sneezeImm = T.SNEEZE_IMM; e.cd = Math.max(e.cd, 24); }
-      return;
-    }
-    if (e.st === 'flinch') {             // (Ibb) a screen beside him has just gone: a moment with his arm up over his eyes
-      if (e.covered) upFromCover(s, e);
-      if (e.stT >= (e.flinchT || 40)) { e.st = e.post ? 'wait' : 'walk'; e.stT = 0; e.cd = Math.max(e.cd, 16); }
       return;
     }
 
@@ -1447,7 +1442,7 @@ var Sim = (function () {
     knifeTarget: knifeTarget,
     // for the files that add to the game: the car section and the boss
     ext: X,
-    _: { ev: ev, refill: refill, explode: explode, hurtPlayer: hurtPlayer, killEnemy: killEnemy, hurtEnemy: hurtEnemy, spawnEnemy: spawnEnemy, standDown: standDown, groupOf: groupOf, lastMan: lastMan,
+    _: { ev: ev, refill: refill, explode: explode, hurtPlayer: hurtPlayer, killEnemy: killEnemy, hurtEnemy: hurtEnemy, spawnEnemy: spawnEnemy, standDown: standDown, groupOf: groupOf,
          landing: landing, follow: follow, floorUnder: floorUnder, inBox: inBox, platIndex: platIndex, enemyFire: enemyFire, stepPlayer: stepPlayer,
          addCloud: addCloud, burstSack: burstSack, hitBar: hitBar, barGone: barGone, inCloud: inCloud, offPits: offPits }
   };

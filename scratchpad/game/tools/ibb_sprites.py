@@ -450,190 +450,21 @@ def preview(path, scale=6):
 
 
 
-# ================================================================ stage 2 (24 Oct): the speakers and the screens
-# The loudspeaker on its pole (two horns on a crossbar, a junction box), the sound coming out of it, the speech bubble
-# over a man who chants under it, the men's two chanting poses (a fist up and down in step, the rifle still at the hip:
-# never mistaken for hands up) and their flinch (an arm up over the eyes when a screen beside them goes), and the
-# screens: the billboard (the approved picture at its real size, drawn as one picture and three small patches: the
-# mouth half open, wide open, the blink) and the shop television (the same silhouette at a quarter size). All of it on
-# a sheet of its own, art/out/ibb.png (gen/ibb_sprites.json), as Taiz's is.
+# ================================================================ stage 2 (24 Oct): the screens
+# The billboard (the approved picture at its real size, drawn as one picture and three small patches: the mouth half
+# open, wide open, the blink) and the shop's set (the same silhouette at a quarter size, on a crate). They are scenery:
+# nothing breaks them (Khaled, 24 Oct: people want to hear him; the speakers on poles were dropped the same day). On a
+# sheet of their own, art/out/ibb.png (gen/ibb_sprites.json), as Taiz's is.
 import json
-import sprites as SP
-from ms3 import at, weapon, LEAN
 
 OUT = os.path.join(HERE, '..', 'art', 'out')
 GEN = os.path.join(HERE, '..', 'gen')
 
 
 def prop_pal():
-    p = pal('khaki', 'khaki', 'blue', 'skin2')
-    p.update({'o': '#2e3638', 'O': '#55625f', '0': '#8a9893', '9': '#c2ccc4'})       # the pole's grey-green paint
-    return p
+    return pal('khaki', 'khaki', 'blue', 'skin2')
 
 
-POLE_H = 62                     # the pole, ground to crossbar
-POLE = ['oO0'] * (POLE_H - 2)
-BOX = [                         # the junction box, a third of the way up
-    'ooOOO00',
-    'oO0000O',
-    'oO0990O',
-    'oO0000O',
-    'oO0000O',
-    'ooOOOOo',
-]
-FLANGE = ['oOO009', 'ooOOOO']
-BAR = [                         # the crossbar the horns hang from
-    'oOOOOOOOOOOOOOOOOO0',
-    'ooOOOOOOOOOOOOOOOOo',
-]
-HORN = [                        # a horn pointing right: the driver at the back, the bell flaring to the rim
-    '.......HLIJ',
-    '.....HHHLIJ',
-    'yzz.HHIILIJ',
-    'yzzHHIIILIJ',
-    'yzz.HHIILIJ',
-    '.....HHHLIJ',
-    '.......HLIJ',
-]
-BUBBLE = [                      # a speech bubble with two red marks of shouting in it
-    '.JJJJJJJJJ.',
-    'JJJLJJJLJJJ',
-    'JJJLJJJLJJJ',
-    'JJJLJJJLJJJ',
-    'JJJJJJJJJJJ',
-    'JJJLJJJLJJJ',
-    '.JJJJJJJJJ.',
-    '..JJJ......',
-    '..JJ.......',
-    '..J........',
-]
-
-
-def _img(rows, p, ink=None):
-    return ms3.part(rows, p, ink)
-
-
-def pole():
-    p = prop_pal()
-    return compose([(POLE, 0, 0, p), (BOX, -2, 18, p), (FLANGE, -1, POLE_H - 2, p)], foot=(1, POLE_H - 1))
-
-
-def crossbar():
-    p = prop_pal()
-    return compose([(BAR, 0, 0, p)], foot=(9, 1))
-
-
-def horn():
-    """Pointing right; the anchor is where it bolts to the crossbar (the back of the driver)."""
-    p = prop_pal()
-    return compose([(HORN, 0, 0, p)], foot=(0, 3))
-
-
-def burnt(im, k=0.45):
-    a = np.asarray(im.convert('RGBA')).astype(float)
-    a[:, :, :3] = a[:, :, :3] * k + np.array([18, 14, 12]) * (1 - k)
-    return Image.fromarray(a.clip(0, 255).astype(np.uint8))
-
-
-def white(im):
-    a = np.asarray(im.convert('RGBA')).copy()
-    a[:, :, :3] = 255
-    return Image.fromarray(a)
-
-
-def wave(k):
-    """Sound out of a horn: an arc (k = 0, 1, 2: near to far), opening to the right; anchored at the horn's rim. Two
-    pixels of red with a light inside and a dark rim outside, so it reads on a pale sky and a dark wall alike."""
-    r = 5 + 5 * k
-    W, H = r + 4, 2 * r + 5
-    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    px = im.load()
-    cy = H // 2
-    for dr, col in ((2, (60, 10, 8, 255)), (1, (224, 68, 60, 255)), (0, (255, 214, 150, 255))):
-        for t in np.linspace(-0.9, 0.9, 200):
-            x, y = int(round((r + dr) * np.cos(t))), int(round(cy + (r + dr) * np.sin(t)))
-            if 0 <= x < W and 0 <= y < H:
-                px[x, y] = col
-    return im, 0, cy
-
-
-def bubble(k):
-    """k 0: the bubble; k 1: the same with the strokes of a shout round it (it beats with the chant)."""
-    p = prop_pal()
-    im, ax, ay = compose([(BUBBLE, 0, 0, p)], foot=(3, 10))
-    if not k:
-        return im, ax, ay
-    out = Image.new('RGBA', (im.width + 6, im.height + 4), (0, 0, 0, 0))
-    out.alpha_composite(im, (3, 3))
-    px = out.load()
-    for x, y in ((1, 2), (0, 1), (out.width - 2, 2), (out.width - 1, 1), (3 + im.width // 2, 0), (3 + im.width // 2, 1)):
-        px[x, y] = (255, 251, 239, 255)
-    return out, ax + 3, ay + 3
-
-
-# ---------------------------------------------------------------- the men under a speaker
-FIST_UP = ['.qq..', 'qrrq.', 'qrrq.'] + PARTS['arm_raise_l'][3:]      # the far arm straight up, a fist at the top
-LOOKS = {'worried': 'skin2', 'youth': 'skin1', 'angry': 'skin3', 'qat': 'skin2'}
-CHANT_AT = [(3, -3), (1, 3)]     # where the fist arm goes: straight up, then pumped down and back behind the head
-
-
-def rifleman_chant(k, look, skin):
-    """k 0: the fist up; k 1: pumped down to the head. The rifle stays at the hip."""
-    p = ms3.militia_pal(skin)
-    B = LEAN
-    lk = {'qat': 'qat_l'}.get(look, look)
-    legs, dx, dy = SP.lean_legs(p, 'stand')
-    L = [at(FIST_UP, CHANT_AT[k], p, dx, dy)]
-    L += legs + [at('jacket_l', B.torso, p, dx, dy), at('belt_l', B.belt, p, dx, dy), at('jambiya_s', B.jamb, p, dx, dy)]
-    g = (B.grip[0] + dx, B.grip[1] + dy)
-    weapon(L, 'rifle', p, g)
-    L += [at('forearm_l', B.forearm, p, dx, dy), at('sleeve_l', B.sleeve, p, dx, dy), at('armband', B.sleeve, p, dx + 2, dy + 2)]
-    SP.lean_head(L, lk, p, dx, dy)
-    return L, B.foot, None
-
-
-def rifleman_flinch(look, skin):
-    """A screen beside him has just gone: he shies back from it, his arm up over his eyes."""
-    p = ms3.militia_pal(skin)
-    B = LEAN
-    lk = {'qat': 'qat_l'}.get(look, look)
-    legs, dx, dy = SP.lean_legs(p, 'stand')
-    L = list(legs)
-    L += [at('jacket_l', B.torso, p, -1, 1), at('belt_l', B.belt, p, 0, 0), at('jambiya_s', B.jamb, p, 0, 0)]
-    g = (B.grip[0] - 2, B.grip[1] + 2)
-    weapon(L, 'rifle', p, g)
-    L += [at('sleeve_l', B.sleeve, p, -1, 1), at('armband', B.sleeve, p, 1, 3)]
-    SP.lean_head(L, lk, p, -1, 2)
-    L.append(at('arm_raise_fl', (14, 4), p))
-    return L, B.foot, None
-
-
-def bomber_chant(k):
-    p = ms3.militia_pal('skin1')
-    B = LEAN
-    legs, dx, dy = SP.lean_legs(p, 'stand')
-    L = [at(FIST_UP, CHANT_AT[k], p, dx, dy)]
-    L += legs + [at('jacket_l', B.torso, p, dx, dy), at('belt_l', B.belt, p, dx, dy), at('jambiya_s', B.jamb, p, dx, dy)]
-    weapon(L, 'dynamite', p, grip=(20 + dx, 19 + dy))
-    L += [at('forearm_l', B.forearm, p, dx, dy), at('sleeve_l', B.sleeve, p, dx, dy), at('armband', B.sleeve, p, dx + 2, dy + 2)]
-    SP.lean_head(L, 'angry', p, dx, dy)
-    return L, B.foot, None
-
-
-def bomber_flinch():
-    p = ms3.militia_pal('skin1')
-    B = LEAN
-    legs, dx, dy = SP.lean_legs(p, 'stand')
-    L = list(legs)
-    L += [at('jacket_l', B.torso, p, -1, 1), at('belt_l', B.belt, p, 0, 0), at('jambiya_s', B.jamb, p, 0, 0)]
-    weapon(L, 'dynamite', p, grip=(18, 21))
-    L += [at('sleeve_l', B.sleeve, p, -1, 1), at('armband', B.sleeve, p, 1, 3)]
-    SP.lean_head(L, 'angry', p, -1, 2)
-    L.append(at('arm_raise_fl', (14, 4), p))
-    return L, B.foot, None
-
-
-# ---------------------------------------------------------------- the screens
 BOARD_MOUTH = (64, 49, 81, 59)        # the box the mouths change in (x0, y0, x1, y1), and the blink's
 BOARD_BLINK = (56, 32, 89, 40)
 
@@ -662,10 +493,6 @@ def board_frame():
     return im, 4, 4
 
 
-TV_BODY = [                     # a shop television: the screen goes in the hole, the knobs on the right
-    'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV',
-    'VGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGV',
-]
 def tv_box():
     """The set (screen hole 32 x 21 at 3, 3), a little stand under it; anchored at the bottom middle of the stand."""
     W, H = 32 + 6 + 8, 21 + 6
@@ -716,57 +543,17 @@ def crate():
     return compose([(CRATE, 0, 0, p)], foot=(13, len(CRATE)))
 
 
-def crack(w, h, seed):
-    """A crack across a dead screen: a few jagged white lines from a point of impact."""
-    rng = np.random.RandomState(seed)
-    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    cx, cy = int(w * (0.35 + 0.3 * rng.rand())), int(h * (0.3 + 0.4 * rng.rand()))
-    for k in range(5 if w > 60 else 3):
-        a = rng.rand() * 2 * np.pi
-        x, y = cx, cy
-        for s in range(6):
-            a += (rng.rand() - 0.5) * 0.9
-            n = (w / 10) * (0.6 + rng.rand())
-            nx, ny = x + np.cos(a) * n, y + np.sin(a) * n
-            d.line([(x, y), (nx, ny)], fill=(250, 250, 255, 230))
-            x, y = nx, ny
-    d.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], outline=(250, 250, 255, 255))
-    return im
-
-
 def frames():
     """-> [(name, image, ax, ay)] for the sheet."""
     items = []
-    def add(name, f):
-        im, ax, ay = f if isinstance(f, tuple) else (f['im'], f['ax'], f['ay'])
-        items.append((name, im, ax, ay))
-    for nm, f in (('spk_pole', pole()), ('spk_bar', crossbar()), ('spk_horn', horn())):
-        add(nm, f)
-        add(nm + '!', (white(f[0]), f[1], f[2]))
-    hb = horn()
-    add('spk_horn_burnt', (burnt(hb[0]), hb[1], hb[2]))
-    for k in range(3):
-        add('spk_wave%d' % k, wave(k))
-    for k in range(2):
-        add('bubble%d' % k, bubble(k))
-    for look, skin in LOOKS.items():
-        for k in range(2):
-            add('rifle_%s_chant%d' % (look, k), SP.build(*rifleman_chant(k, look, skin)))
-        add('rifle_%s_flinch' % look, SP.build(*rifleman_flinch(look, skin)))
-    for k in range(2):
-        add('bomber_chant%d' % k, SP.build(*bomber_chant(k)))
-    add('bomber_flinch', SP.build(*bomber_flinch()))
     for nm, im, ax, ay in board_parts():
-        add(nm, (im, ax, ay))
-    add('board_frame', board_frame())
-    add('board_crack', (crack(144, 96, 7), 0, 0))
+        items.append((nm, im, ax, ay))
+    items.append(('board_frame',) + board_frame())
     for m in range(3):
-        add('tv%d' % m, (screen('tv', m, False), 0, 0))
-    add('tvb', (screen('tv', 0, True), 0, 0))
-    add('tv_box', tv_box())
-    add('tv_crack', (crack(32, 21, 3), 0, 0))
-    add('crate', crate())
+        items.append(('tv%d' % m, screen('tv', m, False), 0, 0))
+    items.append(('tvb', screen('tv', 0, True), 0, 0))
+    items.append(('tv_box',) + tv_box())
+    items.append(('crate',) + crate())
     return items
 
 
@@ -786,11 +573,7 @@ def sheet():
     for n, im, x, y, ax, ay in place:
         out.alpha_composite(im, (x, y))
         meta[n] = [x, y, im.width, im.height, int(ax), int(ay)]
-    # where things are: the horns on the crossbar (from the pole's foot), the screen in its set, the beat of the chant
-    rig = dict(pole_h=POLE_H, horn=[[8, -POLE_H - 1], [-9, -POLE_H - 1]], tv_screen=[-23 + 3, -(21 + 6 + 3 + 9 - 1) + 9 + 3],
-               board=[144, 96], tv=[32, 21])
-    return out, meta, rig
-
+    return out, meta, dict(board=[144, 96], tv=[32, 21])
 
 
 if __name__ == '__main__':

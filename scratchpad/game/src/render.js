@@ -872,10 +872,8 @@ var Render = (function () {
       var rx = (e.st === 'burst' && e.stT % 8 < 3) || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
       // a man behind the bags keeps his head down, and comes up over a few frames to aim
       var down = e.covered && e.hostile ? (Sim.ducked(e) ? 9 : (e.st === 'aim' && e.stT < 4 ? 9 - e.stT * 3 : 0)) : 0;
-      if (e.st === 'stagger' || (e.st === 'flinch' && e.stT < 14)) rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
-      // (a man a mission dresses up itself draws himself when it wants: Ibb's men chanting under a speaker, or flinching)
-      var dc = e.deco && bosses[e.deco];
-      if (!(dc && dc.pose && dc.pose(s, e, K, name, rx, down, flip))) spr(name, e.x + rx, e.y + down, flip, 1, down);
+      if (e.st === 'stagger') rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
+      spr(name, e.x + rx, e.y + down, flip, 1, down);
       // still coming in, out at the edge: he flashes, and nothing hurts him yet
       if (Sim.guarded(s, e) && (tick >> 2) % 2 && A.frames[name.replace('!', '') + '!']) {
         cx.globalAlpha = 0.42; spr(name.replace('!', '') + '!', e.x + rx, e.y + down, flip, 1, down); cx.globalAlpha = 1;
@@ -887,7 +885,6 @@ var Render = (function () {
       }
       if (e.k === 'bomber' && e.st === 'wind' && (tick >> 1) % 2) spr('fx_spark2', e.x - e.face * 4, e.y - 46);
       if (e.st === 'surr' && !e.captured && (tick >> 4) % 2) text('s_lav', T('WALK IN'), e.x, e.y - 50, 'c');
-      if (dc && dc.mark) dc.mark(s, e, K);                           // (and what goes over him: Ibb's speech bubble)
     }
     SRC = null;
     // the sandbags stand in front of whoever hides behind them
@@ -1242,8 +1239,8 @@ var Render = (function () {
     src: function (c) { SRC = c || null; },
     sub: function () { return sub; }
   };
-  // a mission's own lines that run by themselves (Ibb's screens and speakers): the next one to say, when nobody else is
-  // talking (main.js asks, and says it)
+  // a mission's own lines that run by themselves (Ibb's screens): the next one to say, when nobody else is talking
+  // (main.js asks, and says it)
   function talk(s) {
     for (var k in bosses) if (bosses[k].talk) { var t = bosses[k].talk(s, K); if (t) return t; }
     return null;
