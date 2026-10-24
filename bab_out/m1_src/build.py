@@ -112,8 +112,9 @@ for n in pics:
 audio_small = dict(audio)
 if not IBB:
     audio_small.pop('speech', None)
+    audio_small['music'] = {k: v for k, v in audio['music'].items() if k not in ('ibb', 'ibbboss')}      # (Ibb's music: test builds only)
 if NO_SOUQ:
-    audio_small['music'] = {k: v for k, v in audio['music'].items() if k not in ('souq', 'tailor')}
+    audio_small['music'] = {k: v for k, v in audio_small['music'].items() if k not in ('souq', 'tailor')}
 
 # a quarter-second of silence, for the iPhone ring-switch workaround
 n, sr = 2000, 8000

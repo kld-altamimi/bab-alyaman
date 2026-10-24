@@ -16,7 +16,7 @@ var LEVEL_IBB = (function () {
     name: 'The Green Valleys',
     art: 'ibb',
     banner: 'THE GREEN VALLEYS',
-    music: 'mocha', bossMusic: 'mocha',  // (Ibb's own music comes at stage 6)
+    music: 'ibb', bossMusic: 'ibb',      // (the Green Valleys' theme, 24 Oct; the Spokesman's own comes with his fight)
     speech: true,                        // (his lines come in a file of their own, fetched with the mission: audio.js)
     birds: 'pigeon',
     lines: { start: [], clear: [[26, 'ann_complete', 8]] },
