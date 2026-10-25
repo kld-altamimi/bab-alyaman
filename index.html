@@ -578,7 +578,7 @@ html[lang="ar"] .fbq,html[lang="ar"] .fbthanks{text-transform:none}
 </div>
 
 <script>
-var BUILD = "0.15.83";
+var BUILD = "0.15.84";
 // the Radio meter: hidden until spending it is built (it still fills underneath; Khaled, 19 Oct)
 var RADIO_ON = false;
 // the two badges, Ace and Liberator, drawn here in pixels (Khaled, 19 Oct). Ace: a gold medal with a jambiya struck on
@@ -1692,6 +1692,7 @@ var Sim = (function () {
     SIGHT: 310,
     // on a phone the edges of the picture sit under the thumbs, so the fight is staged in the middle:
     // Yazeed holds at HOLD of the way across while a gate is shut, and nobody stops to fight inside the two lanes
+    // (his shots reach them there; a man coming in through one comes in shooting: see inReach and comeIn)
     HOLD: 0.5, LANE_L: 0.18, LANE_R: 0.25,
     DRUM_FUSE: 54,
     SETTLE: 28,
@@ -1881,9 +1882,9 @@ var Sim = (function () {
     e.slot = s.slotN * 12;
     if (sp.covered) e.cd += Math.round(60 * T.FIRST);
     if (sp.k === 'rifle') e.band = 96 + s.rand() * 78;
-    // his first attack gets made: once he has begun to aim (or to wind up) the first time, nothing stops him until it's
-    // made, and he flashes meanwhile, as at the edge (Khaled, 23 Oct: "still feels no one is trying to shoot me": most
-    // of them died the moment they stepped in, before they could aim)
+    // his first attack comes quickly: a walker aims as soon as he is in (Khaled, 23 Oct: "still feels no one is trying to
+    // shoot me"). Until 25 Oct nothing could stop that first attack once begun; now his shots can (Khaled), and a man
+    // coming in from an edge comes in shooting instead (comeIn)
     if (sp.k === 'rifle' || sp.k === 'bomber') e.first = true;
     if (sp.k === 'bomber') e.band = 150 + s.rand() * 60;
     if (sp.k === 'door') { e.band = 8; e.cd = Math.round((60 + Math.floor(s.rand() * 30)) * T.FIRST); e.door = T.DOOR_HITS; e.bashCd = 0; }
@@ -2245,16 +2246,19 @@ var Sim = (function () {
   function doorTop(e) { return doorUp(e) ? 28 : (doorLow(e) ? 18 : 0); }
   // a man behind cover keeps his head down until he comes up to aim; down, only a blast can reach him
   function ducked(e) { return !!e.covered && e.alive && e.hostile && (e.st === 'wait' || e.st === 'walk' || e.st === 'cool'); }
-  // The fight is staged in the middle of the screen, clear of the thumbs (inMiddle). A man out in either edge lane is
-  // still coming in: he is guarded (he flashes, and nothing hurts him: shots glance off him) and he starts no attack.
-  // His shots themselves fly on to the edge of the screen. (Build 9 dropped them where the lane began, which looked like
-  // an invisible wall; build 10 let them kill a man the moment he showed, which left nobody a chance to fight.)
-  // inReach: where a man can be hurt: the middle. staged: where a man may start an attack of his own: a posted man
-  // anywhere in the middle, a walker only once he is properly in.
+  // The fight is staged in the middle of the screen, clear of the thumbs (inMiddle): nobody stops to fight in either edge
+  // lane, and only a man who comes in from one may act there, once, as he steps in (comeIn). His shots, blasts and knife
+  // reach anyone on the screen. (Build 9 dropped them where the lane began, which looked like an invisible wall; build 10
+  // let them kill a man the moment he showed, which left nobody a chance to fight; build 11 guarded a man in the lanes,
+  // flashing and glancing his shots off, until Khaled, 25 Oct: "Most players are on phone, and now there is a big phone
+  // area with an invisible wall for shots". Now men come in shooting instead.)
+  // inReach: where a man can be hurt: anywhere on the screen. staged: where a man may start an attack of his own: a posted
+  // man anywhere in the middle, a walker only once he is properly in.
   function inMiddle(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
-  function inReach(s, x) { return inMiddle(s, x); }
-  // (and a man making his first attack: see spawnEnemy)
-  function guarded(s, e) { return !!e && e.alive && e.hostile && ((!e.ext && (!inMiddle(s, e.x) || e.emerge > 0)) || (e.first && (e.st === 'aim' || e.st === 'wind'))); }
+  function inReach(s, x) { return onScreen(s, x, 0); }
+  // guarded (shots glance off him): only a man still in a doorway, coming into the light. The guard on a man making his
+  // first attack is gone too (Khaled, 25 Oct: "remove the one with the lining up of the first attack")
+  function guarded(s, e) { return !!e && e.alive && e.hostile && !e.ext && e.emerge > 0; }
   function staged(s, e) { return e.post ? inMiddle(s, e.x) : (e.x >= s.cam + s.viewW * s.laneL - 1 && e.x <= s.cam + s.viewW * (1 - s.laneR) + 1); }
 
   function enemyFire(s, e, aimed, yOff) {
@@ -2411,6 +2415,19 @@ var Sim = (function () {
     }
     if (!s.alarmed && !p.dead) { s.alarmed = true; ev(s, { t: 'alarm', x: e.x, y: e.y }); }
     if (p.dead || s.status !== 'play') { if (e.st !== 'walk' && e.st !== 'wait') { e.st = e.post ? 'wait' : 'walk'; e.stT = 0; } return; }
+    // comeIn: a man walking in from an edge comes in shooting (Khaled, 25 Oct, with the guard at the edges gone). A
+    // rifleman stops for a moment as he steps into the picture and fires one level round, no aiming first (the slow
+    // bullet is the warning); a bomber comes in with his stick already lit and throws from where he stands. Once, as he
+    // steps in; after that the lanes are for walking through, as before.
+    if (!e.entered) {
+      e.entered = true;
+      if (!e.post && e.st === 'walk' && !staged(s, e)) {
+        e.face = dx >= 0 ? 1 : -1;
+        if (e.k === 'rifle') { e.snapT = 0; e.moving = 0; enemyFire(s, e, false, 26); s.events[s.events.length - 1].enter = true; }
+        else if (e.k === 'bomber' && ad > 26) { e.st = 'wind'; e.stT = 22; e.lit = true; e.moving = 0; ev(s, { t: 'tell', k: 'bomber', x: e.x, y: e.y, enter: true }); }
+      }
+    }
+    if (e.snapT != null && e.snapT < 6) { e.snapT++; return; }        // (holding still for the round he came in with)
 
     var K = KIND[e.k], home = e.post ? 'wait' : 'walk';
     if (e.k === 'rifle') {
@@ -3144,8 +3161,9 @@ var Sim = Sim || require('./sim.js');
     FLIP_PTS: 500, CRUSH_PTS: 400, GUNNER_PTS: 150, TRUCK_PTS: 300, DRONE_PTS: 200, STRIKE_PTS: 1000, STRIKE_N: 6
   };
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
-  // staged: in the middle of the screen, clear of the thumbs, where a truck or a drone may start an attack, and where his
-  // shots can hurt it. Out in the edge lanes it is still coming in: his shots glance off it (and it flashes).
+  // staged: in the middle of the screen, clear of the thumbs, where a truck or a drone may start an attack. His shots and
+  // grenades hurt it anywhere on the screen (until 25 Oct one still out in an edge lane flashed and his shots glanced off
+  // it: Khaled saw an invisible wall for shots on a phone).
   function staged(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
   function onScreen(s, x) { return x >= s.cam - 10 && x <= s.cam + s.viewW + 10; }
 
@@ -3586,10 +3604,6 @@ var Sim = Sim || require('./sim.js');
       var t = s.trucks[i];
       if (t.st !== 'ok' || !onScreen(s, t.x)) continue;
       var gx = gunnerX(t), onGun = t.gun > 0 && b.x > gx - 8 && b.x < gx + 8 && b.y > t.y - 62 && b.y < t.y - 34;
-      if (!staged(s, t.x) && (onGun || (b.x > t.x - D.TRUCK_HW && b.x < t.x + D.TRUCK_HW && b.y > t.y - D.TRUCK_H && b.y < t.y))) {
-        ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y });
-        return true;
-      }
       if (onGun) {
         ev(s, { t: 'hit', kind: 'body', x: b.x, y: b.y });
         if (--t.gun <= 0) { t.gun = 1; dropGunner(s, t, 'shot'); }
@@ -3606,7 +3620,6 @@ var Sim = Sim || require('./sim.js');
       var d = s.drones[i];
       if (d.st === 'gone' || !onScreen(s, d.x)) continue;
       if (Math.abs(b.x - d.x) < 11 && Math.abs(b.y - d.y) < 8) {
-        if (!staged(s, d.x)) { ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y }); return true; }
         popDrone(s, d, true); return true;
       }
     }
@@ -3614,8 +3627,8 @@ var Sim = Sim || require('./sim.js');
   }
   function aim(s, m, consider) {
     var i;
-    for (i = 0; i < s.trucks.length; i++) { var t = s.trucks[i]; if (t.st === 'ok' && t.gun > 0 && staged(s, t.x)) consider(gunnerX(t), t.y - 48); }
-    for (i = 0; i < s.drones.length; i++) { var d = s.drones[i]; if (d.st !== 'gone' && staged(s, d.x)) consider(d.x, d.y); }
+    for (i = 0; i < s.trucks.length; i++) { var t = s.trucks[i]; if (t.st === 'ok' && t.gun > 0 && onScreen(s, t.x)) consider(gunnerX(t), t.y - 48); }
+    for (i = 0; i < s.drones.length; i++) { var d = s.drones[i]; if (d.st !== 'gone' && onScreen(s, d.x)) consider(d.x, d.y); }
   }
   // a grenade of his in the air: has it touched something of theirs?
   function touch(s, x, y) {
@@ -3632,7 +3645,7 @@ var Sim = Sim || require('./sim.js');
     }
     for (i = 0; i < s.trucks.length; i++) {
       var t = s.trucks[i];
-      if (t.st !== 'ok' || (own && !staged(s, t.x))) continue;          // (his grenades do not hurt one still coming in)
+      if (t.st !== 'ok') continue;
       var tx = clamp(x, t.x - D.TRUCK_HW, t.x + D.TRUCK_HW), ty = clamp(y, t.y - D.TRUCK_H, t.y);
       if ((tx - x) * (tx - x) + (ty - y) * (ty - y) >= (r + 4) * (r + 4)) continue;
       t.hurtT = 0;
@@ -4484,7 +4497,7 @@ var Sim = Sim || require('./sim.js');
     if (!q.plat) { e.y = q.y != null ? q.y : Sim.groundY(L, x); e.plat = -1; }          // (in the street, or on the road)
     e.px = e.x; e.py = e.y;
     e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = (q.k === 'rifle' ? 4 + Math.floor(s.rand() * 10) : Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST)) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
-    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; the first burst gets made, as on foot)
+    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; 25 Oct: the first burst comes on sight)
     if (q.k === 'sam') e.cd = Math.round((8 + Math.floor(s.rand() * 16)) * T.FIRST) + (q.cd || 0);          // (the missile man does not hang about)
     if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
     if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = Math.round((30 + Math.floor(s.rand() * 30)) * T.FIRST); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
@@ -4967,7 +4980,9 @@ var Sim = Sim || require('./sim.js');
     if (e.k === 'rifle') {
       if (e.st === 'wait') {
         if (e.cd > 0) e.cd--;
-        else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { e.st = 'aim'; e.stT = 0; }
+        // (his first burst comes on sight, without the aim: since 25 Oct nothing guards him while he makes it, and this keeps
+        // as many of them shooting at the Apache as before: Khaled, "remove the one with the lining up of the first attack")
+        else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { if (e.first) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; } else { e.st = 'aim'; e.stT = 0; } }
       } else if (e.st === 'aim') {
         if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {
@@ -6361,7 +6376,7 @@ var Render = (function () {
       if (!e.alive) name = b + 'flung';
       else if (e.st === 'panic') name = b + 'up_' + walk;                  // hands in the air, and away
       else if (e.st === 'surr' || e.st === 'shock') name = b + 'up_' + (e.captured && e.stT > 70 ? walk : 'stand');
-      else if (e.st === 'aim' || e.st === 'burst' || e.st === 'cool') name = b + 'aim';
+      else if (e.st === 'aim' || e.st === 'burst' || e.st === 'cool' || e.snapT < 6) name = b + 'aim';     // (snapT: the round he came in with)
       else name = b + (moving ? walk : 'stand');
     } else if (e.k === 'bomber') {
       if (!e.alive) name = 'bomber_flung';
@@ -6459,7 +6474,6 @@ var Render = (function () {
     var wn = wheelName(Math.abs(t.wheel), moving ? t.vx : 0);
     spr(wn, t.x - wr, t.y - 9); spr(wn, t.x + wr, t.y - 9);
     // still coming in: it flashes, and his shots glance off it
-    if (!Sim.ext.drive.staged(s, t.x) && (tick >> 2) % 2) { cx.globalAlpha = 0.32; spr(body + '!', t.x, t.y + bob, flip); cx.globalAlpha = 1; }
     if (!paused && t.hp <= 3 && tick % 5 === 0) part('smoke', t.x + t.face * 34, t.y - 28, { life: 24, vx: -20, vy: -34 });
   }
   function dotted(x0, y0, x1, y1, gap, col) {
@@ -6483,7 +6497,6 @@ var Render = (function () {
       cx.fillRect(Math.round(d.x - d.vx * 0.03), Math.round(d.y - d.vy * 0.03), 1, 1); cx.fillRect(Math.round(d.x - d.vx * 0.05), Math.round(d.y - d.vy * 0.05), 1, 1);
     } else {
       spr(f, d.x, d.y);
-      if (!Sim.ext.drive.staged(s, d.x) && (tick >> 2) % 2) { cx.globalAlpha = 0.42; spr(f + '!', d.x, d.y); cx.globalAlpha = 1; }       // (still coming in)
     }
   }
   // whichever boss the mission has
@@ -6651,15 +6664,11 @@ var Render = (function () {
         continue;
       }
       if (e.hurtT < 3 && A.frames[name + '!']) name += '!';
-      var rx = (e.st === 'burst' && e.stT % 8 < 3) || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
+      var rx = (e.st === 'burst' && e.stT % 8 < 3) || e.snapT < 3 || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
       // a man behind the bags keeps his head down, and comes up over a few frames to aim
       var down = e.covered && e.hostile ? (Sim.ducked(e) ? 9 : (e.st === 'aim' && e.stT < 4 ? 9 - e.stT * 3 : 0)) : 0;
       if (e.st === 'stagger') rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
       spr(name, e.x + rx, e.y + down, flip, 1, down);
-      // still coming in, out at the edge: he flashes, and nothing hurts him yet
-      if (Sim.guarded(s, e) && (tick >> 2) % 2 && A.frames[name.replace('!', '') + '!']) {
-        cx.globalAlpha = 0.42; spr(name.replace('!', '') + '!', e.x + rx, e.y + down, flip, 1, down); cx.globalAlpha = 1;
-      }
       if (e.k === 'door' && e.door > 0 && e.door <= 9) {
         // the door shows what it has taken
         var dp = A.points[name.replace('!', '')];
