@@ -30,7 +30,7 @@ const T = Sim.T, R = Sim.R, THUMBS = [0.18, 0.25];
   ok(!off.length && doors.length === 4, 'every man who comes out of a door comes out of a painted one (' + doors.join(', ') + ')' + (off.length ? ': not ' + off.join(', ') : ''));
 }
 
-// ---- every posted man stands inside the middle of his gate's screen at every width (or he would be guarded for ever)
+// ---- every posted man stands inside the middle of his gate's screen at every width (or he would never start a fight)
 {
   const gateOf = g => MOCHA.gates.find(gt => gt.groups.indexOf(g) >= 0);
   const out = [];

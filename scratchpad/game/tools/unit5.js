@@ -1,9 +1,12 @@
-// unit5.js - Yazeed's shots and the edge lanes (builds 10 and 11).
+// unit5.js - Yazeed's shots and the edge lanes (builds 10 and 11; 25 Oct).
 // Build 9 dropped his shots where the right-hand lane begins (a quarter of the way in from the edge with the thumbs over
 // the picture): Khaled saw an invisible wall. Build 10 let them fly to the edge and hit anything: then the Scorpion's men
-// died the moment they showed. Build 11: the shots fly to the edge, and a man (or a truck, or a drone) still coming in
-// through an edge lane is guarded: the shot glances off him and he flashes, until he is in the middle, where the fight
-// is. Nobody starts an attack from the lanes.
+// died the moment they showed. Build 11 guarded a man still coming in through an edge lane (the shot glanced off him and he
+// flashed), until Khaled, 25 Oct: "Most players are on phone, and now there is a big phone area with an invisible wall for
+// shots". Now: his shots, grenades and knife reach anyone on the screen; nobody stops to fight in the lanes; and a man
+// walking in from an edge comes in shooting, once, as he steps in (a rifleman one level round, a bomber a stick already
+// lit). Nor is a man making his first attack guarded any more (Khaled, 25 Oct). Only a man stepping out of a doorway is
+// (unit6.js).
 'use strict';
 const path = require('path');
 const Sim = require(path.join(__dirname, '../src/sim.js'));
@@ -29,9 +32,9 @@ for (const vw of [384, 449, 468]) {
   ok(b && (far - s.cam) / vw >= 1.0, `${vw} wide, thumbs over the picture: with nobody in the way the shot flies to ${Math.round((far - s.cam) / vw * 100)}% of the way across`);
 }
 
-// ---- a man still out in the right-hand lane: shots glance off him, he starts nothing; once in the middle he goes down
-function laneMan(vw, frac) {
-  const L = Object.assign({}, LEVEL, { props: [], gates: [], groups: { X: { zone: 0, trig: 0 } }, spawns: [{ g: 'X', k: 'rifle', x: 300, post: 1 }] });
+// ---- a man standing out in the right-hand lane: the shots that reach him put him down; he starts nothing there
+function laneMan(vw, frac, k) {
+  const L = Object.assign({}, LEVEL, { props: [], gates: [], groups: { X: { zone: 0, trig: 0 } }, spawns: [{ g: 'X', k: k || 'rifle', x: 300, post: 1 }] });
   const s = Sim.create(L, { viewW: vw, seed: 1, lanes: THUMBS });
   const e = s.enemies[0];
   e.x = s.cam + vw * frac; e.y = s.p.y; e.plat = -2; e.air = false; e.face = -1;
@@ -39,40 +42,85 @@ function laneMan(vw, frac) {
 }
 for (const [vw, frac] of [[449, 0.86], [468, 0.93], [384, 0.80]]) {
   let { s, e } = laneMan(vw, frac);
-  let body = 0, glance = 0, tells = 0;
-  const hp0 = e.hp;
-  for (let k = 0; k < 60; k++) {
+  let body = 0, glance = 0, tells = 0, down = false;
+  for (let k = 0; k < 60 && !down; k++) {
     e.cd = 9999; e.x = s.cam + vw * frac;
     Sim.step(s, inp({ fire: true, viewW: vw, lanes: THUMBS }));
     for (const ev of s.events) { if (ev.t === 'hit' && ev.kind === 'body') body++; if (ev.t === 'hit' && ev.kind === 'guard') glance++; }
+    down = !e.alive;
   }
-  ok(e.alive && e.hp === hp0 && body === 0 && glance > 0 && Sim.guarded(s, e), `${vw} wide: a man ${Math.round(frac * 100)}% of the way across is still coming in: ${glance} shots glance off him, none hurt him`);
+  ok(down && body > 0 && glance === 0 && !Sim.guarded(s, e), `${vw} wide: a man ${Math.round(frac * 100)}% of the way across, under the thumb, goes down to fire (${body} hit, ${glance} glanced)`);
   ({ s, e } = laneMan(vw, frac));
   for (let k = 0; k < 240; k++) {
     if (k === 0) e.cd = 0;
     e.x = s.cam + vw * frac;
     Sim.step(s, inp({ viewW: vw, lanes: THUMBS }));
-    for (const ev of s.events) if (ev.t === 'tell') tells++;
+    for (const ev of s.events) if (ev.t === 'tell' || ev.t === 'eshot') tells++;
   }
   ok(tells === 0, `   and standing there for four seconds he starts no attack (${tells})`);
-  ({ s, e } = laneMan(vw, 0.62));
-  let down = false;
-  for (let k = 0; k < 60 && !down; k++) { e.cd = 9999; Sim.step(s, inp({ fire: true, viewW: vw, lanes: THUMBS })); down = !e.alive; }
-  ok(down && !Sim.guarded(s, e), '   a man 62% of the way across (in the middle) goes down to the same fire');
 }
 
-// ---- grenades: a blast does not hurt a man still coming in either
+// ---- grenades and the knife reach him there too
 {
   const { s, e } = laneMan(449, 0.9);
-  const hp0 = e.hp;
   Sim._.explode(s, e.x, e.y - 10, 30, 'gren', true);
-  ok(e.alive && e.hp === hp0, 'a grenade going off on a man still coming in does not hurt him');
-  const m = laneMan(449, 0.6);
-  Sim._.explode(m.s, m.e.x, m.e.y - 10, 30, 'gren', true);
-  ok(!m.e.alive, '   one going off on a man in the middle does');
+  ok(!e.alive, 'a grenade going off on a man out in the lane puts him down');
+  const m = laneMan(449, 0.9);
+  m.s.p.x = m.e.x - 14; m.s.p.face = 1; m.s.p.y = m.e.y;
+  let cut = false;
+  for (let k = 0; k < 30 && !cut; k++) { m.e.cd = 9999; m.e.x = m.s.cam + 449 * 0.9; Sim.step(m.s, inp({ fire: true, viewW: 449, lanes: THUMBS })); cut = !m.e.alive; }
+  ok(cut, '   and so does the knife at arm\'s length out there');
 }
 
-// ---- on the coast road: a truck out in the lane takes no harm; in the middle it does
+// ---- nobody's first attack is guarded: a rifleman aiming his first burst in the middle goes down to fire
+{
+  const { s, e } = laneMan(449, 0.62);
+  e.first = true; e.st = 'aim'; e.stT = 0;
+  let down = false;
+  for (let k = 0; k < 24 && !down; k++) { Sim.step(s, inp({ fire: true, viewW: 449, lanes: THUMBS })); down = !e.alive; }
+  ok(down && !Sim.guarded(s, e), 'a rifleman lining up his first burst goes down to fire before he gets it off');
+}
+
+// ---- men walking in come in shooting: once, as they step in
+function walkIn(k, enter) {
+  const L = Object.assign({}, LEVEL, { props: [], gates: [], groups: { X: { zone: 0, trig: 0 } }, spawns: [{ g: 'X', k: k, enter: enter, delay: 0 }] });
+  return Sim.create(L, { viewW: 449, seed: 2, lanes: THUMBS });
+}
+for (const enter of [1, -1]) {
+  const s = walkIn('rifle', enter), side = enter === 1 ? 'right' : 'left';
+  let shots = [], tells = 0, inAt = null, e = null;
+  for (let t = 0; t < 360; t++) {
+    Sim.step(s, inp({ viewW: 449, lanes: THUMBS }));
+    s.p.inv = 99;
+    e = e || s.enemies.find(q => q.k === 'rifle');
+    for (const ev of s.events) { if (ev.t === 'eshot') shots.push({ t, x: e ? e.x : 0, staged: e ? Sim.staged(s, e) : null }); if (ev.t === 'tell') tells++; }
+    if (e && inAt == null && Sim.staged(s, e)) inAt = t;
+  }
+  const first = shots[0], lane = shots.filter(q => q.staged === false).length;
+  ok(first && first.staged === false && lane === 1, `a rifleman walking in from the ${side} fires one round as he steps in (${lane} from the lane), then walks on in`);
+  ok(inAt != null && shots.length > 1 && shots[1].t > inAt, `   his next shots come once he is in the middle (after ${tells} warning${tells === 1 ? '' : 's'})`);
+}
+{
+  const s = walkIn('bomber', 1);
+  let lob = null, e = null;
+  for (let t = 0; t < 120 && lob == null; t++) {
+    Sim.step(s, inp({ viewW: 449, lanes: THUMBS }));
+    s.p.inv = 99;
+    e = e || s.enemies.find(q => q.k === 'bomber');
+    for (const ev of s.events) if (ev.t === 'lob' && e) lob = { t, staged: Sim.staged(s, e) };
+  }
+  ok(lob && lob.staged === false && lob.t < 60, 'a bomber walking in comes with his stick lit and throws from where he steps in (' + (lob ? lob.t + ' ticks' : 'none') + ')');
+}
+{
+  // (a posted man doesn't: he waits at his post in the middle)
+  const L = Object.assign({}, LEVEL, { props: [], gates: [], groups: { X: { zone: 0, trig: 0 } }, spawns: [{ g: 'X', k: 'rifle', x: 300, post: 1 }] });
+  const s = Sim.create(L, { viewW: 449, seed: 2, lanes: THUMBS });
+  let early = 0;
+  for (let t = 0; t < 8; t++) { Sim.step(s, inp({ viewW: 449, lanes: THUMBS })); for (const ev of s.events) if (ev.t === 'eshot') early++; }
+  ok(early === 0, '   a posted man fires no such round');
+}
+
+// ---- on the coast road: a truck out in the lane takes his shots, as in the middle
 {
   const s = Sim.create(LEVEL, { viewW: 449, seed: 11, zone: 3, lanes: THUMBS });
   const D = Sim.ext.drive;
@@ -80,13 +128,13 @@ for (const [vw, frac] of [[449, 0.86], [468, 0.93], [384, 0.80]]) {
   s.trucks.length = 0; s.trucks.push(mk(0.88));
   let t = s.trucks[0];
   const g1 = D.shot(s, { x: t.x, y: t.y - 20, vx: 450, vy: 0, own: true });
-  ok(g1 && t.hp === 8, 'the coast road: a shot at a truck 88% of the way across glances off (' + t.hp + ' of 8 left)');
+  ok(g1 && t.hp === 7, 'the coast road: a shot at a truck 88% of the way across hurts it (' + t.hp + ' of 8 left)');
   s.trucks.length = 0; s.trucks.push(mk(0.6)); t = s.trucks[0];
   const g2 = D.shot(s, { x: t.x, y: t.y - 20, vx: 450, vy: 0, own: true });
-  ok(g2 && t.hp === 7, '   and one at a truck 60% of the way across hurts it (' + t.hp + ' of 8 left)');
+  ok(g2 && t.hp === 7, '   and so does one at a truck 60% of the way across (' + t.hp + ' of 8 left)');
 }
 
-// ---- the boat: on a low pass out at the edge it still takes his shots (it is not coming in, it is the fight)
+// ---- the boat: on a low pass out at the edge it takes his shots
 {
   const s = Sim.create(LEVEL, { viewW: 449, seed: 5, zone: 4, lanes: THUMBS });
   const x = s.cam + 449 * 0.9, y = 120;

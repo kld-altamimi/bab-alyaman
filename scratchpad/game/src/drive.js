@@ -21,8 +21,9 @@ var Sim = Sim || require('./sim.js');
     FLIP_PTS: 500, CRUSH_PTS: 400, GUNNER_PTS: 150, TRUCK_PTS: 300, DRONE_PTS: 200, STRIKE_PTS: 1000, STRIKE_N: 6
   };
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
-  // staged: in the middle of the screen, clear of the thumbs, where a truck or a drone may start an attack, and where his
-  // shots can hurt it. Out in the edge lanes it is still coming in: his shots glance off it (and it flashes).
+  // staged: in the middle of the screen, clear of the thumbs, where a truck or a drone may start an attack. His shots and
+  // grenades hurt it anywhere on the screen (until 25 Oct one still out in an edge lane flashed and his shots glanced off
+  // it: Khaled saw an invisible wall for shots on a phone).
   function staged(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
   function onScreen(s, x) { return x >= s.cam - 10 && x <= s.cam + s.viewW + 10; }
 
@@ -463,10 +464,6 @@ var Sim = Sim || require('./sim.js');
       var t = s.trucks[i];
       if (t.st !== 'ok' || !onScreen(s, t.x)) continue;
       var gx = gunnerX(t), onGun = t.gun > 0 && b.x > gx - 8 && b.x < gx + 8 && b.y > t.y - 62 && b.y < t.y - 34;
-      if (!staged(s, t.x) && (onGun || (b.x > t.x - D.TRUCK_HW && b.x < t.x + D.TRUCK_HW && b.y > t.y - D.TRUCK_H && b.y < t.y))) {
-        ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y });
-        return true;
-      }
       if (onGun) {
         ev(s, { t: 'hit', kind: 'body', x: b.x, y: b.y });
         if (--t.gun <= 0) { t.gun = 1; dropGunner(s, t, 'shot'); }
@@ -483,7 +480,6 @@ var Sim = Sim || require('./sim.js');
       var d = s.drones[i];
       if (d.st === 'gone' || !onScreen(s, d.x)) continue;
       if (Math.abs(b.x - d.x) < 11 && Math.abs(b.y - d.y) < 8) {
-        if (!staged(s, d.x)) { ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y }); return true; }
         popDrone(s, d, true); return true;
       }
     }
@@ -491,8 +487,8 @@ var Sim = Sim || require('./sim.js');
   }
   function aim(s, m, consider) {
     var i;
-    for (i = 0; i < s.trucks.length; i++) { var t = s.trucks[i]; if (t.st === 'ok' && t.gun > 0 && staged(s, t.x)) consider(gunnerX(t), t.y - 48); }
-    for (i = 0; i < s.drones.length; i++) { var d = s.drones[i]; if (d.st !== 'gone' && staged(s, d.x)) consider(d.x, d.y); }
+    for (i = 0; i < s.trucks.length; i++) { var t = s.trucks[i]; if (t.st === 'ok' && t.gun > 0 && onScreen(s, t.x)) consider(gunnerX(t), t.y - 48); }
+    for (i = 0; i < s.drones.length; i++) { var d = s.drones[i]; if (d.st !== 'gone' && onScreen(s, d.x)) consider(d.x, d.y); }
   }
   // a grenade of his in the air: has it touched something of theirs?
   function touch(s, x, y) {
@@ -509,7 +505,7 @@ var Sim = Sim || require('./sim.js');
     }
     for (i = 0; i < s.trucks.length; i++) {
       var t = s.trucks[i];
-      if (t.st !== 'ok' || (own && !staged(s, t.x))) continue;          // (his grenades do not hurt one still coming in)
+      if (t.st !== 'ok') continue;
       var tx = clamp(x, t.x - D.TRUCK_HW, t.x + D.TRUCK_HW), ty = clamp(y, t.y - D.TRUCK_H, t.y);
       if ((tx - x) * (tx - x) + (ty - y) * (ty - y) >= (r + 4) * (r + 4)) continue;
       t.hurtT = 0;

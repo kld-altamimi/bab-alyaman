@@ -48,7 +48,7 @@ const T = Sim.T, I = Sim._, THUMBS = [0.18, 0.25];
   ok(ZABID.walls === true && !B.LEVEL.walls && !B.MOCHA.walls, 'steps and walls are the Souq\'s alone');
 }
 
-// ---- every posted man stands inside the middle of his gate's screen at every width (or he would be guarded for ever)
+// ---- every posted man stands inside the middle of his gate's screen at every width (or he would never start a fight)
 {
   const gateOf = g => ZABID.gates.find(gt => gt.groups.indexOf(g) >= 0);
   const out = [];

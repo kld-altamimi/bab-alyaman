@@ -253,7 +253,7 @@ var Sim = Sim || require('./sim.js');
     if (!q.plat) { e.y = q.y != null ? q.y : Sim.groundY(L, x); e.plat = -1; }          // (in the street, or on the road)
     e.px = e.x; e.py = e.y;
     e.face = q.face || -1; e.st = 'wait'; e.stT = 0; e.cd = (q.k === 'rifle' ? 4 + Math.floor(s.rand() * 10) : Math.round((20 + Math.floor(s.rand() * 40)) * T.FIRST)) + (q.cd || 0);      // (R5: T.FIRST and T.GAP, sim.js; the bosses keep theirs)
-    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; the first burst gets made, as on foot)
+    e.u = uOf(route(L), e.x, e.y); e.bar = -Math.PI / 2; e.beamT = 0; e.brave = q.k !== 'rifle' || e.id % 3 !== 0; if (q.k === 'rifle') e.first = true;      // (23 Oct: two in three riflemen stand their ground; 25 Oct: the first burst comes on sight)
     if (q.k === 'sam') e.cd = Math.round((8 + Math.floor(s.rand() * 16)) * T.FIRST) + (q.cd || 0);          // (the missile man does not hang about)
     if (q.k === 'crate') { e.left = q.n || 3; e.lid = 0; e.brave = true; e.oops = !!q.oops; }
     if (q.k === 'truck') { e.y = groundAt(L, x); e.st = 'park'; e.vx = 0; e.paint = q.paint || 'olive'; e.lead = q.lead || 0.6; e.gst = 'wait'; e.gT = 0; e.gcd = Math.round((30 + Math.floor(s.rand() * 30)) * T.FIRST); e.wheel = 0; e.ang = slopeAt(L, x); e.brave = true; e.face = 1; e.load = q.load || null; }
@@ -736,7 +736,9 @@ var Sim = Sim || require('./sim.js');
     if (e.k === 'rifle') {
       if (e.st === 'wait') {
         if (e.cd > 0) e.cd--;
-        else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { e.st = 'aim'; e.stT = 0; }
+        // (his first burst comes on sight, without the aim: since 25 Oct nothing guards him while he makes it, and this keeps
+        // as many of them shooting at the Apache as before: Khaled, "remove the one with the lining up of the first attack")
+        else if (shown && d < F.SIGHT && !blocked(L, e.x, e.y - 26, h.x, h.y)) { if (e.first) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; } else { e.st = 'aim'; e.stT = 0; } }
       } else if (e.st === 'aim') {
         if (e.stT >= 24) { e.st = 'burst'; e.stT = 0; e.shots = 0; e.first = false; }
       } else if (e.st === 'burst') {

@@ -262,19 +262,23 @@ function stepN(s, n, i) { for (let k = 0; k < n; k++) Sim.step(s, typeof i === '
     const L = Object.assign({}, LEVEL, { props: [], gates: [{ id: 'g', x: 400, groups: ['X'] }], groups: { X: { zone: 0, trig: 150 } },
       spawns: [{ g: 'X', k: 'rifle', enter: 1, delay: 0 }, { g: 'X', k: 'rifle', enter: -1, delay: 30 }, { g: 'X', k: 'bomber', enter: 1, delay: 60 }, { g: 'X', k: 'door', enter: 1, delay: 90 }] });
     const s = Sim.create(L, { viewW: vw, seed: 5, lanes: lanes });
-    let maxFrac = 0, tells = [], gone = false, stoppedAt = -1;
+    let maxFrac = 0, tells = [], entered = 0, gone = false, stoppedAt = -1;
     for (let k = 0; k < 60 * 14; k++) {
       const x0 = s.p.x;
       Sim.step(s, inp({ mx: 1, my: 1 }));            // crouch-walk right the whole time, never firing
       s.p.plates = 3; s.p.inv = 5;                    // (he is not here to be hurt)
       maxFrac = Math.max(maxFrac, (s.p.x - s.cam) / vw);
       if (stoppedAt < 0 && Math.abs(s.cam - (400 - vw * T.HOLD)) < 0.5) stoppedAt = (s.p.x - s.cam) / vw;
-      for (const e of s.events) if (e.t === 'tell' && e.k !== 'bash') tells.push((e.x - s.cam) / vw);
+      for (const e of s.events) {
+        if ((e.t === 'tell' || e.t === 'eshot') && e.enter) entered++;                 // (the round a man comes in shooting with, from the lane)
+        else if (e.t === 'tell' && e.k !== 'bash') tells.push((e.x - s.cam) / vw);
+      }
     }
     const lo = Math.min.apply(null, tells), hi = Math.max.apply(null, tells), edge = 1 - lanes[1] - 4 / vw;
     ok(Math.abs(s.cam - (400 - vw * T.HOLD)) < 0.5 && stoppedAt > 0 && stoppedAt < 0.5 && Math.abs(maxFrac - edge) < 0.005,
       'gate shut, ' + vw + ' wide, ' + label + ': the screen stops with Yazeed ' + (stoppedAt * 100).toFixed(0) + '% of the way across, and he can walk on to ' + (maxFrac * 100).toFixed(0) + '%');
     ok(tells.length >= 5 && lo >= lanes[0] - 0.01 && hi <= 1 - lanes[1] + 0.01, '   ' + tells.length + ' attacks begun, all from between ' + (lo * 100).toFixed(0) + '% and ' + (hi * 100).toFixed(0) + '% of the way across');
+    ok(entered >= 1 && entered <= 3, '   and ' + entered + ' of the three who walk in with a gun or a stick came in shooting (once each, from the lane; the man with the door doesn\'t)');
     for (const e of s.enemies) if (e.alive && e.hostile) { e.hp = 0; e.door = 0; }
     for (const e of s.enemies.slice()) if (e.alive && e.hostile) { s.bullets.push({ x: e.x - 3, y: e.y - 30, vx: 100, vy: 0, life: 5, own: true, age: 5 }); }
     for (let k = 0; k < 400; k++) { Sim.step(s, inp({ mx: 1 })); for (const e of s.events) if (e.t === 'go') gone = true; }

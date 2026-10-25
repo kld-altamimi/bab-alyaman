@@ -21,6 +21,7 @@ var Sim = (function () {
     SIGHT: 310,
     // on a phone the edges of the picture sit under the thumbs, so the fight is staged in the middle:
     // Yazeed holds at HOLD of the way across while a gate is shut, and nobody stops to fight inside the two lanes
+    // (his shots reach them there; a man coming in through one comes in shooting: see inReach and comeIn)
     HOLD: 0.5, LANE_L: 0.18, LANE_R: 0.25,
     DRUM_FUSE: 54,
     SETTLE: 28,
@@ -210,9 +211,9 @@ var Sim = (function () {
     e.slot = s.slotN * 12;
     if (sp.covered) e.cd += Math.round(60 * T.FIRST);
     if (sp.k === 'rifle') e.band = 96 + s.rand() * 78;
-    // his first attack gets made: once he has begun to aim (or to wind up) the first time, nothing stops him until it's
-    // made, and he flashes meanwhile, as at the edge (Khaled, 23 Oct: "still feels no one is trying to shoot me": most
-    // of them died the moment they stepped in, before they could aim)
+    // his first attack comes quickly: a walker aims as soon as he is in (Khaled, 23 Oct: "still feels no one is trying to
+    // shoot me"). Until 25 Oct nothing could stop that first attack once begun; now his shots can (Khaled), and a man
+    // coming in from an edge comes in shooting instead (comeIn)
     if (sp.k === 'rifle' || sp.k === 'bomber') e.first = true;
     if (sp.k === 'bomber') e.band = 150 + s.rand() * 60;
     if (sp.k === 'door') { e.band = 8; e.cd = Math.round((60 + Math.floor(s.rand() * 30)) * T.FIRST); e.door = T.DOOR_HITS; e.bashCd = 0; }
@@ -574,16 +575,19 @@ var Sim = (function () {
   function doorTop(e) { return doorUp(e) ? 28 : (doorLow(e) ? 18 : 0); }
   // a man behind cover keeps his head down until he comes up to aim; down, only a blast can reach him
   function ducked(e) { return !!e.covered && e.alive && e.hostile && (e.st === 'wait' || e.st === 'walk' || e.st === 'cool'); }
-  // The fight is staged in the middle of the screen, clear of the thumbs (inMiddle). A man out in either edge lane is
-  // still coming in: he is guarded (he flashes, and nothing hurts him: shots glance off him) and he starts no attack.
-  // His shots themselves fly on to the edge of the screen. (Build 9 dropped them where the lane began, which looked like
-  // an invisible wall; build 10 let them kill a man the moment he showed, which left nobody a chance to fight.)
-  // inReach: where a man can be hurt: the middle. staged: where a man may start an attack of his own: a posted man
-  // anywhere in the middle, a walker only once he is properly in.
+  // The fight is staged in the middle of the screen, clear of the thumbs (inMiddle): nobody stops to fight in either edge
+  // lane, and only a man who comes in from one may act there, once, as he steps in (comeIn). His shots, blasts and knife
+  // reach anyone on the screen. (Build 9 dropped them where the lane began, which looked like an invisible wall; build 10
+  // let them kill a man the moment he showed, which left nobody a chance to fight; build 11 guarded a man in the lanes,
+  // flashing and glancing his shots off, until Khaled, 25 Oct: "Most players are on phone, and now there is a big phone
+  // area with an invisible wall for shots". Now men come in shooting instead.)
+  // inReach: where a man can be hurt: anywhere on the screen. staged: where a man may start an attack of his own: a posted
+  // man anywhere in the middle, a walker only once he is properly in.
   function inMiddle(s, x) { return x >= s.cam + s.viewW * s.laneL - 10 && x <= s.cam + s.viewW * (1 - s.laneR) + 10; }
-  function inReach(s, x) { return inMiddle(s, x); }
-  // (and a man making his first attack: see spawnEnemy)
-  function guarded(s, e) { return !!e && e.alive && e.hostile && ((!e.ext && (!inMiddle(s, e.x) || e.emerge > 0)) || (e.first && (e.st === 'aim' || e.st === 'wind'))); }
+  function inReach(s, x) { return onScreen(s, x, 0); }
+  // guarded (shots glance off him): only a man still in a doorway, coming into the light. The guard on a man making his
+  // first attack is gone too (Khaled, 25 Oct: "remove the one with the lining up of the first attack")
+  function guarded(s, e) { return !!e && e.alive && e.hostile && !e.ext && e.emerge > 0; }
   function staged(s, e) { return e.post ? inMiddle(s, e.x) : (e.x >= s.cam + s.viewW * s.laneL - 1 && e.x <= s.cam + s.viewW * (1 - s.laneR) + 1); }
 
   function enemyFire(s, e, aimed, yOff) {
@@ -740,6 +744,19 @@ var Sim = (function () {
     }
     if (!s.alarmed && !p.dead) { s.alarmed = true; ev(s, { t: 'alarm', x: e.x, y: e.y }); }
     if (p.dead || s.status !== 'play') { if (e.st !== 'walk' && e.st !== 'wait') { e.st = e.post ? 'wait' : 'walk'; e.stT = 0; } return; }
+    // comeIn: a man walking in from an edge comes in shooting (Khaled, 25 Oct, with the guard at the edges gone). A
+    // rifleman stops for a moment as he steps into the picture and fires one level round, no aiming first (the slow
+    // bullet is the warning); a bomber comes in with his stick already lit and throws from where he stands. Once, as he
+    // steps in; after that the lanes are for walking through, as before.
+    if (!e.entered) {
+      e.entered = true;
+      if (!e.post && e.st === 'walk' && !staged(s, e)) {
+        e.face = dx >= 0 ? 1 : -1;
+        if (e.k === 'rifle') { e.snapT = 0; e.moving = 0; enemyFire(s, e, false, 26); s.events[s.events.length - 1].enter = true; }
+        else if (e.k === 'bomber' && ad > 26) { e.st = 'wind'; e.stT = 22; e.lit = true; e.moving = 0; ev(s, { t: 'tell', k: 'bomber', x: e.x, y: e.y, enter: true }); }
+      }
+    }
+    if (e.snapT != null && e.snapT < 6) { e.snapT++; return; }        // (holding still for the round he came in with)
 
     var K = KIND[e.k], home = e.post ? 'wait' : 'walk';
     if (e.k === 'rifle') {

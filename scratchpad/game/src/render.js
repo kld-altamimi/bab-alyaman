@@ -580,7 +580,7 @@ var Render = (function () {
       if (!e.alive) name = b + 'flung';
       else if (e.st === 'panic') name = b + 'up_' + walk;                  // hands in the air, and away
       else if (e.st === 'surr' || e.st === 'shock') name = b + 'up_' + (e.captured && e.stT > 70 ? walk : 'stand');
-      else if (e.st === 'aim' || e.st === 'burst' || e.st === 'cool') name = b + 'aim';
+      else if (e.st === 'aim' || e.st === 'burst' || e.st === 'cool' || e.snapT < 6) name = b + 'aim';     // (snapT: the round he came in with)
       else name = b + (moving ? walk : 'stand');
     } else if (e.k === 'bomber') {
       if (!e.alive) name = 'bomber_flung';
@@ -678,7 +678,6 @@ var Render = (function () {
     var wn = wheelName(Math.abs(t.wheel), moving ? t.vx : 0);
     spr(wn, t.x - wr, t.y - 9); spr(wn, t.x + wr, t.y - 9);
     // still coming in: it flashes, and his shots glance off it
-    if (!Sim.ext.drive.staged(s, t.x) && (tick >> 2) % 2) { cx.globalAlpha = 0.32; spr(body + '!', t.x, t.y + bob, flip); cx.globalAlpha = 1; }
     if (!paused && t.hp <= 3 && tick % 5 === 0) part('smoke', t.x + t.face * 34, t.y - 28, { life: 24, vx: -20, vy: -34 });
   }
   function dotted(x0, y0, x1, y1, gap, col) {
@@ -702,7 +701,6 @@ var Render = (function () {
       cx.fillRect(Math.round(d.x - d.vx * 0.03), Math.round(d.y - d.vy * 0.03), 1, 1); cx.fillRect(Math.round(d.x - d.vx * 0.05), Math.round(d.y - d.vy * 0.05), 1, 1);
     } else {
       spr(f, d.x, d.y);
-      if (!Sim.ext.drive.staged(s, d.x) && (tick >> 2) % 2) { cx.globalAlpha = 0.42; spr(f + '!', d.x, d.y); cx.globalAlpha = 1; }       // (still coming in)
     }
   }
   // whichever boss the mission has
@@ -870,15 +868,11 @@ var Render = (function () {
         continue;
       }
       if (e.hurtT < 3 && A.frames[name + '!']) name += '!';
-      var rx = (e.st === 'burst' && e.stT % 8 < 3) || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
+      var rx = (e.st === 'burst' && e.stT % 8 < 3) || e.snapT < 3 || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
       // a man behind the bags keeps his head down, and comes up over a few frames to aim
       var down = e.covered && e.hostile ? (Sim.ducked(e) ? 9 : (e.st === 'aim' && e.stT < 4 ? 9 - e.stT * 3 : 0)) : 0;
       if (e.st === 'stagger') rx = (e.stT >> 1) % 2 ? 1 : -1;         // reeling
       spr(name, e.x + rx, e.y + down, flip, 1, down);
-      // still coming in, out at the edge: he flashes, and nothing hurts him yet
-      if (Sim.guarded(s, e) && (tick >> 2) % 2 && A.frames[name.replace('!', '') + '!']) {
-        cx.globalAlpha = 0.42; spr(name.replace('!', '') + '!', e.x + rx, e.y + down, flip, 1, down); cx.globalAlpha = 1;
-      }
       if (e.k === 'door' && e.door > 0 && e.door <= 9) {
         // the door shows what it has taken
         var dp = A.points[name.replace('!', '')];
