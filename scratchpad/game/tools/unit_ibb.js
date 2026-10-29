@@ -75,7 +75,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
   for (const [seed, auto] of [[3, false], [8, true], [21, false]]) {
     let s = Sim.create(L, { viewW: 468, seed: seed, zone: 1 });
     const bot = B.smartBot({ auto: auto }), tag = 'seed ' + seed + (auto ? ', auto fire' : '');
-    let early = 0, opened = 0, out = 0, stops = 0, calmActs = 0, hushIn = 0, lost = 0, ranEarly = false, doneAt = -1, goAt = -1, maxKids = 0, calmTicks = 0, seq = 0;
+    let early = 0, opened = 0, out = 0, stops = 0, calmActs = 0, hushIn = 0, lost = 0, ranEarly = false, doneAt = -1, goAt = -1, maxKids = 0, calmTicks = 0, seq = 0, hints = 0;
     const last = {};
     for (let t = 0; t < 60 * 300 && s.status === 'play'; t++) {
       const inp = bot(s); inp.viewW = 468;
@@ -91,6 +91,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
         if (e.t === 'kid_stop') stops++;
         if (calm0 && (e.t === 'shot' || e.t === 'throw' || e.t === 'slash')) calmActs++;
         if (hush0 && (e.t === 'emerge' || e.t === 'behind')) hushIn++;
+        if (hush0 && e.t === 'hint') hints++;                 // (no tip about aiming while his gun is down and the doors are his to open)
         if (e.t === 'school_done') doneAt = seq;
         if (e.t === 'go' && e.gate === Sc.gate) goAt = seq;
       }
@@ -109,9 +110,24 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(stops === 1, tag + ': one child stops by Yazeed to wave (' + stops + ')');
     ok(calmTicks > 0 && calmActs === 0, tag + ': while children were out (' + calmTicks + ' ticks) nothing was fired, thrown or cut, though the bot tried every tick (' + calmActs + ')');
     ok(hushIn === 0, tag + ': nobody woke or came in while the school was being let out (' + hushIn + ')');
+    ok(hints === 0, tag + ': no tips while the school was being let out (' + hints + ')');
     ok(lost === 0, tag + ': every child went home, off the screen; none went any other way (' + lost + ')');
     ok(!ranEarly, tag + ': the teacher went after his pupils only once the last of them was away');
     ok(doneAt >= 0 && goAt > doneAt, tag + ': the school\'s gate opened after the last class was away (event ' + goAt + ', after ' + doneAt + ')');
+  }
+  // the yard counts as clear with a man of the next fight awake just off the screen (he stays put), not with one in the picture
+  for (const vw of [384, 448, 520]) {
+    const s = Sim.create(L, { viewW: vw, seed: 4, zone: 1 });
+    for (const g in s.groups) if (['F', 'F2', 'E', 'E2'].indexOf(g) >= 0) { s.groups[g].done = true; s.groups[g].pending.length = 0; }
+    s.enemies = s.enemies.filter(e => ['E', 'E2', 'F', 'F2'].indexOf(e.g) < 0);
+    s.cam = Math.min(1880 - vw * 0.5, L.endRight - vw); s.p.x = s.cam + 60;
+    const g = s.enemies.find(e => e.g === 'G');
+    s.groups.G.awake = true;
+    g.x = s.cam + vw + 3;
+    const off = X.yardClear(s);
+    g.x = s.cam + vw - 6;
+    const on = X.yardClear(s);
+    ok(off && !on, 'screen ' + vw + ': an awake man just off the screen leaves the yard clear (' + off + '), one in the picture does not (' + !on + ')');
   }
   // nothing touches them: two games let out the same way by hand; in one of them a grenade and a stick of dynamite go off on
   // every child in the yard and a shot of each side is sent through them. The children do exactly the same in both.

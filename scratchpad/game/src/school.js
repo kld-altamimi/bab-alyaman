@@ -34,15 +34,16 @@ var Sim = Sim || require('./sim.js');
     for (var i = 0; i < s.gates.length; i++) if (s.gates[i].id === s.L.school.gate) return s.gates[i];
     return null;
   }
-  // the yard is clear: the school's fight is over, nobody of theirs is awake on the screen (one further up the street,
-  // off it, stays where he is while the school is let out: sim.js holds him), and nothing is burning, flying or on its way
+  // the yard is clear: the school's fight is over, nobody of theirs is awake with his feet in the picture (one further up
+  // the street, off it, stays where he is while the school is let out: sim.js holds him), and nothing is burning, flying or
+  // on its way
   function yardClear(s) {
     var gt = gateOf(s), i;
     if (!gt) return false;
     for (i = 0; i < gt.groups.length; i++) if (!s.groups[gt.groups[i]].done) return false;
     for (i = 0; i < s.enemies.length; i++) {
       var e = s.enemies[i], G = s.groups[e.g];
-      if (e.alive && e.hostile && (!G || G.awake) && Sim.onScreen(s, e.x, 20)) return false;
+      if (e.alive && e.hostile && (!G || G.awake) && Sim.onScreen(s, e.x, -2)) return false;
     }
     for (i = 0; i < s.bombs.length; i++) if (!s.bombs[i].gone) return false;
     for (i = 0; i < s.bullets.length; i++) if (!s.bullets[i].gone && !s.bullets[i].own) return false;

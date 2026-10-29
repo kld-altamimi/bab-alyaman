@@ -1402,7 +1402,7 @@ var Sim = (function () {
         any = true;
         if (he.y < s.p.y - 26) above = true;
       }
-      s.quietT = any ? s.quietT + 1 : 0;
+      s.quietT = any && !s.hush ? s.quietT + 1 : 0;          // (not while Ibb's school is let out: his gun is down, the doors are his to open)
       for (i = 0; i < s.events.length; i++) if (s.events[i].t === 'die' || s.events[i].t === 'surrender') s.quietT = 0;
       if (s.quietT > 330 && above && !s.hinted.up) { s.hinted.up = 1; ev(s, { t: 'hint', k: 'up' }); }
       // only after a good two seconds of bullets wasted on it
