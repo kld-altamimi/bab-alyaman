@@ -15,8 +15,10 @@
 // behind it, giving his statement (D): heard in person when he is the nearest of his voices in the picture (talk()), the
 // mouth with his line; stopped short by Yazeed's word, then his jump (the podium was hiding the rest) and his dash for the
 // pass. The five in the chairs sit still, clap after each of his lines, and applaud his jump, and go on applauding.
-// The lookout at the top of the pass (zone 4; L.arena): the five podiums they have set out for him, each with its screen
-// on a pole behind it, his face in it, soundless, waiting (his fight on them comes after its storyboard).
+// The lookout at the top of the pass (zone 4) and his fight there: render_spokesman.js. Once their rack is smashed every
+// screen here goes dark and says nothing more (s.spk.off).
+// The opening (opening.js): Salem's 4x4 up the road with Yazeed standing in its roof ring, stopping under the billboard,
+// Yazeed jumping down, Salem backing off the way he came.
 (function () {
   'use strict';
   var FS = null, IMI = null, cx = null;
@@ -85,6 +87,7 @@
   function drawTV(s, o, K) {
     var x = Math.round(o.x), gy = Math.round(o.y), base = gy - CRATE_H;
     ispr('crate', x, gy);
+    if (s.spk && s.spk.off) { cx.fillStyle = '#08090c'; cx.fillRect(x - 20, base - 26, 32, 21); ispr('tv_box', x, base); return; }
     var m = mouthOf(s, o, K);
     ispr(m === 0 && blinkOf(s, o) ? 'tvb' : 'tv' + m, x - 20, base - 26);       // (the screen's top left, inside the set)
     ispr('tv_box', x, base);
@@ -185,31 +188,23 @@
     else if (r && r.st === 'run') ispr('spk_run' + (Math.floor(r.runD / 7) % 2), r.x, r.y, false);
   }
 
-  // ---------------------------------------------------------------- the lookout on the pass
-  var PS_LIFT = 46;                      // a podium's screen: its mount's foot this far above the floor
-  function drawArena(s, K) {
-    var A = s.L.arena, cam = s.cam, W = K.W();
-    if (A.x1 + 30 < cam || A.x0 - 30 > cam + W) return;
-    for (var i = 0; i < A.podiums.length; i++) {
-      var x = A.podiums[i], y = A.y, top = y - PS_LIFT - 40;
-      if (x + 30 < cam || x - 30 > cam + W) continue;
-      // the pole behind the podium, its feet on the gravel
-      cx.fillStyle = '#16181c'; cx.fillRect(x - 1, top + 40, 3, y - top - 40); cx.fillRect(x - 6, y - 1, 13, 1); cx.fillRect(x - 4, y - 2, 9, 1);
-      cx.fillStyle = '#4a4e56'; cx.fillRect(x - 1, top + 40, 1, y - top - 41);
-      var o = { i: 40 + i }, m = mouthOf(s, o, K);
-      ispr(m === 0 && blinkOf(s, o) ? 'psb' : 'ps' + m, x - 24, top + 2);
-      ispr('ps_box', x - 26, top);
-      ispr('podium', x, y, true);
-    }
+  // ---------------------------------------------------------------- the opening: Salem's 4x4 (the Strait's, drive.js's rig)
+  function drawOpening(s, K) {
+    var o = s.open, D = Sim.D || { BED: -22, STAND: 31 }, rig = K.rig('car') || { wheel: 29, r: 9, big: 11 };
+    var y = Sim.groundY(s.L, Math.max(0, o.x)), moving = Math.abs(o.vx) > 20, bob = moving ? (Math.floor(Math.abs(o.wheel) / 13) & 1) : 0;
+    var lift = rig.big ? rig.big - rig.r : 0, wn = (rig.big ? 'b' : '') + 'wheel' + (3 - (((Math.floor(o.wheel / 2.4) % 4) + 4) % 4));
+    if (o.x < s.cam - 80 || o.x > s.cam + K.W() + 80) return;
+    if (o.st === 'drive' || o.st === 'stop') K.spr('yazeed_stand_side_fwd', o.x + D.BED, y - D.STAND + bob, false);
+    K.spr('shass', o.x, y + bob);
+    K.spr(wn, o.x - rig.wheel, y - 9 - lift); K.spr(wn, o.x + rig.wheel, y - 9 - lift);
   }
 
   function ground(s, paused, K) {
-    if ((!s.school && !s.L.stage && !s.L.arena) || !sheet()) return;
+    if ((!s.school && !s.L.stage) || !sheet()) return;
     cx = K.ctx();
     fresh(s);
     if (s.school) drawDoors(s, K, false);
     if (s.L.stage) drawRally(s, K);
-    if (s.L.arena) drawArena(s, K);
   }
   function drawKids(s) {
     for (var i = 0; i < s.kids.length; i++) {
@@ -219,6 +214,7 @@
   }
   // Yazeed, while a child is out: his gun pointed at the ground (render.js asks before it draws him; true: drawn here)
   function yazeed(s, p, legs, K) {
+    if (p.hidden) return true;                 // (in Salem's 4x4, drawn with it: the opening)
     if (!s.calm || !sheet()) return false;
     var gun = p.weapon === 'hmg' ? 'hmg' : 'side';
     if (legs === 'jump' || legs === 'fall') { K.spr('yazeed_' + legs + '_' + gun + '_ddiag', p.x, p.y, p.face < 0); return true; }
@@ -238,12 +234,15 @@
       if (o.x + hw < cam || o.x - hw > cam + W) continue;
       if (o.big) drawBoard(s, o, K); else drawTV(s, o, K);
     }
+    // (the opening's 4x4 on the road, in front of the billboard on the verge it stops under)
+    if (s.open && s.open.st !== 'gone') drawOpening(s, K);
     if (s.kids && s.kids.length) drawKids(s);
   }
 
   // ---------------------------------------------------------------- what they hear
   function talk(s, K) {
     if (!s.L.screens && !s.rally) return null;
+    if (s.spk && (s.spk.off || s.boss)) return null;       // (on the pass he speaks for himself, and then nothing does)
     fresh(s);
     var p = s.p, at = s.L.screens ? screens(s) : [], best = null, bd = 1e9;
     for (var i = 0; i < at.length; i++) {

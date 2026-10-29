@@ -11,7 +11,8 @@ def main(which=('music_ibb',)):
     info = json.load(open('out/music.json'))
     bad = T.check_tunes()
     print('long notes a semitone off the strings under them:', bad or 'none')
-    jobs = [('music_ibb', T.ibb_theme, T.IBB_LEVELS, T.IBB_SENDS, -16.0)]
+    jobs = [('music_ibb', T.ibb_theme, T.IBB_LEVELS, T.IBB_SENDS, -16.0),
+            ('music_spokesman', T.spokesman_theme, T.IBB_LEVELS, T.IBB_SENDS, -15.0)]
     print(' ' * 77 + ' '.join('%4d' % b for b in meter.BANDS))
     for name, fn, levels, sends, target in jobs:
         if name not in which:

@@ -693,9 +693,8 @@ def play_z4(L, seed=801):
     k = np.clip((xs - 200) / 200.0, 0, 1)
     ln = np.where(k > 0, top - 4.0, np.nan)
     puffs(L, [(ln - 10, 6, 12), (ln, 5, 11)], seed=seed + 300, behind=True, body=0.74, lit=0.0)
-    # behind the lookout's wall
-    lw = np.where(xs >= ARENA[0] - 110, BACK - 26.0, np.nan)
-    puffs(L, [(lw - 26, 9, 18), (lw - 12, 8, 15), (lw, 7, 13)], seed=seed + 400, behind=True, body=0.76)
+    # (nothing painted behind the lookout's wall: the cloud there is the back layer's, so that when it clears at the end
+    # the Dhamar plateau is drawn over it there, render_spokesman.js)
     info['arena'] = dict(x0=wx(ARENA[0]), x1=wx(ARENA[1]), y=WALKY, podiums=[wx(x) for x in PODIUMS])
     I.INFO['z4'] = info
     return info
@@ -740,3 +739,100 @@ def back_pass(w=1400, seed=861):
         y += r.uniform(10, 16)
     L.paste(T.layer(FOG, dither=0.35))
     return L
+
+
+# ------------------------------------------------------------------ the end: the cloud clears onto the Dhamar plateau
+GOLDF = ramp(['#2a2010', '#463818', '#665224', '#866c30', '#a48840', '#bea456', '#d4bc72', '#e6d494'], 16)   # harvest, gold
+BASLT = ramp(['#1a1816', '#2a2624', '#3c3634', '#504844', '#665c56', '#7e726a', '#968a80'], 12)            # the volcanic cones
+
+
+def plateau(w=640, h=118, seed=881):
+    """What the lookout looks out on once the cloud has gone (the brief: "The cloud clears at the end onto the Dhamar
+    plateau"): a washed blue sky with the last of the cloud breaking up along the top; far off, low blue ranges and the
+    volcanic cones the plateau is known for, dark and flat-topped; the plain below the horizon in a patchwork of fields at
+    harvest, gold, brown and green, between dry-stone walls, a road running north across it to Dhamar, a low town of pale
+    houses on the horizon. Drawn behind the lookout (render_spokesman.js): only what shows over its wall matters (to
+    about y 100). -> the picture."""
+    L = Layer(w, h)
+    yy = np.arange(h)[:, None] * np.ones((1, w))
+    xs = np.arange(w)
+    # the sky, clear, pale at the horizon; the last cloud along the top
+    t = 0.22 + 0.62 * np.clip(yy / 64.0, 0, 1) ** 1.3
+    cl = noise((h, w), seed, 26, 6)
+    cov = np.clip((cl - 0.52) * 3.2, 0, 1) * np.clip((22 - yy) / 22.0, 0, 1)
+    t = t + cov * (0.92 - t)
+    L.put(toned(np.clip(t, 0, 1), I.SKYI, dither=0.6), np.ones((h, w), bool))
+    HZ = 62                                                       # the horizon
+    # far ranges, low and blue, a little above the horizon
+    far = HZ - 6 - 9 * noise((1, w), seed + 1, 46, 0.5)[0] - 4 * np.sin(xs / 37.0) ** 2
+    m = yy >= far[None, :]
+    tf = 0.44 + 0.08 * (noise((h, w), seed + 2, 8, 3) - 0.5) + 0.10 * ((yy - far[None, :]) < 1) + 0.12 * np.clip((yy - HZ + 8) / 8.0, 0, 1)
+    L.put(toned(np.clip(tf, 0, 1), I.HAZEB, dither=0.5), m)
+    # the cones: dark, round-shouldered, flat on top (their craters), lit from the left
+    r = rng(seed + 3)
+    T = Tone(w, h)
+    for cx, hw, ch in ((64, 30, 13), (196, 20, 8), (318, 36, 16), (452, 24, 10), (575, 32, 12)):
+        cx += r.uniform(-10, 10)
+        topw = hw * 0.28
+        for x in range(int(cx - hw), int(cx + hw) + 1):
+            if x < 0 or x >= w:
+                continue
+            d = abs(x - cx)
+            u = 0 if d < topw else (d - topw) / (hw - topw)
+            yt = HZ - ch * (0.5 + 0.5 * np.cos(np.pi * min(1.0, u)))
+            for y in range(int(yt), HZ + 1):
+                T.px(x, y, 0.50 + 0.14 * (x < cx) * (1 - u) - 0.16 * (x > cx) + 0.12 * (y - yt < 1) - 0.06 * ((y - yt) / max(1.0, ch)))
+            if d < topw - 1:
+                T.px(x, int(yt) + 1, 0.22)                         # (the crater's rim)
+    put_tone(L, T, BASLT, dither=0.4)
+    # the plain: fields in a patchwork, smaller toward the horizon, walls between them
+    F = Tone(w, h)
+    G = Tone(w, h)
+    Gr = Tone(w, h)
+    y = HZ + 1
+    row = 0
+    while y < h:
+        rh = 2 + int(row * 0.9)
+        x = int(r.integers(-20, 0))
+        while x < w:
+            fw = int(r.integers(14, 40)) + row * 4
+            kind = r.random()
+            tgt = F if kind < 0.45 else (G if kind < 0.75 else Gr)
+            base = r.uniform(0.40, 0.68)
+            for xx in range(max(0, x), min(w, x + fw)):
+                for yv in range(y, min(h, y + rh)):
+                    edge = xx == x or yv == y
+                    tgt.px(xx, yv, base - 0.16 * edge + 0.04 * (((xx + yv) % 3) == 0) * (tgt is not Gr))
+            x += fw
+        y += rh
+        row += 1
+    put_tone(L, F, GOLDF, dither=0.4)
+    put_tone(L, G, FALLOW_, dither=0.4)
+    put_tone(L, Gr, TERR, dither=0.4)
+    # the road north, across the plain toward the town on the horizon
+    Rd = Tone(w, h)
+    for y in range(HZ + 1, h):
+        u = (y - HZ) / float(h - HZ)
+        cxr = w * 0.56 - (1 - u) * 40 + u * 30
+        half = 0.6 + u * 3.2
+        for x in range(int(cxr - half), int(cxr + half) + 1):
+            Rd.px(x, y, 0.62 - 0.1 * (abs(x - cxr) > half - 1))
+    put_tone(L, Rd, I.GRAVEL, dither=0.3)
+    # Dhamar, low and pale on the horizon
+    Hs = Tone(w, h)
+    tx = int(w * 0.56 - 40)
+    for k in range(26):
+        hx = tx - 34 + int(r.uniform(0, 72))
+        hh, hw2 = int(r.uniform(2, 6)), int(r.uniform(3, 7))
+        for x in range(hx, hx + hw2):
+            for y in range(HZ - hh, HZ + 1):
+                Hs.px(x, y, 0.72 + 0.12 * (y == HZ - hh) - 0.16 * (x == hx + hw2 - 1) + 0.04 * ((x + y) % 2))
+    put_tone(L, Hs, I.HOUSEF, dither=0.3)
+    # a haze over the farthest of it
+    hz = np.clip((HZ + 10 - yy) / 26.0, 0, 1) * np.clip((yy - (HZ - 20)) / 20.0, 0, 1) * 0.35
+    sub = L.rgb.astype(float)
+    L.rgb[:] = np.round((sub * (1 - hz[..., None]) + np.array([214, 226, 232]) * hz[..., None]) / 8).clip(0, 31).astype(np.uint8) * 8
+    return L
+
+
+FALLOW_ = I.FALLOW

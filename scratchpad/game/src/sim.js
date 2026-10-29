@@ -420,8 +420,9 @@ var Sim = (function () {
       return;
     }
 
-    var walking = s.status === 'clear';
-    var mx = walking ? (p.x < (L.restX || L.exitX + 12) ? 1 : 0) : (inp.mx > 0 ? 1 : (inp.mx < 0 ? -1 : 0));
+    // (a mission's own scene holds the stick for a moment: s.script = { mx }: Ibb's opening, Salem dropping him off)
+    var scripted = !!s.script, walking = s.status === 'clear' || scripted;
+    var mx = scripted ? (s.script.mx || 0) : (walking ? (p.x < (L.restX || L.exitX + 12) ? 1 : 0) : (inp.mx > 0 ? 1 : (inp.mx < 0 ? -1 : 0)));
     var my = walking ? 0 : (inp.my > 0 ? 1 : (inp.my < 0 ? -1 : 0));
     var jump = !walking && !!inp.jump, fire = !walking && !!inp.fire, gren = !walking && !!inp.grenade;
     var jumpPressed = jump && !s.prev.jump, firePressed = fire && !s.prev.fire, grenPressed = gren && !s.prev.grenade;

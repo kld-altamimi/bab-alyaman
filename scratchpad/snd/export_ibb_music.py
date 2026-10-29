@@ -9,7 +9,7 @@ from core import *
 AUD = '/home/claude/bab_out/m1/audio/'
 GEN = '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchpad/game/gen/'
 ROLL, LOOP_AT, LEAD = 0.5, 0.6, 0.5
-LOOPS = [('ibb', 'music_ibb')]
+LOOPS = [('ibb', 'music_ibb'), ('spokesman', 'music_spokesman')]
 
 
 def loop_file(x):

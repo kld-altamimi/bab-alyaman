@@ -70,7 +70,7 @@ var Sound = (function () {
       var sp = man.speech[sk];
       spoken[sp.file] = true;
       if (all.indexOf(sp.file) < 0) all.push(sp.file);
-      for (var lid in sp.lines) { var ln = sp.lines[lid]; said[lid] = { at: ln.at, who: ln.who, text: ln.text, m: ln.m, f: sp.file }; }
+      for (var lid in sp.lines) { var ln = sp.lines[lid]; said[lid] = { at: ln.at, who: ln.who, text: ln.text, m: ln.m, fa: ln.fa, f: sp.file }; }      // (fa: a line in Persian, shown under its subtitle: Ibb's technicians)
     }
     var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     try { if (OAC) off = new OAC(2, 2, 44100); } catch (e) { off = null; }

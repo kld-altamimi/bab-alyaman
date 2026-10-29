@@ -255,7 +255,8 @@
       if (pri <= line.pri) return;                 // a bark never talks over its equal
     }
     var dur = Sound.voice(id, { gain: o.gain });
-    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri, rally: !!o.rally };
+    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri, rally: !!o.rally,
+             t0: sim ? sim.tick : 0, fa: v.fa || null };      // (when it began, for a mouth that goes with it; a line in Persian under it)
   }
   function yelp(e) {
     if (gt - (flags.yelpAt || -99) < 9) return;
@@ -272,7 +273,8 @@
     drone: 'Shoot the little drones before they dive', mine: 'A red flag marks a mine: hop over it', mount: 'Walk up to the 4x4 to get in',
     vent: 'A vent hisses before it blows: wait, then cross',
     spice: 'Crouch and shoot a spice sack: the Zanabeel cannot fight while they sneeze', sneeze: 'Keep out of the chilli: you cannot shoot while you sneeze',
-    bar: 'Grenades break a barricade fastest. So does a drum', gap: 'Jump the gaps between the roofs'
+    bar: 'Grenades break a barricade fastest. So does a drum', gap: 'Jump the gaps between the roofs',
+    mic: 'Shoot the microphone he is speaking into'
   };
 
   function react(ev) {
@@ -391,6 +393,7 @@
           Sound.sfx('surrender', { gain: 0.7 });
           if (e.k === 'quartermaster') { speak('qm_surrender', { pri: 7, who: 'QUARTERMASTER' }); after(200, function () { speak('uncle_cheque', { pri: 3, wait: true, keep: true }); }); break; }
           if (e.k === 'tailor') { speak('tl_surrender', { pri: 7, wait: true }); break; }
+          if (e.k === 'tech') { if (e.n === 0) speak('tech_videos', { pri: 7 }); break; }      // (Ibb: the back room; over his statement, not after the whole of it)
           if (whoIs(e) === 'cmdr') { speak('cmdr_surrender', { pri: 7, who: 'COMMANDER' }); break; }      // (the mission ends before the Uncle could call)
           flags.surr = (flags.surr || 0) + 1;
           speak(flags.surr % 2 ? 'grunt_twice' : 'grunt_monday', { pri: 3, who: WHO[whoIs(e)] });
@@ -448,6 +451,48 @@
           break;
         case 'wrap_hop': Sound.sfx('jump', { gain: 0.35, rate: 1.3, pan: panOf(e.x) }); break;
         case 'boat': after(34, function () { speak('yazeed_boat', { pri: 1 }); }); break;
+        // ---- Ibb: Salem dropping Yazeed off under the billboard (opening.js)
+        case 'op_arrive': Sound.sfx('rev', { gain: 0.5, rate: 0.8 }); after(16, function () { Sound.sfx('engine', { gain: 0.35, rate: 0.7 }); }); break;
+        case 'op_stop': Sound.sfx('brake', { gain: 0.8 }); break;
+        case 'op_hop': Sound.sfx('jump'); break;
+        case 'op_salem': speak('salem_noise', { pri: 6 }); break;
+        case 'op_back': Sound.sfx('rev', { gain: 0.6, rate: 0.7 }); break;
+        case 'op_go': after(10, function () { speak('yazeed_quiet', { pri: 6, wait: true, keep: true }); }); break;
+        // ---- Ibb: Brigadier Breaking on Sumara pass (spokesman.js): his lines, cut off, his leaps, the feedback, his men
+        case 'spk_say': speak(e.id, { pri: 5 }); break;
+        case 'spk_chip': Sound.sfx('clang', { gain: 0.5, rate: 1.35, pan: panOf(e.x) }); break;
+        case 'spk_cut':
+          Sound.sfx('clang', { gain: 0.9, rate: 1.1, pan: panOf(e.x) }); Sound.voice('feedback', { over: true, gain: 0.7 });
+          speak('spk_what', { pri: 8 }); buzz(30);
+          break;
+        case 'spk_leap': Sound.sfx('jump', { gain: 0.8, rate: 0.85, pan: panOf(e.x) }); break;
+        case 'spk_land': Sound.sfx('land', { gain: 0.7, pan: panOf(e.x) }); break;
+        case 'spk_dash': Sound.sfx('whoosh', { gain: 0.7, pan: panOf(e.x) }); break;
+        case 'spk_wave': Sound.voice('shriek', { over: true, gain: 0.75, pan: panOf(e.x) }); break;
+        case 'spk_call': if (e.first) after(20, function () { speak('grunt_shh', { pri: 4 }); }); break;
+        case 'spk_spare': Sound.sfx('pick_gren', { gain: 0.7 }); break;
+        case 'spk_fixed': Sound.sfx('clang', { gain: 0.4, rate: 1.6 }); break;
+        case 'cable_wind': Sound.sfx('rope', { gain: 0.45, rate: 1.2 + Math.random() * 0.3, pan: panOf(e.x) }); break;
+        // the screens back on: him, still speaking (statement E), though he stands there tied up
+        case 'spk_rerender':
+          Sound.sfx('beep', { gain: 0.6, rate: 0.7 }); Sound.sfx('spinup', { gain: 0.4, rate: 1.3 });
+          (sim.L.arena.lines.E || []).forEach(function (id) { speak(id, { pri: 5, wait: true, keep: true }); });
+          break;
+        case 'van_open': Sound.sfx('whoosh', { gain: 0.7, rate: 0.7, pan: panOf(e.x) }); Sound.sfx('clang', { gain: 0.4, rate: 0.6, pan: panOf(e.x) }); break;
+        case 'tech_out': Sound.sfx('step', { gain: 0.5, pan: panOf(e.x) }); break;
+        // the rack smashed: every screen dark; the Uncle on the radio; Yazeed
+        case 'spk_smash':
+          Sound.sfx('crash', { pan: panOf(e.x) }); Sound.sfx('boom_s', { gain: 0.6, pan: panOf(e.x) }); buzz([60, 40, 100]);
+          queue.length = 0; line = null;
+          Sound.voice('feedback', { gain: 0.6 });                // (his statement cut off mid-word, in a screech)
+          after(80, function () {
+            speak('uncle_again', { pri: 7, wait: true, keep: true });
+            speak('tech_cannot', { pri: 7, wait: true, keep: true });
+            speak('uncle_me', { pri: 7, wait: true, keep: true });
+            speak('yazeed_finally', { pri: 7, wait: true, keep: true });
+          });
+          break;
+        case 'spk_clearing': Sound.startMusic(false, sim.L.music, 2.5); break;
         case 'hint': if (HINTS[e.k]) hint(T(HINTS[e.k])); break;
 
         // ---- the coast road
@@ -486,16 +531,23 @@
             Sound.sfx('door_creak', { gain: 0.9, rate: 0.6, pan: panOf(e.x) }); after(24, function () { Sound.sfx('door_creak', { gain: 0.7, rate: 0.52, pan: panOf(e.x) }); });
             if (!flags.lnTip) { flags.lnTip = 1; after(150, function () { hint(T('Their missile launcher! Get it before the missile is up')); }); }
           }
-          else after(420, function () { speak(e.k === 'roaster' ? 'uncle_coffee' : (e.k === 'tailor' ? 'uncle_spice' : 'uncle_drones'), { pri: 3, wait: true, keep: true }); });
+          else if (e.k !== 'spokesman') after(420, function () { speak(e.k === 'roaster' ? 'uncle_coffee' : (e.k === 'tailor' ? 'uncle_spice' : 'uncle_drones'), { pri: 3, wait: true, keep: true }); });
           break;
         case 'boss_phase':
           if (e.k === 'tailor') Sound.sfx(e.n === 3 ? 'whoosh' : 'clatter', { pan: panOf(e.x), rate: 0.8 });      // (a spare dummy wheeled in; the sheets out)
+          else if (e.k === 'spokesman') { if (e.n === 3) { Sound.sfx('thunk', { gain: 0.9, rate: 0.6 }); Sound.sfx('clang', { gain: 0.4, rate: 0.5 }); } else Sound.voice('feedback', { over: true, gain: 0.5 }); }      // (Ibb: the lights go out; the feedback starts)
           else Sound.sfx('part_off', { pan: panOf(e.x) });
           buzz(60);
           bossSays(e.k, 'phase' + e.n);
           break;
         case 'boss_dying': Sound.sfx(BOSSLINES[e.k || 'boat'].fall || 'boss_fall', { pan: panOf(e.x) }); break;
         case 'boss_dead':
+          if (e.k === 'spokesman') {
+            // tied up in his own cable: no bang, the cable pulled tight; his statement cut off for good
+            Sound.sfx('rope'); after(10, function () { Sound.sfx('freed', { gain: 0.6, rate: 0.8 }); });
+            buzz([40, 30, 80]); Sound.stopMusic(1.6);
+            break;
+          }
           if (e.k === 'tailor') {
             // the dummies all going over at once, and the chillies they were stuffed with bursting out of them
             Sound.sfx('clatter'); Sound.sfx('sack_burst', { gain: 0.9, rate: 0.9 });
@@ -655,6 +707,8 @@
     roaster: { intro: [[40, 'yazeed_roaster', 5], [150, 'qm_behold', 6, 'QUARTERMASTER']], phase2: [[40, 'qm_chimney', 6, 'QUARTERMASTER']], phase3: [[40, 'qm_dark', 6, 'QUARTERMASTER']], fall: 'boss_fall' },
     // (the Tailor first, then Yazeed, then the Uncle on the radio at 420: one after another, none of them cut short)
     tailor: { intro: [[24, 'tl_welcome', 6], [260, 'yazeed_coat', 5]], phase2: [[40, 'tl_more', 6]], phase3: [[30, 'tl_cover', 6]], fall: 'tape' },
+    // (Ibb's Spokesman speaks for himself, from his podiums: spokesman.js says when)
+    spokesman: { fall: 'rope' },
     // (Taiz's: the Castle Gun, heard rather than spoken; and the launcher, the Commander's new pride, with his old lines)
     cgun: { intro: [[30, 'grunt_alarm', 4, 'RIFLEMAN']] },
     launcher: { intro: [[70, 'cmdr_behold', 6, 'COMMANDER']], phase2: [[40, 'cmdr_minor', 6, 'COMMANDER']], phase3: [[40, 'cmdr_insured', 6, 'COMMANDER']] }
@@ -712,6 +766,13 @@
     if (line && gt >= line.until) line = null;
     if (!line && queue.length) { var q = queue.shift(); if (gt - q.at < 200 || q.o.keep) speak(q.id, q.o); }      // (unless its moment has passed: a story line's never does)
     if (hintLine && gt >= hintLine.until) hintLine = null;
+    // Yazeed's word at a place in the level, once a run (Ibb: the Queen Arwa mosque in Jibla)
+    if (sim.L.remarks && sim.status === 'play' && !sim.p.dead) {
+      for (var rmi = 0; rmi < sim.L.remarks.length; rmi++) {
+        var rm = sim.L.remarks[rmi];
+        if (!flags['remark' + rmi] && sim.p.x >= rm.x && sim.p.x < rm.x + 240) { flags['remark' + rmi] = 1; speak(rm.id, { pri: 3, wait: true, keep: true, who: 'YAZEED' }); }
+      }
+    }
     // a mission's own talk (Ibb's screens): its next line, when nobody else is saying anything
     if (!line && !queue.length && sim.status === 'play' && !sim.p.dead) { var tk = Render.talk(sim); if (tk) speak(tk.id, tk.o); }
     // nobody has shown the lock yet: say so once, after a good while of holding the trigger down by hand

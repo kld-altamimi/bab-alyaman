@@ -8,6 +8,7 @@ require(path.join(__dirname, '../src/roaster.js'));
 try { require(path.join(__dirname, '../src/tailor.js')); } catch (e) {}
 try { require(path.join(__dirname, '../src/fly.js')); } catch (e) {}          // (Taiz: loaded so the other missions are checked with it in place)
 try { require(path.join(__dirname, '../src/school.js')); } catch (e) {}       // (Ibb's school: its classrooms)
+try { require(path.join(__dirname, '../src/rally.js')); require(path.join(__dirname, '../src/opening.js')); require(path.join(__dirname, '../src/spokesman.js')); } catch (e) {}   // (Ibb: the rally, the opening, the Spokesman)
 const LEVEL = require(path.join(__dirname, '../src/level.js'));
 LEVEL.ground = require(path.join(__dirname, '../gen/ground.json'));
 const MOCHA = require(path.join(__dirname, '../src/level_mocha.js'));
@@ -280,6 +281,40 @@ function smartBot(opts) {
     if (jump && !p.air && jumpHold <= 0) jumpHold = 14;
     if (jumpHold > 0) { inp.jump = true; jumpHold--; }
   }
+  // ---- Ibb's Spokesman: stand off his podium on our side of it and keep firing level (the gun's help takes the shot to
+  // his microphone while he speaks into it, to him while he is stunned, and to his men); jump the feedback along the
+  // ground and him when he dashes along it; keep out from under the podium he is leaping for
+  function spokesmanBot(s, inp) {
+    const p = s.p, b = s.boss, X = Sim.ext.spokesman, SP = Sim.SP, P = s.spk.pods;
+    let jump = false, flee = 0;
+    if (bossGren > 0) bossGren--;
+    const lo = s.cam + 14, hi = s.cam + s.viewW * (1 - s.laneR) - 8;
+    for (const w of s.spk.waves) { const dx = (w.x - p.x) * w.dir; if (dx < 0 && dx > -40) jump = true; }
+    if (b.st === 'dash') { const dx = b.x - p.x; if (Math.abs(dx) < 44 && (b.x1 - b.x) * dx < 0) jump = true; }
+    if (b.st === 'leap') { const land = b.x1; if (Math.abs(land - p.x) < 20) flee = land >= p.x ? -1 : 1; }
+    for (const o of s.bullets) {
+      if (o.own || o.gone) continue;
+      const dx = o.x - p.x, coming = (o.vx > 0 && dx < 0) || (o.vx < 0 && dx > 0);
+      if (coming && Math.abs(dx) < 40 && o.y > p.y - 36 && o.y < p.y + 2) jump = true;
+    }
+    for (const o of s.bombs) {
+      if (o.own || o.gone) continue;
+      if (Math.abs(o.x - p.x) < T.DYN_R + 14) flee = o.x >= p.x ? -1 : 1;
+    }
+    // where to stand: off his podium on the side we are on, a little way out; facing him
+    const pod = P[b.pod] ? P[b.pod].x : b.x, side = p.x <= pod ? -1 : 1;
+    let want = pod + side * 70;
+    if (want < lo || want > hi) want = pod - side * 70;
+    want = Math.max(lo, Math.min(hi, want));
+    inp.my = 0;
+    inp.mx = flee || (Math.abs(want - p.x) > 4 ? (want > p.x ? 1 : -1) : 0);
+    const face = b.x >= p.x ? 1 : -1;
+    if (!inp.mx && p.face !== face) inp.mx = face;
+    if (p.x <= lo && inp.mx < 0) inp.mx = 0;
+    if (!noGren && p.grenades > 0 && bossGren <= 0 && b.st === 'stun' && Math.abs(b.x - p.x) > 40 && Math.abs(b.x - p.x) < 100 && p.face === face) { inp.grenade = true; bossGren = 50; }
+    if (jump && !p.air && jumpHold <= 0) jumpHold = 14;
+    if (jumpHold > 0) { inp.jump = true; jumpHold--; }
+  }
   // ---- a way up to the platform somebody is tied up on: a platform at a time, as far as a jump goes
   function surfaceOf(L, i, x) { return i < 0 ? Sim.groundY(L, x) : Sim.platY(L.plats[i], Math.max(L.plats[i].pts[0][0], Math.min(L.plats[i].pts[L.plats[i].pts.length - 1][0], x))); }
   function routeUp(L, from, to, win) {
@@ -335,6 +370,7 @@ function smartBot(opts) {
     if (s.boss && Sim.ext.boss.open(s.boss)) { bossBot(s, inp); if (noGren) inp.grenade = false; return inp; }
     if (s.boss && Sim.ext.roaster.open(s.boss)) { roasterBot(s, inp); if (noGren) inp.grenade = false; return inp; }
     if (s.boss && Sim.ext.tailor && Sim.ext.tailor.open(s.boss)) { tailorBot(s, inp); if (noGren) inp.grenade = false; return inp; }
+    if (s.boss && Sim.ext.spokesman && Sim.ext.spokesman.fighting(s.boss)) { spokesmanBot(s, inp); if (noGren) inp.grenade = false; return inp; }
     if (grenWait > 0) grenWait--;
     const gren = noGren ? 0 : p.grenades;
     const foes = s.enemies.filter(e => e.alive && e.hostile && Sim.onScreen(s, e.x, 0) && Sim.inReach(s, e.x));      // men out at the edge are nobody's target yet

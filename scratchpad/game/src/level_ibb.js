@@ -28,8 +28,11 @@
 // painted black and white, a crash barrier on the drop's side, the next hairpin below, the valley full of cloud); their
 // post in a shipping container with sandbags across the road, a tea shack with a tin awning, the summit's rock, marker and
 // flag; then the lookout at the top, where they have set out five podiums with a screen each for the Spokesman and parked
-// their broadcast van. Three fights; the podiums and screens stand ready (render_ibb.js); his fight on them comes after
-// its storyboard, and the mission ends past the van for now.
+// their broadcast van. Three fights; then his (spokesman.js, as the storyboard Khaled passed on 30 Oct 00:39: "Go ahead
+// and finish the whole level"): cut off at his microphone, podium by podium, caught in his own cable; the screens back
+// on with him still speaking (the ear, two Yemens); the back room in their van, three of the Uncle's men and a rack
+// marked RENDER; every screen dark; the cloud clearing onto the Dhamar plateau. The mission opens with Salem dropping
+// Yazeed under the billboard (opening.js).
 // Only test builds have it (build.py --ibb).
 // The ground is the road, flat at 184, until the terraces, where it climbs in steps of 16 (walls: true: a step of more
 // than 7 is a wall); it comes from the painting (GROUNDS.ibb in the page, gen/stage_ibb.json under Node), as the
@@ -43,17 +46,18 @@ var LEVEL_IBB = (function () {
     name: 'The Green Valleys',
     art: 'ibb',
     banner: 'THE GREEN VALLEYS',
-    music: 'ibb', bossMusic: 'ibb',      // (the Green Valleys' theme, 24 Oct; the Spokesman's own comes with his fight)
+    music: 'ibb', bossMusic: 'spokesman',    // (the Green Valleys' theme, 24 Oct; the Spokesman's own for his fight, 30 Oct)
     speech: true,                        // (his lines come in a file of their own, fetched with the mission: audio.js)
     birds: 'pigeon',
     lines: { start: [], clear: [[26, 'ann_complete', 8]] },
     freedNote: 'the teacher is still at the flagpole',         // (the brief's; the teacher comes with zone 2)
+    bossFact: 'Statement interrupted in',
     width: END,
     height: 216,
-    par: 300,
+    par: 360,
     start: 96,
-    exitX: END - 40,
-    restX: END - 20,
+    exitX: END - 90,                     // (past the van at the lookout's far end, once the reveal is over)
+    restX: END - 10,
     endRight: END,
     walls: true,                         // (the terraces: a step up of more than 7 px is a wall)
     ground: null,                        // (from the painting: GROUNDS.ibb in the page, gen/stage_ibb.json under Node)
@@ -153,7 +157,9 @@ var LEVEL_IBB = (function () {
       { id: 'station', x: 5850, groups: ['L', 'L2'], until: 'rally' },         // (and the Spokesman gone: rally.js)
       { id: 'post', x: 6800, groups: ['T', 'T2'] },
       { id: 'shack', x: 7180, groups: ['U', 'U2'] },
-      { id: 'summit', x: 7470, groups: ['V', 'V2'] }
+      { id: 'summit', x: 7470, groups: ['V', 'V2'] },
+      { id: 'arena', x: 7840, groups: ['BOSS'] },                                // (the held screen centred on the five podiums)
+      { id: 'van', x: 8100, groups: ['BOSS'], until: 'spokesman', quiet: true }  // (and the reveal over: spokesman.js)
     ],
     groups: {
       A: { zone: 0, trig: 300 },
@@ -197,7 +203,8 @@ var LEVEL_IBB = (function () {
       U: { zone: 3, trig: 7000 },
       U2: { zone: 3, after: 'U', delay: 40, lastManSurrenders: true },
       V: { zone: 3, trig: 7290 },
-      V2: { zone: 3, after: 'V', delay: 40, lastManSurrenders: true }
+      V2: { zone: 3, after: 'V', delay: 40, lastManSurrenders: true },
+      BOSS: { zone: 3, hold: true, trig: 7660, noSurrender: true }
     },
     // k: rifle | bomber | door. enter: 1 from the right edge, -1 from the left. door: out of the doorway at x.
     // A man at a post stands inside the middle of his gate's held screen, outside the lanes the others walk in by, at every
@@ -428,8 +435,19 @@ var LEVEL_IBB = (function () {
     // the teacher, at his flagpole, waits for them once freed and then goes after them
     school: { gate: 'school', y: 184, teacher: 2656, doors: [{ x: 2554, n: 5 }, { x: 2654, n: 4 }, { x: 2754, n: 5 }] },
     // the lookout at the top of the pass: its floor, the five podiums they have set out for him, each with its screen on a
-    // stand behind it (render_ibb.js draws them; his fight on them comes after its storyboard), their van at the far end
-    arena: { x0: 7550, x1: 8160, y: 120, podiums: [7680, 7760, 7840, 7920, 8000], van: { x0: 8072, x1: 8152, door: [8096, 8118] } },
+    // stand behind it (his fight on them: spokesman.js; render_spokesman.js draws it all), their van at the far end
+    arena: { x0: 7550, x1: 8160, y: 120, podiums: [7680, 7760, 7840, 7920, 8000], van: { x0: 8072, x1: 8152, door: [8096, 8118], roof: 75, sill: 106 },
+             // what he says from his podiums, by phase ([line, ticks it lasts]): calm, putting statement A right; shouting the
+             // warning (C); at the last podium in the dark, reading by torchlight. And what the screens say once he is caught (E)
+             lines: { 1: [['sp_important', 95], ['sp_A4', 178], ['sp_A6', 132], ['sp_A7', 126], ['sp_A8', 82], ['sp_A5', 188]],
+                      2: [['sp_C3', 198], ['sp_C4', 90], ['sp_C5', 90], ['sp_C6', 88], ['sp_C7', 143]],
+                      3: [['sp_A11', 107], ['sp_end', 88], ['sp_D9', 97], ['sp_important', 95]],
+                      E: ['sp_important', 'sp_E2', 'sp_E3', 'sp_E4', 'sp_E5', 'sp_E6', 'sp_E7', 'sp_ops', 'sp_E9', 'sp_end'] } },
+    // the opening: Salem's 4x4 up the road from off the left of the picture, stopping under the billboard (opening.js)
+    opening: { from: -90, stop: 176 },
+    // Yazeed's word at a place (main.js): the Queen Arwa mosque over the low wall in Jibla's upper street (the back layer's
+    // mosque is in the middle of the picture with Yazeed here)
+    remarks: [{ x: 3040, id: 'yazeed_mosque' }],
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
     // is told in pieces, a few lines a set, through the zones); they stand on the verge behind the road
     screens: [

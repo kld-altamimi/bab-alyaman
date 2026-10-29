@@ -13,6 +13,8 @@ require(path.join(__dirname, '../src/roaster.js'));
 require(path.join(__dirname, '../src/fly.js'));
 require(path.join(__dirname, '../src/school.js'));
 require(path.join(__dirname, '../src/rally.js'));
+require(path.join(__dirname, '../src/opening.js'));
+require(path.join(__dirname, '../src/spokesman.js'));
 const IBB = require(path.join(__dirname, '../src/level_ibb.js'));
 const AUDIO = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/audio.json'), 'utf8'));
 const STAGE = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/stage_ibb.json'), 'utf8'));
@@ -70,6 +72,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
   ok(A && A.podiums.length === 5 && A.podiums[4] - A.podiums[0] + 2 * 30 <= 384 && A.podiums.every(x => x > A.x0 + 40 && x < A.x1 - 40),
      'five podiums on the lookout, all in one screen at the narrowest (' + (A ? A.podiums[4] - A.podiums[0] : '?') + ' px apart)');
   ok(L.exitX > A.podiums[4] + 60 && L.exitX <= L.endRight - 30, 'the way out past the last podium (' + L.exitX + ')');
+  for (const r of L.remarks || []) ok(!!lines[r.id] && r.x > L.zones[1].x && r.x < L.zones[2].x, 'Yazeed\'s word at ' + r.x + ' (' + r.id + ') recorded, in Jibla');
   for (let z = 0; z < L.zones.length; z++) {
     const s = Sim.create(L, { viewW: 468, zone: z });
     ok(s.status === 'play' && Math.abs(s.p.x - L.zones[z].spawn) < 1, 'zone ' + z + ' (' + L.zones[z].name + ') starts a game');
@@ -248,6 +251,137 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
       if (ra.st !== rb.st || ra.x !== rb.x || ra.y !== rb.y || ra.t !== rb.t) same = false;
     }
     ok(sawSpeech > 0 && same && a.rally.st === 'gone' && !('hp' in b.rally), 'grenades, dynamite and shots on him, his podium and his audience: he does exactly as he would have, and is gone (' + a.rally.st + ')');
+  }
+})();
+
+// ------------------------------------------------------------------ the opening (opening.js)
+// Khaled, 30 Oct 00:39, "Go ahead and finish the whole level": the mission begins with Salem dropping Yazeed off under the
+// billboard. What must always hold: only at the start of a mission (not from a later checkpoint, not on a continue); the
+// 4x4's arrival, its stop, Yazeed's jump down, Salem's word, the 4x4 backing off and the stick given back, once each and in
+// that order, in a few seconds; until then the stick, the trigger and the grenade do nothing and nothing touches Yazeed;
+// then the stick is his.
+(function opening() {
+  const L = IBB, O = L.opening, X = Sim.ext.opening, lines = AUDIO.speech.ibb.lines;
+  ok(!!X && !!O && O.from < -40 && O.stop > 0 && O.stop < L.gates[0].x - 300, 'the opening: the 4x4 from off the left of the picture to well short of the first fight');
+  ok(['salem_noise', 'yazeed_quiet'].every(id => !!lines[id]), 'Salem\'s word and Yazeed\'s recorded');
+  for (const [z, extra] of [[1, {}], [3, {}], [0, { stats: { deaths: 1, continues: 1 } }]]) {
+    const s = Sim.create(L, Object.assign({ viewW: 468, zone: z }, extra));
+    ok(!s.open && !s.script && !s.p.hidden, 'no opening ' + (extra.stats ? 'on a continue' : 'from zone ' + z));
+  }
+  const s = Sim.create(L, { viewW: 468, seed: 4 });
+  ok(!!s.open && !!s.script && !!s.p.hidden, 'a new mission begins with the opening');
+  const order = [], at = {}, x0 = s.p.x;
+  let fired = 0, hurt = 0, strayed = 0, walked = -1, t;
+  for (t = 0; t < 60 * 20 && s.status === 'play'; t++) {
+    // (every button held and the stick pushed back the whole time)
+    const inp = { viewW: 468, mx: at.op_go != null && t > at.op_go + 5 ? 1 : -1, my: t % 30 < 15 ? 1 : 0, fire: true, jump: t % 6 < 3, grenade: t % 10 < 5, auto: t % 2 === 0 };
+    const xb = s.p.x, scripted = !!s.script, st = s.open && s.open.st;
+    Sim.step(s, inp);
+    if (scripted) {
+      if (s.bullets.some(b => b.own) || s.bombs.some(b => b.own)) fired++;
+      if (st !== 'hop' && st !== 'stop' && Math.abs(s.p.x - xb) > 0.001) strayed++;
+    }
+    for (const e of s.events) {
+      if (/^op_/.test(e.t)) { order.push(e.t); at[e.t] = t; }
+      if (e.t === 'life_lost' || e.t === 'plate_lost' || e.t === 'hurt') hurt++;
+    }
+    if (at.op_go != null && walked < 0 && s.p.x > xb + 0.5) walked = t;
+    if (walked >= 0 && t > walked + 30) break;
+  }
+  ok(order.join(',') === 'op_arrive,op_stop,op_hop,op_salem,op_back,op_go', 'the 4x4 comes, stops, Yazeed jumps down, Salem says it, he backs off, the stick is Yazeed\'s: once each, in order (' + order.join(',') + ')');
+  ok(at.op_go != null && at.op_go < 60 * 8, 'the opening is over in a few seconds (' + (at.op_go / 60).toFixed(1) + ' s)');
+  ok(fired === 0 && strayed === 0 && hurt === 0, 'while it plays nothing is fired or thrown (' + fired + '), the stick moves nobody (' + strayed + '), and nothing touches Yazeed (' + hurt + ')');
+  ok(Math.abs(s.p.x - x0) > 20 && walked >= 0 && walked - at.op_go <= 6, 'then the stick is his: he walks off (' + Math.round(x0) + ' to ' + Math.round(s.p.x) + ')');
+  for (t = 0; t < 60 * 6 && !X.done(s); t++) Sim.step(s, { viewW: 468, mx: 1 });
+  ok(!s.script && !s.p.hidden && X.done(s) && s.open.st === 'gone', 'and the 4x4 is away out of the picture (' + (s.open && s.open.st) + ')');
+})();
+
+// ------------------------------------------------------------------ Brigadier Breaking on Sumara pass (spokesman.js)
+// Khaled, 30 Oct 00:39, "Go ahead and finish the whole level", the storyboard as passed. What must always hold, played by
+// the bot at both fire settings and checked on every tick: he is hurt only while he is stunned, and a stun takes a fifth of
+// him at most; he is stunned only through the microphone he is speaking into; the reveal comes in its order (caught, the
+// screens back on him, the cables, the van's door, the three technicians, the rack smashed, the cloud clearing) and the way
+// out opens only after it; the technicians are in nothing the game hits. And by hand: shots and blasts on him while he is
+// not stunned leave him exactly as he would have been.
+(function spokesman() {
+  const L = IBB, A = L.arena, X = Sim.ext.spokesman, SP = Sim.SP, lines = AUDIO.speech.ibb.lines;
+  const B = require(path.join(__dirname, 'bot.js'));
+  ok(!!X && !!A && L.gates.some(g => g.id === 'van' && g.until === 'spokesman' && g.x > A.van.x0), 'the last gate, at the van, waits for the reveal');
+  ok(L.groups.BOSS && L.groups.BOSS.hold && L.groups.BOSS.zone === 3, 'his fight is held for him, on the pass');
+  for (const ph of ['1', '2', '3']) ok(A.lines[ph].length > 0 && A.lines[ph].every(q => !!lines[q[0]] && q[1] > 40), 'what he says at the podiums, phase ' + ph + ', recorded');
+  ok(A.lines.E.every(id => !!lines[id]), 'what the screens say once he is caught, recorded');
+  ok(['spk_what', 'tech_videos', 'tech_cannot', 'uncle_again', 'uncle_me', 'yazeed_finally', 'feedback'].every(id => !!lines[id]), 'his WHAT?, the technicians, the Uncle, Yazeed and the feedback recorded');
+  ok(A.van.door[0] > A.podiums[4] + 40 && A.van.roof < A.van.sill && A.van.sill < A.y, 'the van past the last podium, its door above the floor');
+  const WANT = ['boss_intro', 'boss_start', 'boss_dying', 'boss_dead', 'spk_rerender', 'spk_cables', 'van_open', 'spk_smash', 'spk_clearing', 'spk_clear'];
+  for (const [seed, auto] of [[3, false], [11, true], [21, false]]) {
+    const s = Sim.create(L, { viewW: 468, seed: seed, zone: 3 });
+    const bot = B.smartBot({ auto: auto }), tag = 'seed ' + seed + (auto ? ', auto fire' : '');
+    const order = [], at = {};
+    let seq = 0, offHurt = 0, deep = 0, badCut = 0, cuts = 0, techHit = 0, techs = new Set(), lastHp = SP.HP, chips = 0;
+    for (let t = 0; t < 60 * 300 && s.status === 'play'; t++) {
+      const b0 = s.boss && s.boss.kind === 'spokesman' ? s.boss : null, st0 = b0 && b0.st, hp0 = b0 ? b0.hp : SP.HP;
+      const inp = bot(s); inp.viewW = 468;
+      Sim.step(s, inp);
+      const b = s.boss && s.boss.kind === 'spokesman' ? s.boss : null;
+      if (b && b.hp < hp0 && st0 !== 'stun') offHurt++;
+      if (b && b.hp < SP.HP - SP.SEG * b.cuts) deep++;
+      for (const e of s.events) {
+        seq++;
+        if (WANT.includes(e.t) && (e.k === 'spokesman' || !/^boss_/.test(e.t))) { if (!(e.t in at)) order.push(e.t); at[e.t] = seq; }
+        if (e.t === 'spk_cut') { cuts++; if (st0 !== 'speak') badCut++; }
+        if (e.t === 'spk_chip' && st0 !== 'speak') badCut++;
+        if (e.t === 'tech_out') techs.add(e.n);
+        if ((e.t === 'kill' || e.t === 'hit') && e.id != null && s.enemies.some(q => q.id === e.id && q.tech != null)) techHit++;
+        if (e.t === 'go' && e.gate === 'van') at.go = seq;
+        if (e.t === 'clear') at.clear = seq;
+      }
+      for (const q of s.enemies) if (q.tech != null && (!q.alive || q.hostile)) techHit++;
+    }
+    const b = s.boss;
+    ok(s.status === 'clear', tag + ': the bot beats him, sees the reveal through and gets off the pass (' + s.status + ', at x ' + Math.round(s.p.x) + ')');
+    ok(order.join(',') === WANT.join(','), tag + ': the fight and the reveal in order (' + order.join(',') + ')');
+    ok(offHurt === 0, tag + ': hurt only while stunned (' + offHurt + ' ticks otherwise)');
+    ok(deep === 0, tag + ': a stun takes a fifth of him at most');
+    ok(badCut === 0 && cuts >= 5, tag + ': stunned only through the microphone he was speaking into (' + cuts + ' times; ' + badCut + ' otherwise)');
+    ok(techs.size === 3 && techHit === 0, tag + ': the three technicians out (' + techs.size + '), in nothing the game hits (' + techHit + ')');
+    ok(at.go > at.spk_clear && at.clear > at.go, tag + ': the way out opened once the cloud cleared, and the mission ended after it');
+    ok(b && b.st === 'dead' && s.spk.off && s.spk.clear === 1 && X.done(s), tag + ': caught, every screen dark, the plateau showing');
+  }
+  // by hand: two games on the lookout, the same; in one of them every kind of shot and blast goes off on him, his podium
+  // and the microphones he is not speaking into, whenever he is not stunned. He does exactly the same in both.
+  {
+    const mk = () => {
+      // (the pass's other fights put down; Yazeed on the lookout's near end, his trigger untouched)
+      const s = Sim.create(L, { viewW: 468, seed: 5, zone: 3 });
+      for (const g in s.groups) if (g !== 'BOSS') { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
+      for (const g of s.gates) if (g.id !== 'arena' && g.id !== 'van') g.done = true;
+      s.enemies.length = 0; s.p.x = A.x0 + 10; s.p.y = Sim.groundY(L, s.p.x); s.cam = A.x0 - 120;
+      s.p.inv = 9999;
+      return s;
+    };
+    const a = mk(), b = mk();
+    let same = true, tries = 0, sawSt = new Set();
+    for (let t = 0; t < 60 * 40; t++) {
+      const inp = { viewW: 468, mx: a.p.x < L.groups.BOSS.trig + 6 ? 1 : 0 };
+      const bb = b.boss;
+      if (bb && bb.kind === 'spokesman' && bb.st !== 'stun' && bb.st !== 'dying' && bb.st !== 'dead' && t % 3 === 0) {
+        sawSt.add(bb.st);
+        const fy = A.y, spots = [[bb.x, fy - 26], [bb.x - bb.face * 4, fy - 20], [bb.x, bb.y - 10]];
+        for (let i = 0; i < 5; i++) if (i !== bb.pod || bb.st !== 'speak') spots.push([X.micX(b, { pod: i, face: bb.face }), fy - 22], [A.podiums[i], fy - 8]);
+        for (const [x, y] of spots) {
+          if (bb.st === 'speak' && Math.abs(x - X.micX(b, bb)) <= SP.MIC_HW + 1) continue;      // (not his live microphone: that would cut him off)
+          X.shot(b, { x: x, y: y, own: true, vx: 450 }); X.shot(b, { x: x, y: y, own: false, vx: -172 });
+          if (!(bb.st === 'speak' && Math.abs(x - X.micX(b, bb)) < 30)) { X.blast(b, x, y, 26, 'gren', true); X.blast(b, x, y, 40, 'dyn', false); }
+          tries++;
+        }
+      }
+      Sim.step(a, inp); Sim.step(b, inp);
+      a.p.inv = b.p.inv = 9999;
+      const pa = a.boss, pb = b.boss;
+      if (!!pa !== !!pb || (pa && (pa.st !== pb.st || pa.hp !== pb.hp || pa.x !== pb.x || pa.y !== pb.y || pa.pod !== pb.pod))) same = false;
+    }
+    ok(tries > 100 && same && a.boss && a.boss.hp === SP.HP && ['speak', 'ready', 'leap'].every(q => sawSt.has(q)),
+       'shots and blasts on him, his podiums and the microphones he is not speaking into, while he is not stunned: he does exactly as he would have, unhurt (' + tries + ' tries; ' + [...sawSt].join(', ') + ')');
   }
 })();
 

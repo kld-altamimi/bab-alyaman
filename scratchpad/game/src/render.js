@@ -766,6 +766,7 @@ var Render = (function () {
     // it comes up out of the sea, behind the beach
     if (b && b.kind === 'boat' && b.st === 'intro') { cx.save(); cx.translate(-cam, sy); drawBoss(s, b, paused); cx.restore(); }
     if (!own && ly.back) stripLayer(ly.back, s.cam, sy);       // (a town on the slope behind the street, at its own pace: Ibb's Jibla)
+    for (var bhk in bosses) if (bosses[bhk].behind) bosses[bhk].behind(s, paused, K);     // (Ibb: the Dhamar plateau as the cloud clears)
     if (!own) stripLayer(ly.play, s.cam, sy);
     cx.translate(-cam, sy - camY);
     // a mission's own things on its picture, behind everyone standing in front of it (Ibb's classroom doors, opened)
@@ -1219,6 +1220,8 @@ var Render = (function () {
         else { text('m_org', who, xa, y); text('m_lav', l, xa + wWho, y); }
       }
       var sy = Lang.isArabic(line) ? (barOn ? 192 : 195) : 198;    // Arabic letters hang lower: the line sits higher, clear of the boss's bar
+      // (a line in another tongue has it under the subtitle: Ibb's technicians, in Persian)
+      if (ui.sub.fa) { var arl = Lang.isArabic(line); sy -= arl ? 14 : 11; text('s_lav', ui.sub.fa, mid, sy + (arl ? 17 : 13), 'c'); }     // (under Arabic, a little further down: both scripts hang)
       if (fullw <= maxw) pair(line, sy);
       else {
         // two lines: break at the space nearest the middle

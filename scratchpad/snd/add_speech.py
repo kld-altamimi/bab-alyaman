@@ -42,7 +42,22 @@ WHO = 'BRIGADIER BREAKING'                       # «العميد عاجل» (Kh
 CAST_LINES = {
     'yazeed_home': ('yazeed', 'YAZEED', 'Go home. Tell your mother.', '*ruu7 *al-bayt . . wa-*tam-min *um-mak', {}),
     'yazeed_beret': ('yazeed', 'YAZEED', 'Nice beret.', '*bay-reh *7il-wa', {}),          # (the rally: he stops mid-word)
+    # 30 Oct (Khaled, 00:39: "Go ahead and finish the whole level"): the opening, the pass, the back room, the end; the
+    # brief's lines (game-direction-brief-ibb.md: "Other lines" and the reveal)
+    'salem_noise': ('salem', 'SALEM', "I don't drive in this noise.", '*maa a-*suu-gu fi *haa-da ad-*daj-jiij !', {}),
+    'yazeed_quiet': ('yazeed', 'YAZEED', 'Quiet. Too quiet.', '*hu-duu . . ak-*tar min al-*laa-zim', {}),
+    'yazeed_finally': ('yazeed', 'YAZEED', 'Good. Quiet. Finally.', '*ta-maam . *hu-duu . . *ax-ii-ran', {}),
+    'yazeed_mosque': ('yazeed', 'YAZEED', "Careful. Somebody's grandmother built that.", '*ha-sib . *haa-da *ban-nat-hu *jad-dat *a-ha-dihim', {}),
+    'grunt_shh': ('grunt', 'RIFLEMAN', "Shh! He's recording!", '*shhhh ! *hu-wa yu-*saj-jil !', dict(final=4)),
+    'tech_videos': ('tech', 'TECHNICIAN', 'We only do the videos!', '*maa fa-*qat *vii-de-o mii-*saa-ziim !', dict(final=5)),
+    'tech_cannot': ('tech', 'TECHNICIAN', 'We cannot.', 'ne-mii-ta-*vaa-niim', {}),
+    'uncle_again': ('uncle', 'THE UNCLE', 'Render him again.', 'do-*baa-re *be-saa-zi-*desh', {}),
+    'uncle_me': ('uncle', 'THE UNCLE', 'Then render me.', '*pas . . *ma-raa be-*saa-zid', {}),
 }
+# the technicians speak Persian: the Persian goes under the subtitle (the brief)
+PERSIAN = {'tech_videos': 'ما فقط ویدیو می‌سازیم!', 'tech_cannot': 'نمی‌توانیم.'}
+VOICES = dict(V.CAST)
+VOICES['tech'] = V.Voice(f0=124, rng_st=4.0, decl=1.5, final=-2.0, rate=1.12, vt=1.0, tilt=1.1, jitter=0.012, name='The technician')
 FPS = 15
 
 
@@ -86,9 +101,21 @@ if __name__ == '__main__':
         meta[lid] = dict(who=WHO, text=en, m=mouth_track(y))
     for lid in sorted(CAST_LINES):
         sp, who, en, bab, opt = CAST_LINES[lid]
-        y = V.level(V.dry(V.CAST[sp].say(bab, seed=sum(map(ord, lid)) % 997, **opt), seed=5))
+        y = V.level(V.dry(VOICES[sp].say(bab, seed=sum(map(ord, lid)) % 997, **opt), seed=5))
         clips.append((lid, y))
         meta[lid] = dict(who=who, text=en)
+        if lid in PERSIAN:
+            meta[lid]['fa'] = PERSIAN[lid]
+    # his own, in person on the pass: cut off at his microphone (no television on it)
+    ar, en, bab = S.IN_PERSON['stunned']
+    y = S.line(bab, 977, screen=False)
+    clips.append(('spk_what', y))
+    meta['spk_what'] = dict(who=WHO, text=en, m=mouth_track(y))
+    # his microphone's feedback, and the shriek along the ground (mic_fx.py)
+    import mic_fx
+    for lid, y in sorted(mic_fx.clips().items()):
+        clips.append((lid, y))
+        meta[lid] = dict(who='', text='')
     import claps
     for lid, y in sorted(claps.clips().items()):
         clips.append((lid, y))

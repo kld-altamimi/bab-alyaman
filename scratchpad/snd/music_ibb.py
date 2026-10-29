@@ -252,6 +252,67 @@ def ibb_theme():
     return s
 
 
+# ---------------------------------------------------------------- the Spokesman's fight (30 Oct; Khaled, 00:39: "Go ahead and
+# finish the whole level"). The same band and the same five strings, read from G (their minor: G A Bb D F), faster (144),
+# the dance turned into a chase: the drums on every beat, the guitar chugging, the qanbus galloping hard, the mizmar on a
+# riff that won't sit still; and the band still stops for his important statement, then tears off again.
+#   the alarm (2)    the news chime in the minor, the kettledrum rolling, the fanfare's ta-ta-ta taaa on G minor.
+#   the chase (8)    everything, the riff twice over (G minor, F, D minor), claps, the brass on the line ends.
+#   the statement (2) the band stops (as in the stage theme), the chord held, the chime.
+#   the chase (8)    again, a second pipe under the riff.
+#   the climb (2)    the drums on every beat, up to the top string and round.
+BOSS_PROG = ('Gm', 'Gm', 'F', 'Gm', 'Gm', 'Dm', 'F', 'Gm')
+BOSS_RIFF = [(0, L2, 'G5', None), (L2, S1, 'Bb5', None), (1, L2, 'A5', None), (1 + L2, S1, 'G5', None), (2, 1, 'D5', None),
+             (3, L2, 'F5', None), (3 + L2, S1, 'G5', None),
+             (4, L2, 'Bb5', None), (4 + L2, S1, 'A5', None), (5, L2, 'G5', None), (5 + L2, S1, 'F5', None), (6, 2, 'G5', 'A5')]
+BOSS_TOP = [(0, 1, 'D5', None), (1, 1, 'F5', None), (2, 1, 'G5', None), (3, 1, 'Bb5', None), (4, 3, 'G5', 'A5'), (7, L2, 'F5', None), (7 + L2, S1, 'G5', None)]
+
+
+def alarm(s, bar):
+    """His signature, in the minor: the chime high and low over a kettledrum roll, then ta-ta-ta taaa."""
+    sd = bar * 307
+    for st, nm in ((0, 'G5'), (2 * TRIP, 'D5')):
+        s.hit('bell', J.bell(H(nm), dur=0.8, vel=1.0), bar, st, 1.0, 0.1)
+    for i in range(9):
+        s.hit('marfa', J.marfa(seed=sd + i, vel=0.45 + 0.06 * i), bar, 4 + i * TRIP, 0.5 + 0.06 * i)
+    for st in (0, TRIP, 2 * TRIP):
+        fanfare(s, bar + 1, st, ('D4', 'G4', 'Bb4'), 0.13, 0.9)
+    fanfare(s, bar + 1, 4, ('G3', 'D4', 'G4', 'Bb4'), 0.9)
+    s.hit('bass', J.bass(H('G1'), dur=0.9, vel=1.0, seed=sd), bar + 1, 4)
+    s.hit('drums', J.kick(seed=sd + 5), bar + 1, 4, 1.0)
+    for i in range(6):
+        s.hit('drums', J.snare(seed=sd + 30 + i, ghost=i < 2), bar + 1, 8 + i * TRIP, 0.55 + 0.08 * i)
+
+
+def spokesman_theme():
+    """The Spokesman's fight: 22 bars at 144, in threes, G minor."""
+    s = Song(144, 22, seed=211)
+    alarm(s, 0)
+    for half, bar0 in enumerate((2, 12)):
+        for i, ch in enumerate(BOSS_PROG):
+            band(s, bar0 + i, ch, 'full', fill='call' if i == 3 else ('roll' if i == 7 else None), claps=i >= 4, chug=True)
+        s.hit('marfa', J.marfa(seed=500 + half, vel=1.0), bar0, 0, 1.2)
+        for k in range(4):
+            melody(s, 'lead', bar0 + 2 * k, BOSS_RIFF, seed=212 + 10 * half + k)
+            if half == 1:
+                pipe2(s, bar0 + 2 * k, BOSS_RIFF, BOSS_PROG[2 * k:2 * k + 2], 230 + k)
+        stabs(s, bar0 + 3, [(8, 0.85), (8 + TRIP, 0.75), (8 + 2 * TRIP, 0.9), (12, 1.0)], ('F4', 'A4', 'F5'))
+        stabs(s, bar0 + 7, [(4, 0.9), (8, 1.0)], ('D4', 'G4', 'Bb4'), dur=0.3)
+    statement(s, 10)
+    for i, ch in enumerate(('Gm', 'F')):
+        bar = 20 + i
+        groove(s, bar, 'build', fill='roll' if i == 1 else None)
+        gallop(s, bar, ch, 0.95)
+        for b in range(4):
+            f = H(LOW[ch][0])
+            s.hit('bass', J.bass(f, dur=0.3, vel=1.0, seed=bar + b), bar, b * 4)
+            s.hit('guitar', J.chug(f * 2, dur=0.3, vel=1.0, seed=bar + b, open_=True), bar, b * 4, 0.9, 0.3)
+            s.hit('guitar', J.chug(f * 2, dur=0.3, vel=1.0, seed=bar + b + 400, open_=True), bar, b * 4, 0.75, -0.5)
+        stabs(s, bar, [(0, 1.0), (8, 0.9)], IBB_LYRE[ch], dur=0.2)
+    melody(s, 'lead', 20, BOSS_TOP, seed=240)
+    return s
+
+
 IBB_LEVELS = dict(drums=-20.0, marfa=-22.0, tabl=-25.5, tunk=-28.0, sahn=-29.5, bass=-20.0, qanbus=-22.0, lyre=-23.5,
                   lead=-18.0, lead2=-24.5, flute=-18.5, guitar=-24.0, brass=-21.5, fanfare=-18.0, bell=-23.0)
 IBB_SENDS = dict(STRAIT_SENDS, qanbus=0.12, flute=0.34, bell=0.30, fanfare=0.30)
@@ -268,7 +329,9 @@ def check_tunes():
         return k % 12
     bad = []
     for name, tune, prog in (('A1', IBB_A1, PROG_A1), ('A2', IBB_A2, PROG_A2), ('terraces', TERRACES, ('Gm', 'Dm', 'Bb', 'F')),
-                             ('morning', MORNING, ('Bb', 'F')), ('climb', CLIMB, ('Bb', 'F'))):
+                             ('morning', MORNING, ('Bb', 'F')), ('climb', CLIMB, ('Bb', 'F')),
+                             ('boss1', BOSS_RIFF, BOSS_PROG[0:2]), ('boss2', BOSS_RIFF, BOSS_PROG[2:4]), ('boss3', BOSS_RIFF, BOSS_PROG[4:6]),
+                             ('boss4', BOSS_RIFF, BOSS_PROG[6:8]), ('bosstop', BOSS_TOP, ('Gm', 'F'))):
         for (b, d, nm, g) in tune:
             if d < 0.99:
                 continue

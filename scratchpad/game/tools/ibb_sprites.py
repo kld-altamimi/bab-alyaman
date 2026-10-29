@@ -599,11 +599,141 @@ def ps_box():
     return im, 0, 0
 
 
+def s6_fake(s=4, mouth=1, blink=False):
+    """The approved portrait as the screens show it once he has been caught (the storyboard of 29 Oct, picture 7: Khaled,
+    30 Oct 00:39, "Go ahead"): the generator's own drawing with the ear on the viewer's left too big, and two maps of
+    Yemen on the backdrop behind him."""
+    src = open(S6.__file__).read()
+    ear = """        ex2 = cx + sx * (6 * s)
+        d.ellipse([ex2 - s - s // 2, top + 7 * s, ex2 + s + s // 2, top + 10 * s + s // 2], fill=skin, outline=OL)"""
+    assert src.count(ear) == 1
+    src = src.replace(ear, """        ex2 = cx + sx * (6 * s)
+        if sx < 0:
+            d.ellipse([ex2 - 3 * s, top + 5 * s, ex2 + s + s // 2, top + 13 * s], fill=skin, outline=OL)
+            d.ellipse([ex2 - 2 * s, top + 6 * s + s // 2, ex2, top + 11 * s + s // 2], fill=skin_d)
+            continue
+        d.ellipse([ex2 - s - s // 2, top + 7 * s, ex2 + s + s // 2, top + 10 * s + s // 2], fill=skin, outline=OL)""")
+    hook = "d.rectangle([6 * s, 2 * s, 6 * s + max(1, s // 2), 28 * s], fill=(50, 40, 32))"
+    assert src.count(hook) == 1
+    src = src.replace(hook, hook + """
+    for mx, my in ((6.6, 8.0), (31.0, 8.0)):
+        pts = [(mx * s + u * 8 * s, my * s + v * 5.5 * s) for u, v in YEMEN]
+        d.polygon(pts, fill=(58, 128, 72), outline=(150, 210, 160))""")
+    # Yemen, roughly, from its coasts and borders (lon 42.5 to 53.1 E, lat 12.1 to 19.0 N)
+    ns = {'YEMEN': [(0.03, 0.39), (0.04, 0.61), (0.07, 0.83), (0.085, 0.93), (0.24, 0.90), (0.62, 0.65), (0.82, 0.55),
+                    (1.00, 0.35), (0.90, 0.00), (0.47, 0.22), (0.19, 0.25), (0.066, 0.38)]}
+    exec(compile(src, 's6_fake', 'exec'), ns)
+    return ns['s6'](s, mouth=mouth, blink=blink)
+
+
+def snow(seed):
+    """A screen cut off: snow, with the set's scanlines."""
+    r = np.random.default_rng(seed)
+    a = (r.random((32, 48)) * 190 + 40).astype(np.uint8)
+    a = (np.round(a / 24.0) * 24).clip(0, 255).astype(np.uint8)
+    a[::3] = (a[::3] * 0.72).astype(np.uint8)
+    return Image.fromarray(np.stack([a, a, a], -1)).convert('RGBA')
+
+
+def podium_bare():
+    """His podium with its microphone shot off."""
+    p = spk_pal()
+    return compose([(PODIUM, 0, 0, p)], foot=(11, 14))
+
+
+def mic_off():
+    """The microphone, shot off its podium (the head and a stub of its stalk), its middle as anchor."""
+    p = spk_pal()
+    return compose([(MIC[:5], 0, 0, p)], foot=(2, 2))
+
+
+# ---------------------------------------------------------------- the Uncle's men in the back room (the reveal)
+# Three technicians: a shirt and trousers, short dark hair, headphones on (the brief: "headphones on"); hands up when
+# found. In the cast's kit (mock/ms3.py), on the lean build, so they stand as tall as the Zanabeel; their own shirts, and
+# trousers rather than the futa: the first people from across the water seen in Yemen look like nobody else in it.
+TROUSERS_L = [
+    '..fghhhiihhhiig...',
+    '..fghhhiihhhiig...',
+    '..fghhhi.ghhiig...',
+    '..fghhi...ghhig...',
+    '..fghhi....ghhig..',
+    '..fghhi.....ghhi..',
+    '..fghi......ghhi..',
+    '..fghi......ghhhi.',
+    '..fghi.......ghhi.',
+    '..fghi.......ghhi.',
+    '..fghi.......ghhi.',
+    '..fghi.......ghhi.',
+    '.ABBCC......ABBCC.',
+    'AABBCCA....AABBCCA',
+    'AAAAAAA....AAAAAAA',
+]
+HAIR = [
+    '..VVVVV....',
+    '.VVGVGVVV..',
+    '.VVVVVVVV..',
+]
+PHONES = [                   # the band up over the top of his head from the cup on his ear (the other side hidden)
+    '..IIIIII',
+    '.IH.....',
+    '.I......',
+    '.I......',
+    'UUU.....',
+    'UGU.....',
+    'UUU.....',
+]
+GLASSES = ['.......', '.UU.UU.']
+TECH_SHIRTS = ('white', 'blue', 'sand')
+TECH_SKINS = ('skin1', 'skin2', 'skin3')
+
+
+def technician(n, pose='up', flip=False):
+    """One of the three: pose 'up' (hands up) or 'stand' (arms down, walking out of the van); faces right."""
+    p = pal(TECH_SHIRTS[n % 3], 'navy', 'black', TECH_SKINS[n % 3])
+    B = ms3.LEAN
+    at = ms3.at
+    L = []
+    if pose == 'up':
+        L.append(at('arm_raise_l', (3, 0), p))
+    L += [at(TROUSERS_L, (2, 20), p), at('jacket_l', B.torso, p), at('belt_l', B.belt, p)]
+    if pose != 'up':
+        L += [at('forearm_l', B.forearm, p), at('sleeve_l', B.sleeve, p)]
+    L.append(at(FACES['worried'], B.face, p))
+    L.append(at(HAIR, B.wrap, p, 0, 1, ink=INK2))
+    if n == 1:
+        L.append(at(GLASSES, (B.face[0] + 2, B.face[1]), p))
+    L.append(at(PHONES, (B.face[0] + 1, B.wrap[1]), p))
+    if pose == 'up':
+        L.append(at('arm_raise_fl', (17, 2), p))
+    return compose(L, flip=flip, foot=B.foot)
+
+
 def arena_frames():
-    """The lookout on the pass (zone 4): each podium's screen, his face in it (three mouths and a blink), and its bezel."""
+    """The lookout on the pass (zone 4): each podium's screen, his face in it (three mouths and a blink), and its bezel;
+    the screens frozen, cut off (snow), and back on once he is caught (the rendered him: the ear, two Yemens), the last
+    also at the billboard's size for the close-up; his podium with its microphone shot off, and the microphone; him in
+    the fight (stunned, shouting with an ear ringing, reading by torchlight, caught in his cable); the three technicians."""
     out = [('ps%d' % m, screen('podium', m, False), 0, 0) for m in range(3)]
     out.append(('psb', screen('podium', 0, True), 0, 0))
     out.append(('ps_box',) + ps_box())
+    for k in range(2):
+        out.append(('psn%d' % k, snow(31 + k), 0, 0))
+    for m in range(3):
+        out.append(('pf%d' % m, _majority(s6_fake(4, m), 4), 0, 0))
+        out.append(('bf%d' % m, _scanlines(s6_fake(3, m)), 0, 0))
+    out.append(('pfb', _majority(s6_fake(4, 0, True), 4), 0, 0))
+    out.append(('podium_bare',) + podium_bare())
+    out.append(('mic_off',) + mic_off())
+    out.append(('spk_stun',) + spokesman_stunned())
+    for m in range(3):
+        out.append(('spk_h%d' % m,) + spokesman(m, trousers=False, hot_ear=True))
+    out.append(('spk_ring',) + ring())
+    for m in range(2):
+        out.append(('spk_read%d' % m,) + spokesman_reading(m))
+    out.append(('spk_caught',) + spokesman_caught())
+    for n in range(3):
+        out.append(('tech%d_up' % n,) + technician(n, 'up'))
+        out.append(('tech%d_stand' % n,) + technician(n, 'stand'))
     return out
 
 

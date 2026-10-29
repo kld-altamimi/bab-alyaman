@@ -59,6 +59,7 @@ bw, bh = save('i_back2', BK.crop(0, 0, Z2.BACK_W, I.SH))
 W3B = 1410                         # (the terraces' mountainside in the back layer; then the pass's cloud)
 bw3, bh3 = save('i_back3', BK.crop(Z2.BACK_W, 0, Z2.BACK_W + W3B, I.SH))
 bw4, bh4 = save('i_back4', BK.crop(Z2.BACK_W + W3B, 0, BK.w, I.SH))
+save('i_plateau', Z4.plateau())    # (30 Oct: the Dhamar plateau, behind the lookout once the cloud clears: render_spokesman.js)
 back = [dict(img='i_back2', x=Z2.BACK_X, w=bw, y=0, h=bh), dict(img='i_back3', x=Z2.BACK_X + Z2.BACK_W, w=bw3, y=0, h=bh3),
         dict(img='i_back4', x=Z2.BACK_X + Z2.BACK_W + W3B, w=bw4, y=0, h=bh4)]
 layers = {
@@ -75,7 +76,7 @@ world = dict(Z1=0, Z2=Z2.X0, Z3=Z3.X0, Z4=Z4.X0, END=END, ROAD_Y=I.WALK, VERGE=Z
 # to hop up: the level has walls: true); every 4 px, the steps on the samples
 ground = dict(step=4, y=[Z3.ground_world(x) for x in range(0, END + 1, 4)])
 out = dict(layers=layers, world=world, fixed={}, ground=ground, plats=I.PLATS, info=I.INFO,
-           pictures=[z[0] for z in zones] + ['i_sky', 'i_far', 'i_mid', 'i_back2', 'i_back3', 'i_back4'] + ['if_z%d' % (k + 1) for k in range(len(fore))])
+           pictures=[z[0] for z in zones] + ['i_sky', 'i_far', 'i_mid', 'i_back2', 'i_back3', 'i_back4', 'i_plateau'] + ['if_z%d' % (k + 1) for k in range(len(fore))])
 json.dump(out, open(os.path.join(GEN, 'stage_ibb.json'), 'w'), separators=(',', ':'), default=int)
 tot = 0
 for n in out['pictures']:
