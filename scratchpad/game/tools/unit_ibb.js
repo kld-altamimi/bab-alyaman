@@ -128,7 +128,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     const s = Sim.create(L, { viewW: vw, seed: 4, zone: 1 });
     for (const g in s.groups) if (['F', 'F2', 'E', 'E2'].indexOf(g) >= 0) { s.groups[g].done = true; s.groups[g].pending.length = 0; }
     s.enemies = s.enemies.filter(e => ['E', 'E2', 'F', 'F2'].indexOf(e.g) < 0);
-    s.cam = Math.min(1880 - vw * 0.5, L.endRight - vw); s.p.x = s.cam + 60;
+    s.cam = Math.min(L.gates.find(q => q.id === Sc.gate).x - vw * 0.5, L.endRight - vw); s.p.x = s.cam + 60;
     const g = s.enemies.find(e => e.g === 'G');
     s.groups.G.awake = true;
     g.x = s.cam + vw + 3;
@@ -143,7 +143,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     const mk = () => {
       const s = Sim.create(L, { viewW: 468, seed: 5, zone: 1 });
       for (const g in s.groups) if (['F', 'F2', 'E', 'E2'].indexOf(g) >= 0) { s.groups[g].done = true; s.groups[g].pending.length = 0; }
-      s.enemies.length = 0; s.p.x = 1740; s.cam = 1880 - 468 * 0.5;
+      s.enemies.length = 0; s.p.x = Sc.doors[0].x - 14; s.cam = L.gates.find(q => q.id === Sc.gate).x - 468 * 0.5;
       for (let t = 0; t < 50; t++) Sim.step(s, { viewW: 468 });
       s.p.inv = 999;
       return s;
@@ -216,7 +216,8 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
       const s = Sim.create(L, { viewW: 468, seed: 6, zone: 2 });
       for (const g of ['I', 'I2', 'J', 'J2', 'K', 'K2', 'L', 'L2']) { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
       for (const g of s.gates) if (g.id !== 'station') g.done = true;
-      s.enemies.length = 0; s.p.x = Lg.x0 - R.REACH - 30; s.p.y = Sim.groundY(L, s.p.x); s.cam = L.endRight - 468;
+      s.enemies.length = 0; s.p.x = Lg.x0 - R.REACH - 30; s.p.y = Sim.groundY(L, s.p.x);
+      s.cam = Math.min(L.gates.find(q => q.id === Lg.gate).x - 468 * 0.5, L.endRight - 468);
       s.p.inv = 999;
       return s;
     };

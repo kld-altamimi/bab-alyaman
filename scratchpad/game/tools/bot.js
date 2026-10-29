@@ -45,7 +45,8 @@ function check(s, prev, where) {
   if (s.cam < prev.cam - 1e-9) bad.push('camera went back');
   if (s.cam > Math.max(0, s.L.endRight - s.viewW) + 1e-6 && s.cam > prev.cam) bad.push('camera past the end');
   if (p.plates < 0 || p.plates > T.PLATES || p.lives < 0 || p.lives > T.LIVES || p.grenades < 0 || p.ammo < 0) bad.push('bad counters');
-  if (s.bullets.length > 400 || s.enemies.length > 40 || s.bombs.length > 60) bad.push('too many things: ' + s.bullets.length + ' bullets ' + s.enemies.length + ' enemies ' + s.bombs.length + ' bombs');
+  // (a long level has every posted man of every fight there from the start, asleep: Ibb's 61 since 29 Oct)
+  if (s.bullets.length > 400 || s.enemies.length > 80 || s.bombs.length > 60) bad.push('too many things: ' + s.bullets.length + ' bullets ' + s.enemies.length + ' enemies ' + s.bombs.length + ' bombs');
   const count = {};
   for (const e of s.enemies) {
     if (!fin(e.x) || !fin(e.y)) bad.push('enemy not finite');

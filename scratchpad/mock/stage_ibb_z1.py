@@ -21,7 +21,7 @@ _SHEET = {}
 SH, WALK = I.SH, I.WALK
 ROAD_TOP = 172              # the asphalt from here down
 VERGE = 160                 # the gravel verge behind the road, from here to the asphalt
-W1 = 1280                   # zone 1's length
+W1 = 2080                   # zone 1's length (1280 until 29 Oct: then the wadi's bridge and the petrol station)
 put_tone = SM.put_tone
 plat = I.plat
 
@@ -871,47 +871,58 @@ def minibus(L, x, seed=41):
 
 
 # ------------------------------------------------------------------ zone 1, put together
-def play_z1(seed=101):
-    """The valley road, 0 to 1280: the opening under the billboard; a field and a sidr tree; the checkpoint; the
-    farmhouse; the roadside shop; the minibus; the fields climbing at the end toward Jibla."""
+def play_z1(L=None, seed=101, ground=True):
+    """The valley road, 0 to 2080: the opening under the billboard; a field and a sidr tree; the checkpoint; the
+    farmhouse; the roadside shop; the minibus; the bridge over the wadi; the petrol station at the town's edge. With
+    ground=False the verge and the road are left to stage_ibb_world.py, which paints the ground along the whole mission
+    in one piece (and the town's edge across the join into Jibla)."""
+    import stage_ibb_z1x as X
     I.PLATS.clear()
     I.INFO.clear()
     W = W1
-    L = Layer(W, SH)
+    L = L if L is not None else Layer(W, SH)
     r = rng(seed)
     # (1) the field behind the wall: eucalyptus along it, sorghum standing in it, a sidr tree
-    for k, (ex, eh) in enumerate(((236, 132), (262, 116), (1020, 128), (1048, 140), (1218, 124))):
+    for k, (ex, eh) in enumerate(((236, 132), (262, 116), (1020, 128), (1048, 140), (1218, 124), (1630, 132))):
         eucalyptus(L, ex, VERGE - 10, hgt=eh, seed=seed + k)
-    for k, (cx0, cx1) in enumerate(((0, 560), (760, 1280))):
+    for k, (cx0, cx1) in enumerate(((0, 560), (760, 1290), (1612, 1900))):
         crops(L, cx0, cx1, VERGE - 12, seed=seed + 20 + k)
     sidr(L, 404, VERGE - 12, seed=seed + 9)
     # (2) the wall along the field, the verge
-    walls = [(0, 572, 146), (740, 806, 148), (976, 1280, 146)]
+    walls = [(0, 572, 146), (740, 806, 148), (976, 1290, 146), (1610, 1904, 146)]
     for k, (wx0, wx1, wt) in enumerate(walls):
         drystone(L, wx0, wx1, wt, VERGE + 2, seed=seed + 30 + k)
-    verge(L, 0, W, seed=seed + 40)
+    if ground:
+        verge(L, 0, W, seed=seed + 40)
     # posters on the wall
     I.INFO['posters'] = [poster(L, 282, 140, 'face', seed=1), poster(L, 320, 141, 'badge', seed=2),
-                         poster(L, 776, 138, 'face', seed=3), poster(L, 1004, 140, 'face', seed=4), poster(L, 1040, 142, 'badge', seed=5)]
-    # (3) the buildings on the verge
+                         poster(L, 776, 138, 'face', seed=3), poster(L, 1004, 140, 'face', seed=4), poster(L, 1040, 142, 'badge', seed=5),
+                         poster(L, 1700, 140, 'badge', seed=6)]
+    # (3) the buildings on the verge; the wadi behind the bridge; the petrol station
     cp = checkpoint(L, 452, seed=seed + 50)
     fh = farmhouse(L, 572, seed=seed + 60)
     sh = shop(L, 816, seed=seed + 70)
-    # (4) the poles and their wires: two with loudspeakers
-    poles = [(214, 1), (520, 0), (800, 2), (1080, 0), (1276, 0)]
+    br = X.bridge(L, seed=seed + 140)
+    pt = X.petrol(L, 1650, seed=seed + 150)
+    I.INFO['posters'] += pt['posters']
+    # (4) the poles and their wires: three with loudspeakers (none on the bridge; the town's edge carries them on)
+    poles = [(214, 1), (520, 0), (800, 2), (1080, 0), (1276, 0), (1622, 0), (1946, 1)]
     ends = [pole(L, px_, VERGE + 4, hgt=112, seed=seed + 80 + k, horns=hn) for k, (px_, hn) in enumerate(poles)]
-    for a, b in zip(ends[:-1], ends[1:]):
-        wires(L, a, b, sag=9)
+    for (pa, _), (pb, _), a, b in zip(poles[:-1], poles[1:], ends[:-1], ends[1:]):
+        wires(L, a, b, sag=int(round(9 * (pb - pa) / 280.0)))
     wires(L, [(e[0] - 260, e[1] + 10) for e in ends[0]], ends[0], sag=9)
     # (5) the road
-    road(L, 0, W, seed=seed + 90)
-    for k, (px_, py_, pw, ph_) in enumerate(((150, 200, 44, 5), (330, 192, 26, 3), (700, 206, 60, 6), (930, 190, 30, 3), (1180, 204, 40, 5))):
+    if ground:
+        road(L, 0, W, seed=seed + 90)
+    for k, (px_, py_, pw, ph_) in enumerate(((150, 200, 44, 5), (330, 192, 26, 3), (700, 206, 60, 6), (930, 190, 30, 3), (1180, 204, 40, 5),
+                                             (1700, 198, 34, 4), (1990, 206, 40, 5))):
         puddle(L, px_, py_, pw, ph_, seed=seed + 100 + k)
     # (6) on the road: the minibus
     checkpoint_road(L, 452, seed=seed + 50)
     mb = minibus(L, 1100, seed=seed + 110)
     I.INFO.update(checkpoint=cp, farmhouse=dict(door=fh['door'], x0=fh['x0'], x1=fh['x1']), shop=dict(door=sh['door'], tv=sh['tv']),
-                  minibus=dict(door=mb['door']), billboard=120, poles=[p for p, h in poles], horns=[p for p, h in poles if h])
+                  minibus=dict(door=mb['door']), billboard=120, poles=[p for p, h in poles], horns=[p for p, h in poles if h],
+                  bridge=br, petrol=dict(door=pt['door'], canopy=pt['canopy'], kiosk=pt['kiosk'], sign=pt['sign']), pole_ends=ends[-1])
     return L
 
 

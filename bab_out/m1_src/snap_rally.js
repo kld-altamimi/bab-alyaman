@@ -26,18 +26,26 @@ fs.mkdirSync(OUT, { recursive: true });
       line: (window.__m1.line() || {}).id || null, foes: s.enemies.filter(e => e.alive && e.hostile).length };
   });
   const snap = async (name) => {
+    // (he is kept from harm by a long invulnerability, which makes him blink: shown steadily for the picture)
+    await page.evaluate(() => { const s = window.__m1.sim(); s.p.inv = 0; });
+    await page.waitForTimeout(60);
     await page.screenshot({ path: OUT + '/' + name + '.png' });
+    await page.evaluate(() => { const s = window.__m1.sim(); s.p.inv = 99999; });
     console.log('picture', name, JSON.stringify(await info()));
   };
   // the fights before the station's put down; Yazeed brought up to the station, its men awake
   await page.evaluate(() => {
     const s = window.__m1.sim();
     window.__m1.frozen = true;
-    for (const g of ['I', 'I2', 'J', 'J2', 'K', 'K2']) { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
-    s.enemies.forEach(e => { if (e.alive && e.hostile && ['I', 'I2', 'J', 'J2', 'K', 'K2'].indexOf(e.g) >= 0) { e.alive = false; e.st = 'gone'; e.deadT = 999; } });
-    for (const g of s.gates) if (['hut', 'falls', 'farm2'].indexOf(g.id) >= 0) g.done = true;
-    s.p.x = 3712; s.p.y = 120; s.p.vx = 0; s.p.inv = 99999;
-    s.cam = Math.min(3900 - Render.width() * 0.5, s.L.endRight - Render.width());
+    const st = s.gates.find(g => g.id === s.L.stage.gate);
+    for (const g of s.gates) {
+      if (g === st || g.x > st.x) continue;
+      g.done = true;
+      for (const k of g.groups) { s.groups[k].done = true; s.groups[k].pending.length = 0; s.groups[k].awake = true; }
+    }
+    s.enemies.forEach(e => { if (e.alive && e.hostile && s.groups[e.g].done) { e.alive = false; e.st = 'gone'; e.deadT = 999; } });
+    s.p.x = st.x - 178; s.p.y = Sim.groundY(s.L, s.p.x); s.p.vx = 0; s.p.inv = 99999;
+    s.cam = Math.min(st.x - Render.width() * 0.5, s.L.endRight - Render.width());
     window.__m1.frozen = false;
   });
   // his speech: wait for one of his lines to be the one heard, a little way into it
@@ -55,7 +63,7 @@ fs.mkdirSync(OUT, { recursive: true });
     for (const g of ['L', 'L2']) { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
     s.enemies.forEach(e => { if (e.alive && e.hostile) { e.alive = false; e.st = 'gone'; e.deadT = 999; } });
     s.bullets.length = 0; s.bombs.length = 0;
-    s.p.x = 3872; s.p.vx = 0;
+    s.p.x = s.L.stage.x0 - 64; s.p.vx = 0;
     window.__m1.frozen = false;
   });
   await page.waitForFunction(() => window.__m1.sim().rally.st === 'heard', null, { timeout: 8000 }).catch(() => {});

@@ -34,33 +34,29 @@ def first_row(L):
 
 
 B = I.backgrounds()
-z1 = Z1.play_z1()                  # (fills I.PLATS and I.INFO)
-f1 = Z1.fore_z1()
-z2 = Z2.play_z2()                  # (adds zone 2's platforms, and I.INFO['z2'])
-f2 = Z2.fore_z2()
-b2 = Z2.back_town()
-z3 = Z3.play_z3()                  # (zone 3's platforms, and I.INFO['z3'])
-f3 = Z3.fore_z3()
-b3 = Z3.back_falls()
-zones = [('i_z1', 0, Z1.W1, z1), ('i_z2', Z2.X0, Z2.END2, z2), ('i_z3', Z3.X0, Z3.END3, z3)]
+# (29 Oct: the zones are painted as one picture, stage_ibb_world.py, and cut at their starts: a join is a cut through one
+# painting; the mountainside behind and the foreground likewise)
+import stage_ibb_world as WD   # noqa: E402
+P = WD.play()                      # (fills I.PLATS and I.INFO for all three zones)
+BK = WD.back()
+FG = WD.fore()
+zones = [('i_z1', 0, Z1.W1), ('i_z2', Z2.X0, Z2.END2), ('i_z3', Z3.X0, Z3.END3)]
 play = []
-for name, a, b, L in zones:
-    w, h = save(name, L)
+for name, a, b in zones:
+    w, h = save(name, P.crop(a, 0, b, I.SH))
     play.append(dict(img=name, x=a, w=w, y=0, h=h))
 save('i_sky', B['sky'])
 save('i_far', B['far'])
 save('i_mid', B['mid'])
-ft = max(0, first_row(f1) - 1)
-fw, fh = save('if_z1', f1, ft)
-ft2 = max(0, first_row(f2) - 1)
-fw2, fh2 = save('if_z2', f2, ft2)
-ft3 = max(0, first_row(f3) - 1)
-fw3, fh3 = save('if_z3', f3, ft3)
-fore = [dict(img='if_z1', x=0, w=fw, y=ft, h=fh), dict(img='if_z2', x=int(Z2.X0 * 1.25), w=fw2, y=ft2, h=fh2),
-        dict(img='if_z3', x=int(Z3.X0 * 1.25), w=fw3, y=ft3, h=fh3)]
-bw, bh = save('i_back2', b2)
-bw3, bh3 = save('i_back3', b3)
-back = [dict(img='i_back2', x=Z2.BACK_X, w=bw, y=0, h=bh), dict(img='i_back3', x=Z3.BACK_X, w=bw3, y=0, h=bh3)]
+ft = max(0, first_row(FG) - 1)
+fore = []
+cuts = [0, int(Z2.X0 * 1.25), int(Z3.X0 * 1.25), FG.w]
+for k, (fa, fb) in enumerate(zip(cuts[:-1], cuts[1:])):
+    fw, fh = save('if_z%d' % (k + 1), FG.crop(fa, 0, fb, I.SH), ft)
+    fore.append(dict(img='if_z%d' % (k + 1), x=fa, w=fw, y=ft, h=fh))
+bw, bh = save('i_back2', BK.crop(0, 0, Z2.BACK_W, I.SH))
+bw3, bh3 = save('i_back3', BK.crop(Z2.BACK_W, 0, BK.w, I.SH))
+back = [dict(img='i_back2', x=Z2.BACK_X, w=bw, y=0, h=bh), dict(img='i_back3', x=Z2.BACK_X + Z2.BACK_W, w=bw3, y=0, h=bh3)]
 layers = {
     'sky': dict(img='i_sky', w=pics['i_sky'][0], h=pics['i_sky'][1], y=0, par=0.15, wrap=True),
     'far': dict(img='i_far', w=pics['i_far'][0], h=pics['i_far'][1], y=B['far_y'], par=0.3, wrap=True),

@@ -39,8 +39,8 @@ fs.mkdirSync(OUT, { recursive: true });
     for (const g of ['E', 'E2', 'F', 'F2']) { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
     s.enemies.forEach(e => { if (e.alive && e.hostile && ['E', 'E2', 'F', 'F2'].indexOf(e.g) >= 0) { e.alive = false; e.st = 'gone'; e.deadT = 999; } });
     for (const g of s.gates) if (g.id === 'alley') g.done = true;
-    s.p.x = 1700; s.p.y = 184; s.p.vx = 0;
-    s.cam = Math.min(1880 - Render.width() * 0.5, s.L.endRight - Render.width());
+    s.p.x = 2500; s.p.y = 184; s.p.vx = 0;
+    s.cam = Math.min(2680 - Render.width() * 0.5, s.L.endRight - Render.width());
     const t = s.props.find(o => o.k === 'detainee');
     if (t) { t.st = 'freed'; t.t = 0; }
     window.__m1.frozen = false;
@@ -57,7 +57,7 @@ fs.mkdirSync(OUT, { recursive: true });
       window.__m1.frozen = false;
     }, to);
   };
-  await walk(1748);
+  await walk(2548);
   await page.waitForTimeout(450);
   await snap('school_2_open');
   await page.waitForTimeout(900);
@@ -67,11 +67,11 @@ fs.mkdirSync(OUT, { recursive: true });
   await snap('school_4_wave');
   // the next two doors
   await page.waitForFunction(() => !window.__m1.sim().kids.length, null, { timeout: 15000 }).catch(() => {});
-  await walk(1850);
+  await walk(2650);
   await page.waitForTimeout(1200);
   await snap('school_5_second');
   await page.waitForFunction(() => !window.__m1.sim().kids.length, null, { timeout: 15000 }).catch(() => {});
-  await walk(1950);
+  await walk(2750);
   await page.waitForFunction(() => window.__m1.sim().school.done, null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(900);
   await snap('school_6_done');

@@ -22,8 +22,10 @@ import stage_ibb_z2 as Z2
 
 SH = I.SH
 X0 = Z2.END2                    # zone 3 starts where Jibla's picture ends (2640)
-W3 = 1600                       # (the path runs on 160 past the stage, toward the pass: 29 Oct)
-END3 = X0 + W3                  # 4240
+W3 = 2120                       # (1440 until 29 Oct: then the path running on 160 past the stage toward the pass, and
+                                # the hamlet on the top terrace before the station, 520)
+STATION = 520                   # how far the relay station and the stage moved on for the hamlet
+END3 = X0 + W3                  # 6200
 put_tone, plat = SM.put_tone, I.plat
 IBBSTONE, CONCRETE, PLASTIC, BLUEP, REDP, GOLD, GRASS = Z1.IBBSTONE, Z1.CONCRETE, Z1.PLASTIC, Z1.BLUEP, Z1.REDP, Z1.GOLD, Z1.GRASS
 DRYST, LEAF, TERR, FALLOW, MUDI, WATER = I.DRYST, I.LEAF, I.TERR, I.FALLOW, I.MUDI, I.WATER
@@ -785,22 +787,24 @@ FALLS_LX = 380                    # where the far fall comes off the top in the 
 FX = 470                          # where the near falls come down behind the path (local x), into their pool
 
 
-def back_falls(w=1040, seed=461):
+def back_falls(w=1410, seed=461, L=None, crest=None, slope=True):
     """The mountainside above the terraces (the `back` layer, moving at 0.7 of the path's pace), taking over from Jibla's
     slope: terraced green climbing on up, trees on it, and to the right the slope coming down again toward the pass, a
     hamlet of tower houses on a spur. -> the picture (at BACK_X)."""
     h = SH
-    L = Layer(w, h)
+    L = L if L is not None else Layer(w, h)
     r = rng(seed)
     yy, xx = np.mgrid[0:h, 0:w]
     xs = np.arange(w)
-    crest = 76 - 40 * np.clip(xs / 300.0, 0, 1) ** 0.7 + 16 * np.clip((xs - 640) / 300.0, 0, 1) + 5 * (noise((1, w), seed, 26, 0.5)[0] - 0.5)
-    m = yy >= crest[None, :]
-    per = 6.0
-    E = yy - 0.35 * (crest[None, :] - crest.mean())
-    frac = (E / per) - np.floor(E / per)
-    t = 0.52 + 0.08 * (noise((h, w), seed + 1, 18, 3) - 0.5) - 0.14 * (frac > 0.72) + 0.06 * (frac < 0.2)
-    L.put(toned(np.clip(t, 0, 1), I.TERR, dither=0.5), m)
+    if crest is None:
+        crest = back_crest(w, seed)
+    if slope:
+        m = yy >= crest[None, :]
+        per = 6.0
+        E = yy - 0.35 * (crest[None, :] - crest.mean())
+        frac = (E / per) - np.floor(E / per)
+        t = 0.52 + 0.08 * (noise((h, w), seed + 1, 18, 3) - 0.5) - 0.14 * (frac > 0.72) + 0.06 * (frac < 0.2)
+        L.put(toned(np.clip(t, 0, 1), I.TERR, dither=0.5), m)
     Tt = Tone(w, h)
     for i in range(int(w / 9)):
         cx = int(r.integers(0, w))
@@ -811,23 +815,35 @@ def back_falls(w=1040, seed=461):
     for k, (hx, hw_, hh) in enumerate(((760, 18, 30), (781, 14, 22), (797, 20, 36), (820, 15, 26))):
         base = int(crest[hx + hw_ // 2] + 26)
         Z2.small_house(L, hx, base, hw_, hh, seed + 50 + k, haze=0.22)
-    sub = L.rgb.astype(float)
-    L.rgb[:] = np.clip(sub * 0.90 + Z2.HAZE_T * 0.10, 0, 255).astype(np.uint8)
+    if slope:                                          # (painted as part of one picture, the haze comes with that)
+        sub = L.rgb.astype(float)
+        L.rgb[:] = np.clip(sub * 0.90 + Z2.HAZE_T * 0.10, 0, 255).astype(np.uint8)
     return L
 
 
-BACK_X = Z2.BACK_X + 1150         # (Jibla's slope is 1150 wide: this picks up where it ends)
+BACK_X = Z2.BACK_X + Z2.BACK_W    # (this picks up where Jibla's slope ends)
+
+
+def back_crest(w, seed=461):
+    """The mountainside's skyline over the terraces: from where Jibla's slope comes down (76), up to the heights, coming
+    down again toward the pass, with a hamlet on a spur."""
+    xs = np.arange(w)
+    return 76 - 40 * np.clip(xs / 300.0, 0, 1) ** 0.7 + 16 * np.clip((xs - 640) / 300.0, 0, 1) + 5 * (noise((1, w), seed, 26, 0.5)[0] - 0.5)
 
 
 # ------------------------------------------------------------------ zone 3, put together
-def play_z3(seed=501):
-    """The terraces, world 2640 to 4240 (the picture's x is world - 2640)."""
-    L = Layer(W3, SH)
+def play_z3(L=None, seed=501, ground=True):
+    """The terraces, world 4080 to 6200 (the picture's x is world - 4080). With ground=False, Jibla's street and its last
+    field wall running into the zone are left to stage_ibb_world.py (painted across the join)."""
+    import stage_ibb_z3x as X
+    L = L if L is not None else Layer(W3, SH)
     info = {}
+    S = STATION
     # (1) the hillside behind the path, its trees, the things standing at the back of the path
     crest = hillside(L, seed=seed)
-    Z1.drystone(L, 0, 40, 140, 171, seed=seed + 3)       # (Jibla's last field wall, running on into the zone)
-    for k, (tx, th) in enumerate(((96, 120), (286, 112), (700, 128), (1018, 118), (1534, 124))):
+    if ground:
+        Z1.drystone(L, 0, 40, 140, 171, seed=seed + 3)       # (Jibla's last field wall, running on into the zone)
+    for k, (tx, th) in enumerate(((96, 120), (286, 112), (700, 128), (1018, 118), (1534 + S, 124))):
         Z1.eucalyptus(L, tx, gy(tx) - 30, hgt=th, seed=seed + 5 + k)
     Z1.sidr(L, 60, gy(60) - 9, seed=seed + 9)
     pool = falls(L, FX, seed=seed + 8)
@@ -842,24 +858,27 @@ def play_z3(seed=501):
     fr, fd = hut(L, 944, w=70, h=33, seed=seed + 12, windows=2, door=BLUEP)
     plat('farmroof', [(wx(944), fr), (wx(944 + 69), fr)])
     info['farmdoor'] = dict(x=wx(fd), y=gy(fd)) if fd is not None else None
-    # (2) the relay station: the fence along the back of the path, the cabin, the generator, the mast
+    # (2) the hamlet on the top terrace (29 Oct)
+    info['hamlet'] = X.hamlet(L, 1046, seed=seed + 100)
+    # (3) the relay station: the fence along the back of the path, the cabin, the generator, the mast
     base = gy(1100) - 7
-    mty = mast(L, 1180, base, seed=seed + 20)
-    plat('mastdeck', [(wx(1166), mty), (wx(1194), mty)])
-    cr, cd = cabin(L, 1064, base, seed=seed + 21)
-    plat('cabinroof', [(wx(1064), cr), (wx(1064 + 69), cr)])
+    mty = mast(L, 1180 + S, base, seed=seed + 20)
+    plat('mastdeck', [(wx(1166 + S), mty), (wx(1194 + S), mty)])
+    cr, cd = cabin(L, 1064 + S, base, seed=seed + 21)
+    plat('cabinroof', [(wx(1064 + S), cr), (wx(1064 + S + 69), cr)])
     info['cabindoor'] = dict(x=wx(cd), y=gy(cd))
-    generator(L, 1138, base, seed=seed + 22)
-    fence(L, 1044, 1214, base, gate=(1196, 1214), seed=seed + 23)
-    # (3) the stage: chairs for the audience, the camera, the deck, the curtain, the emblem, the flag, the lights
-    seats = chairs(L, 1222, 1288, base + 3, seed=seed + 30)
-    camera(L, 1210, base + 4, seed=seed + 31)
-    deck, podium = stage(L, 1296, 1432, gy(1300) + 2, seed=seed + 32)
-    plat('stagedeck', [(wx(1297), deck - 1), (wx(1431), deck - 1)])
-    info['stage'] = dict(x0=wx(1296), x1=wx(1432), deck=deck - 1, podium=wx(podium), chairs=[wx(1222), wx(1288)], camera=wx(1210),
-                         seats=[[wx(x), y, row] for x, y, row in seats])
+    generator(L, 1138 + S, base, seed=seed + 22)
+    fence(L, 1044 + S, 1214 + S, base, gate=(1196 + S, 1214 + S), seed=seed + 23)
+    # (4) the stage: chairs for the audience, the camera, the deck, the curtain, the emblem, the flag, the lights
+    seats = chairs(L, 1222 + S, 1288 + S, base + 3, seed=seed + 30)
+    camera(L, 1210 + S, base + 4, seed=seed + 31)
+    deck, podium = stage(L, 1296 + S, 1432 + S, gy(1300 + S) + 2, seed=seed + 32)
+    plat('stagedeck', [(wx(1297 + S), deck - 1), (wx(1431 + S), deck - 1)])
+    info['stage'] = dict(x0=wx(1296 + S), x1=wx(1432 + S), deck=deck - 1, podium=wx(podium), chairs=[wx(1222 + S), wx(1288 + S)],
+                         camera=wx(1210 + S), seats=[[wx(x), y, row] for x, y, row in seats])
     # posters on the hut and the cabin
-    info['posters'] = [Z1.poster(L, 271, gy(271) - 34, 'face', seed=seed + 40), Z1.poster(L, 1080, base - 26, 'badge', seed=seed + 41)]
+    info['posters'] = [Z1.poster(L, 271, gy(271) - 34, 'face', seed=seed + 40), Z1.poster(L, 1080 + S, base - 26, 'badge', seed=seed + 41)]
+    info['posters'] += info['hamlet']['posters']
     # (4) the path along the terraces, the drop in front, the risers, the stream down through it all
     path(L, 36, W3, seed=seed + 50)
     bands = drop(L, seed=seed + 51)
@@ -867,10 +886,11 @@ def play_z3(seed=501):
         t0[:36] = SH; t1[:36] = SH
     risers(L, seed=seed + 52)
     stream(L, FX - 9, FX + 9, bands, seed=seed + 53)
-    Z2.cobbles(L, 0, 40, seed=seed + 54)
+    if ground:
+        Z2.cobbles(L, 0, 40, seed=seed + 54)
     info['stream'] = dict(x0=wx(FX - 9), x1=wx(FX + 9))
     # where the screens' crates stand: at the back of the path
-    info['screens'] = [dict(x=wx(56), gy=gy(56) - 10), dict(x=wx(780), gy=gy(780) - 10)]
+    info['screens'] = [dict(x=wx(56), gy=gy(56) - 10), dict(x=wx(780), gy=gy(780) - 10), dict(x=wx(1512), gy=gy(1512) - 10)]
     info['steps'] = [dict(x=wx(x), y=y) for x, y in STEPS]
     I.INFO['z3'] = info
     return L

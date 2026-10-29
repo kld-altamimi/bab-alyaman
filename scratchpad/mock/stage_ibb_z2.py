@@ -20,8 +20,8 @@ import stage_ibb_z1 as Z1
 
 SH, WALK = I.SH, I.WALK
 X0 = Z1.W1                      # zone 2 starts where zone 1's picture ends
-W2 = 1360
-END2 = X0 + W2                  # 2640
+W2 = 2000                       # (1360 until 29 Oct: then the souq and Dar al-Izz)
+END2 = X0 + W2                  # 4080
 BASE = 170                      # where the houses' fronts stand, behind the street
 ROAD_TOP = Z1.ROAD_TOP          # the street's back edge
 put_tone, plat = SM.put_tone, I.plat
@@ -306,24 +306,26 @@ def gatepost(L, x, h=44, seed=1):
 HAZE_T = np.array([196, 208, 214], dtype=float)
 
 
-def back_town(w=1150, seed=61):
+def back_town(w=None, seed=61, L=None, crest=None, slope=True):
     """Jibla climbing the mountain behind the street (the `back` layer, moving at 0.7 of the street's pace): the green
     slope rising to the right, terraced, with the town's houses in rows along it (smaller and paler the higher they
     stand), trees between, and the Queen Arwa mosque among them with its two ribbed minarets and two white domes. Its
     left end is the town's edge, so it first shows as the street reaches the town. -> the picture (at BACK_X)."""
     h = SH
-    L = Layer(w, h)
+    w = w or BACK_W
+    L = L if L is not None else Layer(w, h)
     r = rng(seed)
     yy, xx = np.mgrid[0:h, 0:w]
     xs = np.arange(w)
-    crest = 168 - 112 * np.clip(xs / 520.0, 0, 1) ** 0.8 + 8 * (noise((1, w), seed, 40, 0.5)[0] - 0.5)
-    crest = np.where(xs > 900, crest + (xs - 900) * 0.08, crest)
-    m = yy >= crest[None, :]
-    per = 6.0
-    E = yy - 0.35 * (crest[None, :] - crest.mean())
-    frac = (E / per) - np.floor(E / per)
-    t = 0.52 + 0.08 * (noise((h, w), seed + 1, 18, 3) - 0.5) - 0.14 * (frac > 0.72) + 0.06 * (frac < 0.2)
-    L.put(toned(np.clip(t, 0, 1), I.TERR, dither=0.5), m)
+    if crest is None:
+        crest = back_crest(w, seed)
+    if slope:
+        m = yy >= crest[None, :]
+        per = 6.0
+        E = yy - 0.35 * (crest[None, :] - crest.mean())
+        frac = (E / per) - np.floor(E / per)
+        t = 0.52 + 0.08 * (noise((h, w), seed + 1, 18, 3) - 0.5) - 0.14 * (frac > 0.72) + 0.06 * (frac < 0.2)
+        L.put(toned(np.clip(t, 0, 1), I.TERR, dither=0.5), m)
     # trees on the slope
     Tt = Tone(w, h)
     for i in range(int(w / 9)):
@@ -344,11 +346,24 @@ def back_town(w=1150, seed=61):
             hh = int((44 + r.integers(0, 36)) * sc)
             base = int(crest[min(w - 1, x + hw // 2)] + below)
             in_mosque = 680 < x + hw // 2 < 860 and ri >= 1
+            if x + hw > w - 120 and r.random() < 0.6:          # (the town thins out toward the terraces)
+                x += hw + int(r.integers(10, 40))
+                continue
             if base < h - 20 and not in_mosque:
                 small_house(L, x, base, hw, hh, seed + ri * 100 + x, haze=haze)
             x += hw + int(r.integers(1, 8))
     mosque(L, 720, 140)
     return L
+
+
+def back_crest(w, seed=61):
+    """The slope's skyline behind Jibla: rising from the valley at the town's edge to the town's top, level along it,
+    coming down a little at its far end to meet the terraces' mountainside (stage_ibb_z3.back_falls, at 76)."""
+    xs = np.arange(w)
+    crest = 168 - 112 * np.clip(xs / 520.0, 0, 1) ** 0.8 + 8 * (noise((1, w), seed, 40, 0.5)[0] - 0.5)
+    tail = w - 250
+    crest = np.where(xs > tail, crest + (xs - tail) * 0.08, crest)
+    return crest
 
 
 def small_house(L, x, base, w, h, seed, haze=0.3):
@@ -448,18 +463,24 @@ def mosque(L, x, base):
 
 
 # ------------------------------------------------------------------ zone 2, put together
-BACK_X = 960                     # where the back layer's picture starts, in the layer (0.7 of the street's pace)
+BACK_X = 1520                    # where the back layer's picture starts, in the layer (0.7 of the street's pace; 960 until
+                                 # 29 Oct, when the valley road grew 800 px: 0.7 of that later)
+BACK_W = 1600                    # its width (1150 until 29 Oct: Jibla grew 640 px)
 
 
-def play_z2(seed=201):
-    """Jibla's street, world 1280 to 2640 (the picture's x is world - 1280)."""
-    L = Layer(W2, SH)
+def play_z2(L=None, seed=201, ground=True):
+    """Jibla's street, world 2080 to 4080 (the picture's x is world - 2080). With ground=False the street's setts and
+    the town's edge (where the valley's asphalt breaks up over them) are left to stage_ibb_world.py, which paints them in
+    one piece with the valley's road, and the field walls of the way out across the join into the terraces."""
+    import stage_ibb_z2x as X
+    L = L if L is not None else Layer(W2, SH)
     info = {}
     r = rng(seed)
     # (0) the road comes in: the last of the valley's wall and crops, the asphalt turning to cobbles
-    Z1.crops(L, 0, 60, Z1.VERGE - 12, seed=seed)
-    Z1.drystone(L, 0, 58, 146, Z1.VERGE + 2, seed=seed + 1)
-    Z1.verge(L, 0, 60, seed=seed + 2)
+    if ground:
+        Z1.crops(L, 0, 60, Z1.VERGE - 12, seed=seed)
+        Z1.drystone(L, 0, 58, 146, Z1.VERGE + 2, seed=seed + 1)
+        Z1.verge(L, 0, 60, seed=seed + 2)
     # (1) the street's houses, back to front: left to right
     houses = []
     tH1, dH1 = house(L, 56, 84, 84, seed + 10, floors=1, door=False)
@@ -492,16 +513,20 @@ def play_z2(seed=201):
     tH6, dH6 = house(L, 1110, 96, 84, seed + 34, floors=1, door=False, roof=('tank',))
     info['shop2'] = shopfront(L, 1120, 56, seed=seed + 35)
     plat('h6roof', [(wx(1111), tH6 - 1), (wx(1110 + 95), tH6 - 1)])
-    # the way out: a stone path between terraces, up toward the waterfall (zone 3)
-    Z1.drystone(L, 1206, W2, 140, BASE + 1, seed=seed + 36)
-    Z1.crops(L, 1210, W2, 140, seed=seed + 37, hmin=10, hmax=18)
+    # (4) the souq; the ruin of Dar al-Izz; the way out (its field walls painted across the join by stage_ibb_world.py)
+    info['souq'] = X.souq(L, 1212, seed=seed + 200)
+    info['palace'] = X.palace(L, 1546, seed=seed + 230)
+    if ground:
+        Z1.drystone(L, 1840, W2, 140, BASE + 1, seed=seed + 36)
+        Z1.crops(L, 1844, W2, 140, seed=seed + 37, hmin=10, hmax=18)
     # posters of him on the walls
     info['posters'] = [Z1.poster(L, 300, BASE - 46, 'face', seed=seed + 40), Z1.poster(L, 1012, 151, 'badge', seed=seed + 41),
-                       Z1.poster(L, 790, BASE - 48, 'face', seed=seed + 42)]
-    # (4) the street: the asphalt's last metres, then cobbles; the kerb along the house fronts
-    Z1.road(L, 0, 64, seed=seed + 50)
-    cobbles(L, 60, W2, seed=seed + 51)
-    for k, (px_, py_, pw, ph_) in enumerate(((240, 202, 36, 4), (640, 194, 24, 3), (1000, 206, 44, 5))):
+                       Z1.poster(L, 790, BASE - 48, 'face', seed=seed + 42)] + info['souq']['posters']
+    # (5) the street: the asphalt's last metres, then cobbles; the kerb along the house fronts
+    if ground:
+        Z1.road(L, 0, 64, seed=seed + 50)
+        cobbles(L, 60, W2, seed=seed + 51)
+    for k, (px_, py_, pw, ph_) in enumerate(((240, 202, 36, 4), (640, 194, 24, 3), (1000, 206, 44, 5), (1420, 200, 30, 4), (1760, 204, 40, 5))):
         Z1.puddle(L, px_, py_, pw, ph_, seed=seed + 60 + k)
     I.INFO['z2'] = info
     return L
