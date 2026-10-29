@@ -53,7 +53,7 @@ var Sound = (function () {
     if (pendingMusic && bufs[man.music[pendingMusic.track].file] && (pendingMusic.menu || !pendingMusic.intro || bufs[man.music.start.file])) {
       var pm = pendingMusic; pendingMusic = null;
       // (a mission's music that arrives late comes in without the start call: that moment has gone)
-      if (pm.menu) menu(pm.track); else startMusic(pm.intro && Date.now() - (pm.at || 0) < 1500, pm.track);
+      if (pm.menu) menu(pm.track); else startMusic(pm.intro && Date.now() - (pm.at || 0) < 1500, pm.track, pm.fade);
     }
     if (pendingSea && bufs.sfx) { pendingSea = false; sea(true); }
   }
@@ -248,7 +248,7 @@ var Sound = (function () {
     if (!ctx) return;
     var M = man.music, lb = bufs[M[which].file], jb = bufs[M.start.file];
     if (!lb && !wanted[M[which].file]) { wanted[M[which].file] = true; if (!raw[M[which].file]) fetchOne(M[which].file); }
-    if (!lb || (intro && !jb)) { pendingMusic = { intro: intro, track: which, at: Date.now() }; return; }
+    if (!lb || (intro && !jb)) { pendingMusic = { intro: intro, track: which, at: Date.now(), fade: fadeIn }; return; }
     stopMusic(fadeIn ? 0.5 : 0.05);
     var t0 = ctx.currentTime + 0.06, when = t0;
     if (intro) { jingleSrc = play(jb, 0, null, gMusic, { when: t0, gain: 1.2 }); when = t0 + M.start.landing; }

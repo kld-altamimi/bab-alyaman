@@ -12,6 +12,7 @@ require(path.join(__dirname, '../src/boss.js'));
 require(path.join(__dirname, '../src/roaster.js'));
 require(path.join(__dirname, '../src/fly.js'));
 require(path.join(__dirname, '../src/school.js'));
+require(path.join(__dirname, '../src/rally.js'));
 const IBB = require(path.join(__dirname, '../src/level_ibb.js'));
 const AUDIO = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/audio.json'), 'utf8'));
 const STAGE = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/stage_ibb.json'), 'utf8'));
@@ -167,6 +168,79 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     for (const id of ids) { const k = a.kids.find(q => q.id === id); if (!k || k.st === 'run') moved++; }
     ok(same && moved > 0 && b.kids.every(k => !('hp' in k)) && b.enemies.every(e => b.kids.indexOf(e) < 0) && b.status === 'play',
        'a grenade, dynamite and shots on the children: they do exactly as they would have (nothing in the game has them to hit)');
+  }
+})();
+
+// ------------------------------------------------------------------ the Spokesman's rally (rally.js)
+// Khaled, 29 Oct 21:36: "The story board looks great". What must always hold: he and his audience are in nothing the game
+// hits (the audience are not in the simulation at all: render_ibb.js draws them from the level's seats); he stays at his
+// podium until the station is cleared and Yazeed comes up to the chairs; then Yazeed's word, the jump, the landing and his
+// dash off the stage's far end and out of the picture, each once and in that order; the station's gate opens only once he
+// is gone, and the mission can be finished after it.
+(function rally() {
+  const L = IBB, Lg = L.stage, X = Sim.ext.rally, R = Sim.RALLY, P = STAGE.info.z3.stage, lines = AUDIO.speech.ibb.lines;
+  const B = require(path.join(__dirname, 'bot.js'));
+  ok(!!X && !!Lg && Lg.gate === 'station' && L.gates.some(g => g.id === Lg.gate && g.until === 'rally'), 'the station\'s gate waits for the rally');
+  ok(Lg.x0 === P.x0 && Lg.x1 === P.x1 && Lg.deck === P.deck && Lg.podium === P.podium, 'the stage and its podium where the painting has them');
+  ok(Lg.seats.length === 5 && Lg.seats.every(q => P.seats.some(c => c[0] === q[0] && c[1] === q[1])), 'five in the audience, each in a painted chair');
+  ok(Lg.lines.length > 0 && Lg.lines.every(id => !!lines[id]), 'his statement recorded (' + Lg.lines.length + ' lines)');
+  ok(['yazeed_beret', 'clap_s', 'clap_l'].every(id => !!lines[id]), 'Yazeed\'s word and the claps recorded');
+  for (const [seed, auto] of [[2, false], [9, true], [17, false]]) {
+    const s = Sim.create(L, { viewW: 468, seed: seed, zone: 2 });
+    const bot = B.smartBot({ auto: auto }), tag = 'seed ' + seed + (auto ? ', auto fire' : '');
+    const order = [], at = {}, x0 = s.rally.x, y0 = s.rally.y;
+    let moved = 0, early = 0, seq = 0, nearAtHeard = null;
+    for (let t = 0; t < 60 * 240 && s.status === 'play'; t++) {
+      const inp = bot(s); inp.viewW = 468;
+      Sim.step(s, inp);
+      s.p.inv = Math.max(s.p.inv, 2);
+      if ((s.rally.st === 'speech' || s.rally.st === 'heard') && (s.rally.x !== x0 || s.rally.y !== y0)) moved++;
+      for (const e of s.events) {
+        seq++;
+        if (/^rally_/.test(e.t)) { order.push(e.t); at[e.t] = seq; }
+        if (e.t === 'rally_heard') { nearAtHeard = s.p.x; if (!X.cleared(s)) early++; }
+        if (e.t === 'go' && e.gate === Lg.gate) at.go = seq;
+        if (e.t === 'clear') at.clear = seq;
+      }
+    }
+    ok(s.status === 'clear', tag + ': the bot clears the station, sees him off and finishes (' + s.status + ')');
+    ok(order.join(',') === 'rally_heard,rally_jump,rally_land,rally_gone', tag + ': Yazeed\'s word, the jump, the landing, his dash, once each and in order (' + order.join(',') + ')');
+    ok(early === 0 && nearAtHeard !== null && nearAtHeard >= Lg.x0 - R.REACH, tag + ': Yazeed\'s word only with the station cleared and Yazeed at the chairs (x ' + Math.round(nearAtHeard) + ')');
+    ok(moved === 0, tag + ': he stayed at his podium until the jump (' + moved + ')');
+    ok(at.go > at.rally_gone && at.clear > at.go, tag + ': the station\'s gate opened once he was gone, and the mission ended after it');
+  }
+  // nothing touches him: two games at the station by hand, the same, its fight put down; in one of them grenades, dynamite
+  // and a shot of each side go off on him, on his podium and on every seat. He does exactly the same in both.
+  {
+    const mk = () => {
+      const s = Sim.create(L, { viewW: 468, seed: 6, zone: 2 });
+      for (const g of ['I', 'I2', 'J', 'J2', 'K', 'K2', 'L', 'L2']) { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
+      for (const g of s.gates) if (g.id !== 'station') g.done = true;
+      s.enemies.length = 0; s.p.x = Lg.x0 - R.REACH - 30; s.p.y = Sim.groundY(L, s.p.x); s.cam = L.endRight - 468;
+      s.p.inv = 999;
+      return s;
+    };
+    const a = mk(), b = mk();
+    const spots = [[Lg.podium + R.BEHIND, Lg.deck - 20], [Lg.podium, Lg.deck - 10]].concat(Lg.seats.map(q => [q[0] + 6, q[1] - 10]));
+    for (const [x, y] of spots) {
+      Sim._.explode(b, x, y, 40, 'gren', true);
+      Sim._.explode(b, x, y, 40, 'dyn', false);
+      b.bullets.push({ x: x + 30, y: y, vx: -172, vy: 0, life: 60, own: false, src: 'test' });
+      b.bullets.push({ x: x - 30, y: y, vx: 450, vy: 0, life: 60, own: true });
+    }
+    let same = true, sawSpeech = 0;
+    for (let t = 0; t < 400; t++) {
+      // (the shots fly for a while, Yazeed standing back; then what is left of them is cleared away in both games, as
+      // the station has to be clear before anything happens, and Yazeed walks up to the chairs)
+      if (t === 40) { a.bullets.length = 0; b.bullets.length = 0; }
+      const inp = { viewW: 468, mx: t > 40 ? 1 : 0 };
+      Sim.step(a, inp); Sim.step(b, inp);
+      a.p.inv = b.p.inv = 999;
+      const ra = a.rally, rb = b.rally;
+      if (ra.st === 'speech') sawSpeech++;
+      if (ra.st !== rb.st || ra.x !== rb.x || ra.y !== rb.y || ra.t !== rb.t) same = false;
+    }
+    ok(sawSpeech > 0 && same && a.rally.st === 'gone' && !('hp' in b.rally), 'grenades, dynamite and shots on him, his podium and his audience: he does exactly as he would have, and is gone (' + a.rally.st + ')');
   }
 })();
 

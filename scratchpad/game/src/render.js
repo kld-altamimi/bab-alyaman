@@ -768,6 +768,8 @@ var Render = (function () {
     if (!own && ly.back) stripLayer(ly.back, s.cam, sy);       // (a town on the slope behind the street, at its own pace: Ibb's Jibla)
     if (!own) stripLayer(ly.play, s.cam, sy);
     cx.translate(-cam, sy - camY);
+    // a mission's own things on its picture, behind everyone standing in front of it (Ibb's classroom doors, opened)
+    for (var gbk in bosses) if (bosses[gbk].ground) bosses[gbk].ground(s, paused, K);
 
     // what stands beside the road
     if (L.scenery) {

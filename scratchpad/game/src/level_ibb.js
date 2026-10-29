@@ -15,15 +15,17 @@
 // out of town climbs the terraced mountainside a field wall at a time (each step a wall to hop up), past a field hut,
 // across the stream below the falls on a slab bridge, past a boulder and a farmhouse, up to the Zanabeel's relay station
 // on the top (its fence, its cabin, its mast) and their stage beside it: the deck, the blue curtain, their emblem and
-// flag, the chairs set out for an audience, the camera, the podium. (The Spokesman's scene there comes once Khaled has
-// seen its storyboard.) The mission ends at the end of the zones painted so far. Only test builds have it
-// (build.py --ibb).
+// flag, the chairs set out for an audience, the camera, the podium. The Spokesman is there, giving statement D to five of
+// his men in the chairs, who clap; once the station is cleared and Yazeed comes up to the chairs, "Nice beret.", the jump
+// (no trousers under the podium) and his dash for the pass (rally.js; Khaled, 29 Oct 21:36: "The story board looks
+// great"); the station's gate waits for him to be gone. The path runs on past the stage toward the pass (zone 4, to
+// come); the mission ends there for now. Only test builds have it (build.py --ibb).
 // The ground is the road, flat at 184, until the terraces, where it climbs in steps of 16 (walls: true: a step of more
 // than 7 is a wall); it comes from the painting (GROUNDS.ibb in the page, gen/stage_ibb.json under Node), as the
 // platforms do (the tops of things as mock/stage_ibb_z*.py paint them; unit_ibb.js checks that the two agree).
 var LEVEL_IBB = (function () {
   'use strict';
-  var Z1 = 0, Z2 = 1280, Z3 = 2640, END = 4080;    // where the zones start (three so far), and where the painting ends
+  var Z1 = 0, Z2 = 1280, Z3 = 2640, END = 4240;    // where the zones start (three so far), and where the painting ends
   var VERGE = 160;                       // the gravel verge behind the road: the screens stand on it
   var L = {
     id: 'ibb',
@@ -106,7 +108,7 @@ var LEVEL_IBB = (function () {
       { id: 'hut', x: 2940, groups: ['I', 'I2'] },
       { id: 'falls', x: 3280, groups: ['J', 'J2'] },
       { id: 'farm2', x: 3620, groups: ['K', 'K2'] },
-      { id: 'station', x: 3900, groups: ['L', 'L2'] }
+      { id: 'station', x: 3890, groups: ['L', 'L2'], until: 'rally' }          // (and the Spokesman gone: rally.js)
     ],
     groups: {
       A: { zone: 0, trig: 300 },
@@ -237,11 +239,11 @@ var LEVEL_IBB = (function () {
       { g: 'K2', k: 'bomber', door: 1, x: 3601, delay: 50 },
       { g: 'K2', k: 'rifle', enter: 1, delay: 30, look: 'qat' },
       { g: 'K2', k: 'rifle', enter: -1, delay: 120, look: 'youth' },
-      // ---- the relay station: on the cabin's roof, on the mast's deck, by the chairs, a bomber on the stage; then out of
+      // ---- the relay station: on the cabin's roof, on the mast's deck, by the camera, a bomber on the stage; then out of
       //      the cabin, and from both ends
       { g: 'L', k: 'rifle', x: 3768, plat: 'cabinroof', post: 1, look: 'angry' },
       { g: 'L', k: 'rifle', x: 3820, plat: 'mastdeck', post: 1, look: 'qat' },
-      { g: 'L', k: 'rifle', x: 3880, post: 1, look: 'worried' },
+      { g: 'L', k: 'rifle', x: 3840, post: 1, look: 'worried' },
       { g: 'L', k: 'bomber', x: 3952, plat: 'stagedeck', post: 1 },
       { g: 'L2', k: 'rifle', door: 1, x: 3760, delay: 0, look: 'youth' },
       { g: 'L2', k: 'rifle', enter: -1, delay: 30, look: 'angry' },
@@ -257,9 +259,12 @@ var LEVEL_IBB = (function () {
       { k: 'crate', x: 2884, plat: 'hutroof', gives: 'gren', zone: 2 },
       { k: 'crate', x: 3644, plat: 'farmroof', gives: 'hmg', zone: 2 }
     ],
-    // the stage on the top of the terraces (render_ibb.js draws the podium on its deck; the Spokesman's scene there comes
-    // with Khaled's yes to its storyboard)
-    stage: { x0: 3936, x1: 4072, deck: 109, podium: 4031 },
+    // the stage on the top of the terraces (rally.js; render_ibb.js draws it): its deck, his podium on it, the chairs his
+    // audience sits in (the back row's three, then the front row's two: x where the hips come, y the seat; painted chairs,
+    // mock/stage_ibb_z3.py), the statement he gives; the station's gate waits for him
+    stage: { gate: 'station', x0: 3936, x1: 4072, deck: 109, podium: 4031,
+             seats: [[3865, 104], [3889, 104], [3913, 104], [3882, 109], [3906, 109]],
+             lines: ['sp_important', 'sp_D2', 'sp_D3', 'sp_D4', 'sp_D5', 'sp_D6', 'sp_D7', 'sp_important', 'sp_D9', 'sp_end'] },
     // the school's three classrooms (school.js): where their doors are, how many children each holds; the yard's floor;
     // the teacher, at his flagpole, waits for them once freed and then goes after them
     school: { gate: 'school', y: 184, teacher: 1856, doors: [{ x: 1754, n: 5 }, { x: 1854, n: 4 }, { x: 1954, n: 5 }] },

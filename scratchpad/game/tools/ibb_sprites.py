@@ -562,6 +562,26 @@ def yazeed_low():
     return out
 
 
+def stage_frames():
+    """The terraces' stage (render_ibb.js, stage.js; Khaled, 29 Oct 21:36: "The story board looks great"): him at his
+    podium, three mouths and a blink (no trousers already: he stands so close behind it that it hides everything below
+    his belt, render_ibb.js); his jump (now they see) and the two halves of his run for the pass; the five of his
+    audience in their chairs, still and clapping (tools/ibb_audience.py). All face right; the game turns him to face his
+    audience."""
+    out = []
+    for m in range(3):
+        out.append(('spk_m%d' % m,) + spokesman(m, trousers=False))
+    out.append(('spk_bl',) + spokesman(0, blink=True, trousers=False))
+    out.append(('spk_jump',) + spokesman_jump())
+    for k in (0, 1):
+        out.append(('spk_run%d' % k,) + spokesman_run(k))
+    import ibb_audience as A
+    for i, (look, skin) in enumerate(A.LOOKS):
+        for c in (0, 1):
+            out.append(('aud%d_%d' % (i, c),) + A.seated(look, skin, c))
+    return out
+
+
 def frames():
     """-> [(name, image, ax, ay)] for the sheet."""
     items = []
@@ -575,6 +595,7 @@ def frames():
     items.append(('crate',) + crate())
     items += kid_frames() + yazeed_low()
     items.append(('podium',) + podium())          # (the terraces' stage: his podium on its deck, render_ibb.js)
+    items += stage_frames()
     return items
 
 

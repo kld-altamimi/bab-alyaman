@@ -22,8 +22,8 @@ import stage_ibb_z2 as Z2
 
 SH = I.SH
 X0 = Z2.END2                    # zone 3 starts where Jibla's picture ends (2640)
-W3 = 1440
-END3 = X0 + W3                  # 4080
+W3 = 1600                       # (the path runs on 160 past the stage, toward the pass: 29 Oct)
+END3 = X0 + W3                  # 4240
 put_tone, plat = SM.put_tone, I.plat
 IBBSTONE, CONCRETE, PLASTIC, BLUEP, REDP, GOLD, GRASS = Z1.IBBSTONE, Z1.CONCRETE, Z1.PLASTIC, Z1.BLUEP, Z1.REDP, Z1.GOLD, Z1.GRASS
 DRYST, LEAF, TERR, FALLOW, MUDI, WATER = I.DRYST, I.LEAF, I.TERR, I.FALLOW, I.MUDI, I.WATER
@@ -628,12 +628,15 @@ def mast(L, cx, base, top=-10, seed=401):
 # ------------------------------------------------------------------ their stage
 def chairs(L, x0, x1, base, rows=2, seed=411):
     """Rows of plastic chairs set out for the audience, facing the stage (to the right): white, a red one here and there;
-    the back row a step further off (higher up the picture)."""
+    the back row a step further off (higher up the picture). -> where each chair's seat is: [(x, y, row)], the x a
+    sitter's hips come to (3 in from the back), the y the top of the seat."""
     T = Tone(L.w, SH)
     R = Tone(L.w, SH)
+    seats = []
     for row in range(rows):
         b = base - 5 * (rows - 1 - row)
         for i, cx in enumerate(range(x0 + 5 * row, x1 - 8, 12)):
+            seats.append((cx + 3, b - 7, row))
             tgt = R if (i * 3 + row * 5) % 7 == 2 else T
             # the back, leaning back a little, its top rolled
             for j, y in enumerate(range(b - 16, b - 7)):
@@ -649,6 +652,7 @@ def chairs(L, x0, x1, base, rows=2, seed=411):
                 tgt.px(cx + 7 + (j // 3), b - 5 + j, 0.56)
     put_tone(L, T, PANEL, dither=0)
     put_tone(L, R, REDP, dither=0)
+    return seats
 
 
 def camera(L, x, base, seed=421):
@@ -781,7 +785,7 @@ FALLS_LX = 380                    # where the far fall comes off the top in the 
 FX = 470                          # where the near falls come down behind the path (local x), into their pool
 
 
-def back_falls(w=960, seed=461):
+def back_falls(w=1040, seed=461):
     """The mountainside above the terraces (the `back` layer, moving at 0.7 of the path's pace), taking over from Jibla's
     slope: terraced green climbing on up, trees on it, and to the right the slope coming down again toward the pass, a
     hamlet of tower houses on a spur. -> the picture (at BACK_X)."""
@@ -817,13 +821,13 @@ BACK_X = Z2.BACK_X + 1150         # (Jibla's slope is 1150 wide: this picks up w
 
 # ------------------------------------------------------------------ zone 3, put together
 def play_z3(seed=501):
-    """The terraces, world 2640 to 4080 (the picture's x is world - 2640)."""
+    """The terraces, world 2640 to 4240 (the picture's x is world - 2640)."""
     L = Layer(W3, SH)
     info = {}
     # (1) the hillside behind the path, its trees, the things standing at the back of the path
     crest = hillside(L, seed=seed)
     Z1.drystone(L, 0, 40, 140, 171, seed=seed + 3)       # (Jibla's last field wall, running on into the zone)
-    for k, (tx, th) in enumerate(((96, 120), (286, 112), (700, 128), (1018, 118))):
+    for k, (tx, th) in enumerate(((96, 120), (286, 112), (700, 128), (1018, 118), (1534, 124))):
         Z1.eucalyptus(L, tx, gy(tx) - 30, hgt=th, seed=seed + 5 + k)
     Z1.sidr(L, 60, gy(60) - 9, seed=seed + 9)
     pool = falls(L, FX, seed=seed + 8)
@@ -848,11 +852,12 @@ def play_z3(seed=501):
     generator(L, 1138, base, seed=seed + 22)
     fence(L, 1044, 1214, base, gate=(1196, 1214), seed=seed + 23)
     # (3) the stage: chairs for the audience, the camera, the deck, the curtain, the emblem, the flag, the lights
-    chairs(L, 1222, 1288, base + 3, seed=seed + 30)
+    seats = chairs(L, 1222, 1288, base + 3, seed=seed + 30)
     camera(L, 1210, base + 4, seed=seed + 31)
     deck, podium = stage(L, 1296, 1432, gy(1300) + 2, seed=seed + 32)
     plat('stagedeck', [(wx(1297), deck - 1), (wx(1431), deck - 1)])
-    info['stage'] = dict(x0=wx(1296), x1=wx(1432), deck=deck - 1, podium=wx(podium), chairs=[wx(1222), wx(1288)], camera=wx(1210))
+    info['stage'] = dict(x0=wx(1296), x1=wx(1432), deck=deck - 1, podium=wx(podium), chairs=[wx(1222), wx(1288)], camera=wx(1210),
+                         seats=[[wx(x), y, row] for x, y, row in seats])
     # posters on the hut and the cabin
     info['posters'] = [Z1.poster(L, 271, gy(271) - 34, 'face', seed=seed + 40), Z1.poster(L, 1080, base - 26, 'badge', seed=seed + 41)]
     # (4) the path along the terraces, the drop in front, the risers, the stream down through it all
@@ -871,7 +876,7 @@ def play_z3(seed=501):
     return L
 
 
-def fore_z3(w=1900, seed=531):
+def fore_z3(w=2100, seed=531):
     """Close to the lens on the terraces: the same tufts and stones as along the road."""
     return Z1.fore_z1(w=w, seed=seed)
 

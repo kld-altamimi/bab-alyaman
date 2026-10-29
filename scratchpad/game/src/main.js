@@ -255,7 +255,7 @@
       if (pri <= line.pri) return;                 // a bark never talks over its equal
     }
     var dur = Sound.voice(id, { gain: o.gain });
-    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri };
+    line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri, rally: !!o.rally };
   }
   function yelp(e) {
     if (gt - (flags.yelpAt || -99) < 9) return;
@@ -528,6 +528,14 @@
         // ---- Ibb: the school (school.js)
         case 'class_open': Sound.sfx('door_creak', { gain: 0.9, pan: panOf(e.x) }); break;
         case 'kid_stop': after(8, function () { speak('yazeed_home', { pri: 4, who: 'YAZEED' }); }); break;
+        // ---- Ibb: the rally on the terraces' top (rally.js): Yazeed's word cuts the Spokesman short; his jump, the applause;
+        //      his landing on the deck
+        case 'rally_heard': speak('yazeed_beret', { pri: 4, who: 'YAZEED' }); break;
+        case 'rally_jump':
+          Sound.sfx('jump', { gain: 0.8, rate: 0.9, pan: panOf(e.x) });
+          Sound.voice('clap_l', { over: true, gain: 0.6, pan: panOf(e.x - 120) });
+          break;
+        case 'rally_land': Sound.sfx('land', { gain: 0.6, pan: panOf(e.x) }); break;
 
         // ---- Taiz, by Apache
         case 'heli_ready':
@@ -696,6 +704,11 @@
   }
   function direct() {
     for (var i = timers.length - 1; i >= 0; i--) if (gt >= timers[i].at) { var f = timers[i].fn; timers.splice(i, 1); f(); }
+    // (the Spokesman at his rally, Ibb: as each of his lines ends, his audience claps; render_ibb.js has them do it)
+    if (line && line.rally && !line.clapped && gt >= line.until - 26) {
+      line.clapped = true;
+      Sound.voice('clap_s', { over: true, gain: 0.55, pan: sim.L.stage ? panOf(sim.L.stage.x0 - 40) : 0 });
+    }
     if (line && gt >= line.until) line = null;
     if (!line && queue.length) { var q = queue.shift(); if (gt - q.at < 200 || q.o.keep) speak(q.id, q.o); }      // (unless its moment has passed: a story line's never does)
     if (hintLine && gt >= hintLine.until) hintLine = null;
@@ -913,7 +926,10 @@
     setState('play');
     if (window.HM) HM.track('mission_start', { mission: cur, from_zone: run.from, from_checkpoint: run.from > 0, run_number: prefs.prog[cur].runs });
     Render.setBanner(T('MISSION START!'), run.from ? T(L.zones[run.from].name).toUpperCase() : T(L.banner), 170);
-    Sound.startMusic(true, L.music);
+    // (the start jingle leads into the Strait's march, the tune it was written for; anywhere else the mission's own theme
+    // starts on its own, rather than the Strait's call and then a second tune: Khaled, 29 Oct)
+    if (!L.music || L.music === 'strait') Sound.startMusic(true, L.music);
+    else Sound.startMusic(false, L.music, 0.6);
     Sound.sea(!!L.sea);
     // (from a checkpoint, only the announcer: Yazeed's first words belong to the start)
     say(L.lines && L.lines.start && (run.from ? L.lines.start.slice(0, 1) : L.lines.start));
