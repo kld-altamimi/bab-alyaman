@@ -21,16 +21,22 @@
 // emblem and flag, the chairs set out for an audience, the camera, the podium. The Spokesman is there, giving statement
 // D to five of his men in the chairs, who clap; once the station is cleared and Yazeed comes up to the chairs, "Nice
 // beret.", the jump (no trousers under the podium) and his dash for the pass (rally.js; Khaled, 29 Oct 21:36: "The story
-// board looks great"); the station's gate waits for him to be gone. The path runs on past the stage toward the pass
-// (zone 4, to come); the mission ends there for now. Each zone is about half as long again since 29 Oct (Khaled, 21:36:
-// "the zones in this mission are a bit short"), and the three are painted as one picture, so the joins are seamless.
+// board looks great"); the station's gate waits for him to be gone. The path runs on past the stage to the pass. Each
+// zone is about half as long again since 29 Oct (Khaled, 21:36: "the zones in this mission are a bit short"), and they
+// are painted as one picture, so the joins are seamless. Zone 4, Sumara pass (Khaled, 29 Oct 23:11: "Great, continue to
+// next"): the highway climbing to the pass in cloud, cut into the mountainside (the rock above, a retaining wall, kerbs
+// painted black and white, a crash barrier on the drop's side, the next hairpin below, the valley full of cloud); their
+// post in a shipping container with sandbags across the road, a tea shack with a tin awning, the summit's rock, marker and
+// flag; then the lookout at the top, where they have set out five podiums with a screen each for the Spokesman and parked
+// their broadcast van. Three fights; the podiums and screens stand ready (render_ibb.js); his fight on them comes after
+// its storyboard, and the mission ends past the van for now.
 // Only test builds have it (build.py --ibb).
 // The ground is the road, flat at 184, until the terraces, where it climbs in steps of 16 (walls: true: a step of more
 // than 7 is a wall); it comes from the painting (GROUNDS.ibb in the page, gen/stage_ibb.json under Node), as the
 // platforms do (the tops of things as mock/stage_ibb_*.py paint them; unit_ibb.js checks that the two agree).
 var LEVEL_IBB = (function () {
   'use strict';
-  var Z1 = 0, Z2 = 2080, Z3 = 4080, END = 6200;    // where the zones start (three so far), and where the painting ends
+  var Z1 = 0, Z2 = 2080, Z3 = 4080, Z4 = 6200, END = 8200;    // where the zones start, and where the painting ends
   var VERGE = 160;                       // the gravel verge behind the road: the screens stand on it
   var L = {
     id: 'ibb',
@@ -44,14 +50,14 @@ var LEVEL_IBB = (function () {
     freedNote: 'the teacher is still at the flagpole',         // (the brief's; the teacher comes with zone 2)
     width: END,
     height: 216,
-    par: 240,
+    par: 300,
     start: 96,
     exitX: END - 40,
     restX: END - 20,
     endRight: END,
     walls: true,                         // (the terraces: a step up of more than 7 px is a wall)
     ground: null,                        // (from the painting: GROUNDS.ibb in the page, gen/stage_ibb.json under Node)
-    world: { Z1: Z1, Z2: Z2, Z3: Z3, END: END, ROAD_Y: 184 },
+    world: { Z1: Z1, Z2: Z2, Z3: Z3, Z4: Z4, END: END, ROAD_Y: 184 },
     // one-way platforms: land on them from above, drop through with down + jump
     plats: [
       // the checkpoint: the sandbags on the road, the booth's roof (from the sandbags)
@@ -113,12 +119,18 @@ var LEVEL_IBB = (function () {
       { id: 'lastroof', pts: [[5456, 79], [5515, 79]] },
       { id: 'cabinroof', pts: [[5664, 79], [5733, 79]] },
       { id: 'mastdeck', pts: [[5766, 78], [5794, 78]] },
-      { id: 'stagedeck', pts: [[5897, 109], [6031, 109]] }
+      { id: 'stagedeck', pts: [[5897, 109], [6031, 109]] },
+      // the pass: their sandbags across the road by the container, the tea shack's roof and its awning, the summit's rock
+      { id: 'cpnest', pts: [[6784, 98], [6820, 98]] },
+      { id: 'shackroof', pts: [[7060, 79], [7123, 79]] },
+      { id: 'shackawn', pts: [[7083, 87], [7153, 87]] },
+      { id: 'summitrock', pts: [[7397, 89], [7423, 89]] }
     ],
     zones: [
       { x: Z1, name: 'Wadi al-Sahul', spawn: 96 },
       { x: Z2, name: 'Jibla', spawn: Z2 + 30 },
-      { x: Z3, name: 'The terraces', spawn: Z3 + 30 }
+      { x: Z3, name: 'The terraces', spawn: Z3 + 30 },
+      { x: Z4, name: 'Sumara pass', spawn: Z4 + 30 }
     ],
     gates: [
       { id: 'cp', x: 560, groups: ['A', 'A2'] },
@@ -138,7 +150,10 @@ var LEVEL_IBB = (function () {
       { id: 'farm2', x: 5060, groups: ['K', 'K2'] },
       { id: 'hamlet', x: 5300, groups: ['R', 'R2'] },
       { id: 'cistern', x: 5560, groups: ['S', 'S2'] },
-      { id: 'station', x: 5850, groups: ['L', 'L2'], until: 'rally' }          // (and the Spokesman gone: rally.js)
+      { id: 'station', x: 5850, groups: ['L', 'L2'], until: 'rally' },         // (and the Spokesman gone: rally.js)
+      { id: 'post', x: 6800, groups: ['T', 'T2'] },
+      { id: 'shack', x: 7180, groups: ['U', 'U2'] },
+      { id: 'summit', x: 7470, groups: ['V', 'V2'] }
     ],
     groups: {
       A: { zone: 0, trig: 300 },
@@ -176,7 +191,13 @@ var LEVEL_IBB = (function () {
       S: { zone: 2, trig: 5400 },
       S2: { zone: 2, after: 'S', delay: 40, lastManSurrenders: true },
       L: { zone: 2, trig: 5660 },
-      L2: { zone: 2, after: 'L', delay: 40, lastManSurrenders: true }
+      L2: { zone: 2, after: 'L', delay: 40, lastManSurrenders: true },
+      T: { zone: 3, trig: 6620 },
+      T2: { zone: 3, after: 'T', delay: 40, lastManSurrenders: true },
+      U: { zone: 3, trig: 7000 },
+      U2: { zone: 3, after: 'U', delay: 40, lastManSurrenders: true },
+      V: { zone: 3, trig: 7290 },
+      V2: { zone: 3, after: 'V', delay: 40, lastManSurrenders: true }
     },
     // k: rifle | bomber | door. enter: 1 from the right edge, -1 from the left. door: out of the doorway at x.
     // A man at a post stands inside the middle of his gate's held screen, outside the lanes the others walk in by, at every
@@ -352,7 +373,36 @@ var LEVEL_IBB = (function () {
       { g: 'L2', k: 'rifle', door: 1, x: 5720, delay: 0, look: 'youth' },
       { g: 'L2', k: 'rifle', enter: -1, delay: 30, look: 'angry' },
       { g: 'L2', k: 'rifle', door: 1, x: 5720, delay: 60, look: 'qat' },
-      { g: 'L2', k: 'rifle', enter: 1, delay: 100, look: 'worried' }
+      { g: 'L2', k: 'rifle', enter: 1, delay: 100, look: 'worried' },
+      // ---- the pass, their post: one behind the sandbags across the road, a bomber in front of the container, one by the
+      //      drum; then out of the container, a man with a door, and one from behind
+      { g: 'T', k: 'rifle', x: 6800, plat: 'cpnest', post: 1, look: 'angry' },
+      { g: 'T', k: 'bomber', x: 6730, post: 1 },
+      { g: 'T', k: 'rifle', x: 6870, post: 1, look: 'qat' },
+      { g: 'T2', k: 'rifle', door: 1, x: 6690, delay: 0, look: 'youth' },
+      { g: 'T2', k: 'door', enter: 1, delay: 30, tag: 'd' },
+      { g: 'T2', k: 'rifle', enter: 1, delay: 30, dx: 34, behind: 'd', look: 'worried' },
+      { g: 'T2', k: 'rifle', door: 1, x: 6690, delay: 80, look: 'angry' },
+      { g: 'T2', k: 'rifle', enter: -1, delay: 130, look: 'qat' },
+      // ---- the tea shack: one on its roof, one on its awning, one on the road; a bomber comes down the road; then out of
+      //      its door, and from both ends
+      { g: 'U', k: 'rifle', x: 7100, plat: 'shackroof', post: 1, look: 'qat' },
+      { g: 'U', k: 'rifle', x: 7146, plat: 'shackawn', post: 1, look: 'youth' },
+      { g: 'U', k: 'rifle', x: 7250, post: 1, look: 'angry' },
+      { g: 'U', k: 'bomber', enter: 1, delay: 80 },
+      { g: 'U2', k: 'rifle', door: 1, x: 7074, delay: 0, look: 'worried' },
+      { g: 'U2', k: 'rifle', enter: 1, delay: 30, look: 'qat' },
+      { g: 'U2', k: 'rifle', door: 1, x: 7074, delay: 80, look: 'angry' },
+      { g: 'U2', k: 'rifle', enter: -1, delay: 130, look: 'youth' },
+      // ---- the summit: one on the rock, a bomber by their flag, one at the top of the road; then down from the lookout,
+      //      a man with a door, and one from behind
+      { g: 'V', k: 'rifle', x: 7410, plat: 'summitrock', post: 1, look: 'angry' },
+      { g: 'V', k: 'bomber', x: 7484, post: 1 },
+      { g: 'V', k: 'rifle', x: 7540, post: 1, look: 'worried' },
+      { g: 'V2', k: 'rifle', enter: 1, delay: 0, look: 'youth' },
+      { g: 'V2', k: 'door', enter: 1, delay: 40, tag: 'd' },
+      { g: 'V2', k: 'rifle', enter: 1, delay: 40, dx: 34, behind: 'd', look: 'qat' },
+      { g: 'V2', k: 'rifle', enter: -1, delay: 120, look: 'angry' }
     ],
     props: [
       { k: 'crate', x: 340, gives: 'gren', zone: 0 },
@@ -364,7 +414,9 @@ var LEVEL_IBB = (function () {
       { k: 'crate', x: 3340, plat: 'souqroofA', gives: 'gren', zone: 1 },
       { k: 'crate', x: 4324, plat: 'hutroof', gives: 'gren', zone: 2 },
       { k: 'crate', x: 5084, plat: 'farmroof', gives: 'hmg', zone: 2 },
-      { k: 'crate', x: 5482, plat: 'lastroof', gives: 'gren', zone: 2 }
+      { k: 'crate', x: 5482, plat: 'lastroof', gives: 'gren', zone: 2 },
+      { k: 'crate', x: 7066, plat: 'shackroof', gives: 'gren', zone: 3 },
+      { k: 'crate', x: 7330, gives: 'hmg', zone: 3 }
     ],
     // the stage on the top of the terraces (rally.js; render_ibb.js draws it): its deck, his podium on it, the chairs his
     // audience sits in (the back row's three, then the front row's two: x where the hips come, y the seat; painted chairs,
@@ -375,6 +427,9 @@ var LEVEL_IBB = (function () {
     // the school's three classrooms (school.js): where their doors are, how many children each holds; the yard's floor;
     // the teacher, at his flagpole, waits for them once freed and then goes after them
     school: { gate: 'school', y: 184, teacher: 2656, doors: [{ x: 2554, n: 5 }, { x: 2654, n: 4 }, { x: 2754, n: 5 }] },
+    // the lookout at the top of the pass: its floor, the five podiums they have set out for him, each with its screen on a
+    // stand behind it (render_ibb.js draws them; his fight on them comes after its storyboard), their van at the far end
+    arena: { x0: 7550, x1: 8160, y: 120, podiums: [7680, 7760, 7840, 7920, 8000], van: { x0: 8072, x1: 8152, door: [8096, 8118] } },
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
     // is told in pieces, a few lines a set, through the zones); they stand on the verge behind the road
     screens: [
@@ -389,7 +444,9 @@ var LEVEL_IBB = (function () {
       { x: 3460, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_A2', 'sp_A3', 'sp_A4', 'sp_A5', 'sp_A6'] },
       { x: 4136, size: 'tv', zone: 2, gy: 174, lines: ['sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
       { x: 4860, size: 'tv', zone: 2, gy: 126, lines: ['sp_A7', 'sp_A8', 'sp_A11'] },
-      { x: 5592, size: 'tv', zone: 2, gy: 110, lines: ['sp_important', 'sp_B2', 'sp_B3', 'sp_B4'] }
+      { x: 5592, size: 'tv', zone: 2, gy: 110, lines: ['sp_important', 'sp_B2', 'sp_B3', 'sp_B4'] },
+      { x: 6644, size: 'tv', zone: 3, gy: 110, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4', 'sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
+      { x: 7036, size: 'tv', zone: 3, gy: 110, lines: ['sp_B4', 'sp_B5', 'sp_B6', 'sp_end'] }
     ]
   };
   return L;

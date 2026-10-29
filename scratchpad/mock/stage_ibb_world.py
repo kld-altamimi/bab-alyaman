@@ -15,6 +15,7 @@ import stage_ibb_z1 as Z1
 import stage_ibb_z1x as Z1X
 import stage_ibb_z2 as Z2
 import stage_ibb_z3 as Z3
+import stage_ibb_z4 as Z4
 
 SH = I.SH
 ASPHALT_END = 1990               # the valley's asphalt whole to here, then breaking up over the setts
@@ -82,12 +83,13 @@ def joins(L, seed=951):
 # ------------------------------------------------------------------ the whole play picture
 def play(seed=0):
     """-> the play picture (0 to the end of the last zone) with I.PLATS and I.INFO filled."""
-    W = Z3.END3
+    W = Z4.END4
     L = Layer(W, SH)
     ground(L)
     Z1.play_z1(view(L, 0, Z1.W1), ground=False)
     Z2.play_z2(view(L, Z2.X0, Z2.W2), ground=False)
-    Z3.play_z3(view(L, Z3.X0, Z3.W3), ground=False)
+    Z3.play_z3(view(L, Z3.X0, Z3.W3), ground=False, wide=view(L, Z3.X0, Z3.W3 + Z4.W4))
+    Z4.play_z4(view(L, Z4.X0, Z4.W4))
     e = joins(L)
     I.INFO['edge'] = e
     return L
@@ -97,31 +99,42 @@ def play(seed=0):
 def back(seed=0):
     """-> the `back` layer's picture (from Z2.BACK_X): Jibla climbing its slope, then the terraces' mountainside with
     its falls and its hamlet on a spur, on one slope: one skyline and one sweep of terraces across the two."""
-    w2, w3 = Z2.BACK_W, 1410
-    W = w2 + w3
+    w2, w3, w4 = Z2.BACK_W, 1410, BACK_PASS_W
+    W = w2 + w3 + w4
     L = Layer(W, SH)
     c2 = Z2.back_crest(w2, 61)
     c3 = Z3.back_crest(w3, 461)
-    crest = np.concatenate([c2, c3])
+    crest = np.concatenate([c2, c3, np.full(w4, 999.0)])           # (no terraced slope under the pass's own picture)
     # (the two skylines meet at 76; ease the meeting over a few columns)
     k = 24
     crest[w2 - k:w2 + k] = np.linspace(crest[w2 - k], crest[w2 + k - 1], 2 * k)
     yy, xx = np.mgrid[0:SH, 0:W]
     m = yy >= crest[None, :]
     per = 6.0
-    E = yy - 0.35 * (crest[None, :] - crest.mean())
+    E = yy - 0.35 * (crest[None, :] - crest[:w2 + w3].mean())
     frac = (E / per) - np.floor(E / per)
     t = 0.52 + 0.08 * (noise((SH, W), 62, 18, 3) - 0.5) - 0.14 * (frac > 0.72) + 0.06 * (frac < 0.2)
     L.put(toned(np.clip(t, 0, 1), I.TERR, dither=0.5), m)
     Z2.back_town(w2, 61, L=view(L, 0, w2), crest=crest[:w2], slope=False)
-    Z3.back_falls(w3, 461, L=view(L, w2, w3), crest=crest[w2:], slope=False)
+    Z3.back_falls(w3, 461, L=view(L, w2, w3), crest=crest[w2:w2 + w3], slope=False)
     # the mountainside further off than the town: a haze coming on across the join
     hz = np.clip((np.arange(W) - (w2 - 200)) / 400.0, 0, 1) * 0.10
     sub = L.rgb.astype(float)
     L.rgb[:] = np.clip(sub * (1 - hz[None, :, None]) + Z2.HAZE_T * hz[None, :, None], 0, 255).astype(np.uint8)
+    # the pass's mountains in the cloud, the cloud coming on over the terraces' mountainside before them
+    P = Z4.back_pass(w4)
+    L.paste(P, w2 + w3, 0)
+    xs = np.arange(W)
+    ramp_ = np.clip((xs - (w2 + w3 - 360)) / 360.0, 0, 1)
+    dens = np.clip(ramp_[None, :] ** 1.5 * (0.55 - 0.0015 * (np.arange(SH)[:, None] - 60)), 0, 0.60)
+    dens[:, w2 + w3:] = 0
+    Z4.fog(L, dens, 0, seed=77)
     return L
 
 
 def fore(seed=131):
     """-> the foreground's strip along the whole mission (at 1.25 of the street's pace): tufts and stones."""
-    return Z1.fore_z1(w=int(Z3.END3 * 1.25) + 600, seed=seed)
+    return Z1.fore_z1(w=int(Z4.END4 * 1.25) + 600, seed=seed)
+
+
+BACK_PASS_W = 1400               # the pass's mountains in the back layer (after the terraces' mountainside)

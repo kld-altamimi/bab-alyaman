@@ -832,15 +832,17 @@ def back_crest(w, seed=461):
 
 
 # ------------------------------------------------------------------ zone 3, put together
-def play_z3(L=None, seed=501, ground=True):
+def play_z3(L=None, seed=501, ground=True, wide=None):
     """The terraces, world 4080 to 6200 (the picture's x is world - 4080). With ground=False, Jibla's street and its last
     field wall running into the zone are left to stage_ibb_world.py (painted across the join)."""
     import stage_ibb_z3x as X
     L = L if L is not None else Layer(W3, SH)
     info = {}
     S = STATION
+    G = wide if wide is not None else L                  # (the terraces' fields, path and drop carry on into the pass:
+                                                         # stage_ibb_world.py gives a window over both zones)
     # (1) the hillside behind the path, its trees, the things standing at the back of the path
-    crest = hillside(L, seed=seed)
+    crest = hillside(G, seed=seed)
     if ground:
         Z1.drystone(L, 0, 40, 140, 171, seed=seed + 3)       # (Jibla's last field wall, running on into the zone)
     for k, (tx, th) in enumerate(((96, 120), (286, 112), (700, 128), (1018, 118), (1534 + S, 124))):
@@ -880,12 +882,12 @@ def play_z3(L=None, seed=501, ground=True):
     info['posters'] = [Z1.poster(L, 271, gy(271) - 34, 'face', seed=seed + 40), Z1.poster(L, 1080 + S, base - 26, 'badge', seed=seed + 41)]
     info['posters'] += info['hamlet']['posters']
     # (4) the path along the terraces, the drop in front, the risers, the stream down through it all
-    path(L, 36, W3, seed=seed + 50)
-    bands = drop(L, seed=seed + 51)
+    path(G, 36, G.w, seed=seed + 50)
+    bands = drop(G, seed=seed + 51)
     for kind, t0, t1 in bands:                          # (Jibla's street runs on for a few steps first)
         t0[:36] = SH; t1[:36] = SH
-    risers(L, seed=seed + 52)
-    stream(L, FX - 9, FX + 9, bands, seed=seed + 53)
+    risers(G, seed=seed + 52)
+    stream(G, FX - 9, FX + 9, bands, seed=seed + 53)
     if ground:
         Z2.cobbles(L, 0, 40, seed=seed + 54)
     info['stream'] = dict(x0=wx(FX - 9), x1=wx(FX + 9))

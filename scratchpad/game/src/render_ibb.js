@@ -15,6 +15,8 @@
 // behind it, giving his statement (D): heard in person when he is the nearest of his voices in the picture (talk()), the
 // mouth with his line; stopped short by Yazeed's word, then his jump (the podium was hiding the rest) and his dash for the
 // pass. The five in the chairs sit still, clap after each of his lines, and applaud his jump, and go on applauding.
+// The lookout at the top of the pass (zone 4; L.arena): the five podiums they have set out for him, each with its screen
+// on a pole behind it, his face in it, soundless, waiting (his fight on them comes after its storyboard).
 (function () {
   'use strict';
   var FS = null, IMI = null, cx = null;
@@ -183,12 +185,31 @@
     else if (r && r.st === 'run') ispr('spk_run' + (Math.floor(r.runD / 7) % 2), r.x, r.y, false);
   }
 
+  // ---------------------------------------------------------------- the lookout on the pass
+  var PS_LIFT = 46;                      // a podium's screen: its mount's foot this far above the floor
+  function drawArena(s, K) {
+    var A = s.L.arena, cam = s.cam, W = K.W();
+    if (A.x1 + 30 < cam || A.x0 - 30 > cam + W) return;
+    for (var i = 0; i < A.podiums.length; i++) {
+      var x = A.podiums[i], y = A.y, top = y - PS_LIFT - 40;
+      if (x + 30 < cam || x - 30 > cam + W) continue;
+      // the pole behind the podium, its feet on the gravel
+      cx.fillStyle = '#16181c'; cx.fillRect(x - 1, top + 40, 3, y - top - 40); cx.fillRect(x - 6, y - 1, 13, 1); cx.fillRect(x - 4, y - 2, 9, 1);
+      cx.fillStyle = '#4a4e56'; cx.fillRect(x - 1, top + 40, 1, y - top - 41);
+      var o = { i: 40 + i }, m = mouthOf(s, o, K);
+      ispr(m === 0 && blinkOf(s, o) ? 'psb' : 'ps' + m, x - 24, top + 2);
+      ispr('ps_box', x - 26, top);
+      ispr('podium', x, y, true);
+    }
+  }
+
   function ground(s, paused, K) {
-    if ((!s.school && !s.L.stage) || !sheet()) return;
+    if ((!s.school && !s.L.stage && !s.L.arena) || !sheet()) return;
     cx = K.ctx();
     fresh(s);
     if (s.school) drawDoors(s, K, false);
     if (s.L.stage) drawRally(s, K);
+    if (s.L.arena) drawArena(s, K);
   }
   function drawKids(s) {
     for (var i = 0; i < s.kids.length; i++) {

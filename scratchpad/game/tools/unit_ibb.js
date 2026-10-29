@@ -64,6 +64,12 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
   const jumpH = Sim.T.JUMP_V * Sim.T.JUMP_V / (2 * Sim.T.GRAV);
   ok(maxStep > Sim.T.STEP_UP && maxStep < jumpH * 0.4, 'the terraces\' steps are walls, and low enough to hop up (' + maxStep + ' px; a jump is ' + Math.round(jumpH) + ')');
   for (const st of STAGE.info.z3.steps) ok(Sim.groundY(L, st.x) === st.y && Sim.groundY(L, st.x - 4) >= st.y, 'the ground steps up at ' + st.x + ' to ' + st.y + ', where the painting has the wall');
+  // the lookout on the pass: its five podiums where the painting has them, all in the one screen at every width
+  const A = L.arena, PA = STAGE.info.z4 && STAGE.info.z4.arena;
+  ok(!!A && !!PA && A.x0 === PA.x0 && A.x1 === PA.x1 && JSON.stringify(A.podiums) === JSON.stringify(PA.podiums), 'the lookout and its podiums where the painting has them');
+  ok(A && A.podiums.length === 5 && A.podiums[4] - A.podiums[0] + 2 * 30 <= 384 && A.podiums.every(x => x > A.x0 + 40 && x < A.x1 - 40),
+     'five podiums on the lookout, all in one screen at the narrowest (' + (A ? A.podiums[4] - A.podiums[0] : '?') + ' px apart)');
+  ok(L.exitX > A.podiums[4] + 60 && L.exitX <= L.endRight - 30, 'the way out past the last podium (' + L.exitX + ')');
   for (let z = 0; z < L.zones.length; z++) {
     const s = Sim.create(L, { viewW: 468, zone: z });
     ok(s.status === 'play' && Math.abs(s.p.x - L.zones[z].spawn) < 1, 'zone ' + z + ' (' + L.zones[z].name + ') starts a game');
@@ -249,7 +255,7 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
 // (bot.js's player, which fights as it goes: turns to whoever is there, captures whoever gives up, frees whoever is
 // tied up; what must always hold is checked on every tick)
 const B = require(path.join(__dirname, 'bot.js'));
-function walk(seed, auto) { return B.run(B.smartBot({ auto: auto }), { level: IBB, seed: seed, seconds: 360, continues: 9, name: 'ibb ' + seed }); }
+function walk(seed, auto) { return B.run(B.smartBot({ auto: auto }), { level: IBB, seed: seed, seconds: 480, continues: 9, name: 'ibb ' + seed }); }
 (function bot() {
   for (const [seed, auto] of [[7, false], [11, true], [23, false]]) {
     const r = walk(seed, auto), s = r.s;

@@ -582,6 +582,31 @@ def stage_frames():
     return out
 
 
+def ps_box():
+    """A podium's screen on the pass (zone 4): a flat monitor's bezel round the 48 x 32 picture (at 2, 2), its red light
+    on, a mount under it; drawn over the picture, its top left at the anchor. (The pole down to the ground: render_ibb.js.)"""
+    W, H = 48 + 4, 32 + 4
+    im = Image.new('RGBA', (W, H + 4), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, W - 1, H - 1], fill=(26, 28, 32, 255))
+    d.line([(0, 0), (W - 1, 0)], fill=(74, 78, 86, 255))
+    d.line([(0, 0), (0, H - 1)], fill=(56, 60, 68, 255))
+    d.line([(0, H - 1), (W - 1, H - 1)], fill=(12, 12, 14, 255))
+    d.rectangle([2, 2, 2 + 47, 2 + 31], fill=(0, 0, 0, 0))
+    d.point((W - 3, H - 2), fill=(232, 40, 32, 255))                 # (on the air)
+    d.rectangle([W // 2 - 3, H, W // 2 + 2, H + 3], fill=(30, 32, 36, 255))
+    d.line([(W // 2 - 3, H), (W // 2 + 2, H)], fill=(60, 64, 72, 255))
+    return im, 0, 0
+
+
+def arena_frames():
+    """The lookout on the pass (zone 4): each podium's screen, his face in it (three mouths and a blink), and its bezel."""
+    out = [('ps%d' % m, screen('podium', m, False), 0, 0) for m in range(3)]
+    out.append(('psb', screen('podium', 0, True), 0, 0))
+    out.append(('ps_box',) + ps_box())
+    return out
+
+
 def frames():
     """-> [(name, image, ax, ay)] for the sheet."""
     items = []
@@ -596,6 +621,7 @@ def frames():
     items += kid_frames() + yazeed_low()
     items.append(('podium',) + podium())          # (the terraces' stage: his podium on its deck, render_ibb.js)
     items += stage_frames()
+    items += arena_frames()
     return items
 
 
