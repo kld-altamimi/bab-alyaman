@@ -10,7 +10,7 @@ const URL = process.argv[2];
 (async () => {
   const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
   for (const [label, vp] of [['phone on its side, 3x', [844, 390, 3]], ['phone upright, 3x', [390, 760, 3]]]) {
-    for (const [mis, zone, until] of [['taiz', 0, 1300], ['ibb', 0, 1280], ['ibb', 1, 2640]]) {
+    for (const [mis, zone, until] of [['taiz', 0, 1300], ['ibb', 0, 1280], ['ibb', 1, 2640], ['ibb', 2, 4080]]) {
       const ctx = await browser.newContext({ viewport: { width: vp[0], height: vp[1] }, deviceScaleFactor: vp[2], hasTouch: true, isMobile: true });
       const page = await ctx.newPage();
       await page.route(/posthog|fonts\.(googleapis|gstatic)/, (r) => r.abort());

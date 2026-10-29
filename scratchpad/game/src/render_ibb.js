@@ -128,10 +128,13 @@
   }
 
   function scene(s, paused, K) {
-    if ((!s.L.screens && !s.school) || !sheet()) return;
+    if ((!s.L.screens && !s.school && !s.L.stage) || !sheet()) return;
     cx = K.ctx();
     var cam = s.cam, W = K.W(), at = s.L.screens ? screens(s) : [];
     if (s.school) drawDoors(s, K);
+    // the stage on the top of the terraces: his podium on its deck (nobody at it yet)
+    var sg = s.L.stage;
+    if (sg && sg.podium + 20 > cam && sg.podium - 20 < cam + W) ispr('podium', sg.podium, sg.deck);
     for (var i = 0; i < at.length; i++) {
       var o = at[i], hw = o.big ? 80 : 26;
       if (o.x + hw < cam || o.x - hw > cam + W) continue;

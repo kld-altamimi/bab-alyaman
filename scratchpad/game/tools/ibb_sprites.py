@@ -574,6 +574,7 @@ def frames():
     items.append(('tv_box',) + tv_box())
     items.append(('crate',) + crate())
     items += kid_frames() + yazeed_low()
+    items.append(('podium',) + podium())          # (the terraces' stage: his podium on its deck, render_ibb.js)
     return items
 
 

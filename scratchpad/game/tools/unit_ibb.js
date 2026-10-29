@@ -28,8 +28,8 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(q.x > 60 && q.x < L.endRight - 30, q.size + ' at ' + q.x + ' inside the level');
     ok(q.lines.length > 0, q.size + ' at ' + q.x + ' has lines');
     for (const id of q.lines) ok(!!lines[id], q.size + ' at ' + q.x + ': line ' + id + ' recorded');
-    const gy = q.gy != null ? q.gy : Sim.groundY(L, q.x);
-    ok(gy >= STAGE.world.VERGE && gy <= 184, q.size + ' at ' + q.x + ' stands on the verge or the road (' + gy + ')');
+    const gy = q.gy != null ? q.gy : Sim.groundY(L, q.x), g = Sim.groundY(L, q.x);
+    ok(gy <= g && gy >= Math.min(STAGE.world.VERGE, g - 24), q.size + ' at ' + q.x + ' stands on the verge, the road or at the back of the path (' + gy + ', ground ' + g + ')');
   }
   // a posted man must stand in the middle of his gate's held screen, outside the lanes the others walk in by, at every
   // width a phone gives (the screen stops at the gate's line halfway across, or at the level's end if that comes first)
@@ -56,6 +56,13 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(!!pp && JSON.stringify(pp) === JSON.stringify(pl.pts), 'platform ' + pl.id + ' where the painting has it');
   }
   for (const id in STAGE.plats) ok(L.plats.some(pl => pl.id === id), 'painted top ' + id + ' is a platform');
+  // the ground as painted: flat through the town, then the terraces' steps, each one a wall Yazeed can hop up
+  ok(L.walls === true && L.ground && L.ground.y.length * L.ground.step > L.endRight, 'the ground is the painting\'s, with walls (' + L.ground.y.length + ' samples)');
+  let maxStep = 0;
+  for (let i = 1; i < L.ground.y.length; i++) maxStep = Math.max(maxStep, L.ground.y[i - 1] - L.ground.y[i]);
+  const jumpH = Sim.T.JUMP_V * Sim.T.JUMP_V / (2 * Sim.T.GRAV);
+  ok(maxStep > Sim.T.STEP_UP && maxStep < jumpH * 0.4, 'the terraces\' steps are walls, and low enough to hop up (' + maxStep + ' px; a jump is ' + Math.round(jumpH) + ')');
+  for (const st of STAGE.info.z3.steps) ok(Sim.groundY(L, st.x) === st.y && Sim.groundY(L, st.x - 4) >= st.y, 'the ground steps up at ' + st.x + ' to ' + st.y + ', where the painting has the wall');
   for (let z = 0; z < L.zones.length; z++) {
     const s = Sim.create(L, { viewW: 468, zone: z });
     ok(s.status === 'play' && Math.abs(s.p.x - L.zones[z].spawn) < 1, 'zone ' + z + ' (' + L.zones[z].name + ') starts a game');
