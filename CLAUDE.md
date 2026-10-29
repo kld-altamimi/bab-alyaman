@@ -29,8 +29,8 @@ of these files, never the place where edits happen. If the artifact and the repo
 - `node --check` on the script block catches syntax errors; a headless Chromium run (`playwright`) with
   `window.__m1.begin('m1', 0)` confirms the game boots and starts a mission without page errors.
 - The debug handle `window.__m1` exposes `state()`, `sim()`, `cur()`, `begin()`, `skipAhead()`, `report()`.
-- `python3 tools/signoff.py . <output folder> --strict` runs game-features' "must still work" checklist
-  (claude/topics/game-features-checklist.md in the Project) on this folder's build: every line must pass before Khaled
+- `python3 tools/signoff.py . <output folder> --strict` runs game-development's "must still work" checklist
+  (claude/topics/game-development-checklist.md in the Project) on this folder's build: every line must pass before Khaled
   is asked to push. (`--strict` holds every build to the lines added in 0.11.64: menu steps, like / dislike, the big
   Continue; leave it off only for a build made before 0.11.64.)
 
