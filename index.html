@@ -578,7 +578,7 @@ html[lang="ar"] .fbq,html[lang="ar"] .fbthanks{text-transform:none}
 </div>
 
 <script>
-var BUILD = "0.16.86";
+var BUILD = "0.16.87";
 // the Radio meter: hidden until spending it is built (it still fills underneath; Khaled, 19 Oct)
 var RADIO_ON = false;
 // the two badges, Ace and Liberator, drawn here in pixels (Khaled, 19 Oct). Ace: a gold medal with a jambiya struck on
@@ -3078,7 +3078,7 @@ var Sim = (function () {
         any = true;
         if (he.y < s.p.y - 26) above = true;
       }
-      s.quietT = any ? s.quietT + 1 : 0;
+      s.quietT = any && !s.hush ? s.quietT + 1 : 0;          // (not while Ibb's school is let out: his gun is down, the doors are his to open)
       for (i = 0; i < s.events.length; i++) if (s.events[i].t === 'die' || s.events[i].t === 'surrender') s.quietT = 0;
       if (s.quietT > 330 && above && !s.hinted.up) { s.hinted.up = 1; ev(s, { t: 'hint', k: 'up' }); }
       // only after a good two seconds of bullets wasted on it
@@ -5842,15 +5842,16 @@ var Sim = Sim || require('./sim.js');
     for (var i = 0; i < s.gates.length; i++) if (s.gates[i].id === s.L.school.gate) return s.gates[i];
     return null;
   }
-  // the yard is clear: the school's fight is over, nobody of theirs is awake on the screen (one further up the street,
-  // off it, stays where he is while the school is let out: sim.js holds him), and nothing is burning, flying or on its way
+  // the yard is clear: the school's fight is over, nobody of theirs is awake with his feet in the picture (one further up
+  // the street, off it, stays where he is while the school is let out: sim.js holds him), and nothing is burning, flying or
+  // on its way
   function yardClear(s) {
     var gt = gateOf(s), i;
     if (!gt) return false;
     for (i = 0; i < gt.groups.length; i++) if (!s.groups[gt.groups[i]].done) return false;
     for (i = 0; i < s.enemies.length; i++) {
       var e = s.enemies[i], G = s.groups[e.g];
-      if (e.alive && e.hostile && (!G || G.awake) && Sim.onScreen(s, e.x, 20)) return false;
+      if (e.alive && e.hostile && (!G || G.awake) && Sim.onScreen(s, e.x, -2)) return false;
     }
     for (i = 0; i < s.bombs.length; i++) if (!s.bombs[i].gone) return false;
     for (i = 0; i < s.bullets.length; i++) if (!s.bullets[i].gone && !s.bullets[i].own) return false;
