@@ -8,9 +8,11 @@
 // the mosque up the slope behind (the mosque is background only: nothing is staged near it). Houses with a stepped alley
 // up to a roof; the school, the Zanabeel's "course" now, its yard open to the street, sets playing statement B, the
 // walkway along its upper floor, and the teacher tied to the flagpole (the mission's somebody to free); more houses and a
-// second alley; a last shop; the way out toward the terraces. (The children in the classrooms come once Khaled has seen
-// how: the classrooms stay shut until then.) The mission ends at the end of the zones painted so far. Only test builds
-// have it (build.py --ibb).
+// second alley; a last shop; the way out toward the terraces. The classrooms are padlocked until the school's fight is
+// over; then Yazeed opens each and the class runs home, his gun pointed at the ground while they are out (school.js;
+// Khaled, 29 Oct: the storyboard "All good", the children redrawn in the cast's style), and the school's gate waits for
+// every class to be out and away. The mission ends at the end of the zones painted so far. Only test builds have it
+// (build.py --ibb).
 // The ground is the road: flat, the walk line at 184. Platforms are the tops of things as mock/stage_ibb_z1.py paints
 // them (gen/stage_ibb.json; unit_ibb.js checks that the two agree).
 var LEVEL_IBB = (function () {
@@ -82,7 +84,7 @@ var LEVEL_IBB = (function () {
       { id: 'shop', x: 1000, groups: ['C', 'C2'] },
       { id: 'bus', x: 1170, groups: ['D', 'D2'] },
       { id: 'alley', x: 1560, groups: ['E', 'E2'] },
-      { id: 'school', x: 1880, groups: ['F', 'F2'] },
+      { id: 'school', x: 1880, groups: ['F', 'F2'], until: 'school' },          // (and every class let out: school.js)
       { id: 'upper', x: 2200, groups: ['G', 'G2'] },
       { id: 'out', x: 2540, groups: ['H', 'H2'] }
     ],
@@ -189,6 +191,9 @@ var LEVEL_IBB = (function () {
       { k: 'detainee', x: 1856, zone: 1 },                   // the teacher, tied to his own flagpole
       { k: 'crate', x: 2120, plat: 'h4roof', gives: 'hmg', zone: 1 }
     ],
+    // the school's three classrooms (school.js): where their doors are, how many children each holds; the yard's floor;
+    // the teacher, at his flagpole, waits for them once freed and then goes after them
+    school: { gate: 'school', y: 184, teacher: 1856, doors: [{ x: 1754, n: 5 }, { x: 1854, n: 4 }, { x: 1954, n: 5 }] },
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
     // is told in pieces, a few lines a set, through the zones); they stand on the verge behind the road
     screens: [

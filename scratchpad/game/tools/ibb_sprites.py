@@ -543,6 +543,25 @@ def crate():
     return compose([(CRATE, 0, 0, p)], foot=(13, len(CRATE)))
 
 
+def kid_frames():
+    """The school's children (tools/ibb_kids.py; 29 Oct): each of the four, running (two halves of a stride), standing,
+    waving. They face right; the game flips them to run left, for home."""
+    import ibb_kids
+    return [(n, im, ax, ay) for n, (im, ax, ay) in sorted(ibb_kids.frames().items())]
+
+
+def yazeed_low():
+    """Yazeed with his gun pointed at the ground, for while the school's children are out (render_ibb.js): standing and
+    the two walking frames, with each gun. The same drawing as his frames in the atlas (sprites.py), aimed down and along."""
+    import sprites as SP
+    out = []
+    for legs in ('stand', 'pass', 'run'):
+        for gun in ('side', 'hmg'):
+            b = SP.build(*SP.yazeed(legs, gun, 'ddiag'))
+            out.append(('ylow_%s_%s' % (legs, gun), b['im'], b['ax'], b['ay']))
+    return out
+
+
 def frames():
     """-> [(name, image, ax, ay)] for the sheet."""
     items = []
@@ -554,6 +573,7 @@ def frames():
     items.append(('tvb', screen('tv', 0, True), 0, 0))
     items.append(('tv_box',) + tv_box())
     items.append(('crate',) + crate())
+    items += kid_frames() + yazeed_low()
     return items
 
 

@@ -525,6 +525,10 @@
         case 'lunge': Sound.sfx('rev', { pan: panOf(e.x) }); buzz(30); break;
         case 'brake': Sound.sfx('brake', { gain: 0.8, pan: panOf(e.x) }); break;
 
+        // ---- Ibb: the school (school.js)
+        case 'class_open': Sound.sfx('door_creak', { gain: 0.9, pan: panOf(e.x) }); break;
+        case 'kid_stop': after(8, function () { speak('yazeed_home', { pri: 4, who: 'YAZEED' }); }); break;
+
         // ---- Taiz, by Apache
         case 'heli_ready':
           if (!flags.flyTip) { flags.flyTip = 1; after(30, function () { hint(T(coarse ? 'Left stick flies it. Right stick aims and fires the gun' : 'The arrows fly it. Hold FIRE and the gun aims itself')); }); }

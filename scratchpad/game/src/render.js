@@ -919,7 +919,10 @@ var Render = (function () {
       } else if (!(p.inv > 0 && (p.inv >> 1) % 2)) {
         // (a crouching walk is a shuffle: the one frame, lifted a dot on every other step)
         var snz = p.sneezeT > Sim.T.P_SNEEZE - 6 ? 1 : 0;                              // (the Souq: doubled up with a sneeze)
-        spr(playerFrame(p), p.x - (p.fireT < 2 ? p.face : 0) + snz * p.face, p.y - (p.crouch && Math.abs(p.vx) > 1 && Math.floor(p.runD / 5) % 2 ? 1 : 0) + snz, p.face < 0);
+        // (a mission that draws him its own way for a while says so: Ibb's school, his gun pointed at the ground)
+        var own = false;
+        for (var ybk in bosses) if (bosses[ybk].yazeed && bosses[ybk].yazeed(s, p, playerLegs(p), K)) { own = true; break; }
+        if (!own) spr(playerFrame(p), p.x - (p.fireT < 2 ? p.face : 0) + snz * p.face, p.y - (p.crouch && Math.abs(p.vx) > 1 && Math.floor(p.runD / 5) % 2 ? 1 : 0) + snz, p.face < 0);
       }
       SRC = null;
     }

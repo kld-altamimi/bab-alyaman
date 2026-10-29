@@ -4,6 +4,8 @@
 # also gets the shape of his mouth, a frame every 1/15 s
 # (0 shut, 1 half, 2 wide), measured off its own loudness, for the screen that is saying it.
 # The file is laid out as voices.mp3 is (a click, then the clips), so the game lines it up the same way.
+# Ibb's own lines from the cast go on the end, after the statements (29 Oct: Yazeed's to the child who stops to wave, at
+# the school), in their own voices, as add_voices.py makes them.
 #   python3 add_speech.py              -> audio/speech_ibb.mp3, and gen/audio.json's 'speech' gains 'ibb'
 import json, os, subprocess, sys
 import numpy as np
@@ -35,6 +37,10 @@ def sprite(clips):
     return np.concatenate(parts), at
 
 WHO = 'BRIGADIER BREAKING'                       # «العميد عاجل» (Khaled, 24 Oct)
+# the cast's lines in Ibb: id -> (speaker, who, subtitle, babble, options); «روح البيت. وطمّن أمك.» (Khaled, 29 Oct: "All good")
+CAST_LINES = {
+    'yazeed_home': ('yazeed', 'YAZEED', 'Go home. Tell your mother.', '*ruu7 *al-bayt . . wa-*tam-min *um-mak', {}),
+}
 FPS = 15
 
 
@@ -76,6 +82,11 @@ if __name__ == '__main__':
         y = S.line(bab, seed)
         clips.append((lid, y))
         meta[lid] = dict(who=WHO, text=en, m=mouth_track(y))
+    for lid in sorted(CAST_LINES):
+        sp, who, en, bab, opt = CAST_LINES[lid]
+        y = V.level(V.dry(V.CAST[sp].say(bab, seed=sum(map(ord, lid)) % 997, **opt), seed=5))
+        clips.append((lid, y))
+        meta[lid] = dict(who=who, text=en)
     strip, at = sprite(clips)
     write_wav('out/tmp/speech_ibb.wav', strip)
     # (at half the rate the voices use: his lines come through a television and stop at 4.2 kHz anyway; a fifth smaller)

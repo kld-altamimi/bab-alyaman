@@ -160,7 +160,7 @@ var Sim = (function () {
     for (i = 0; i < L.gates.length; i++) {
       var gt = L.gates[i], past = true;
       for (var j = 0; j < gt.groups.length; j++) if (!s.groups[gt.groups[j]].done) past = false;
-      s.gates.push({ id: gt.id, x: gt.x, groups: gt.groups, done: past, wall: gt.wall || null });
+      s.gates.push({ id: gt.id, x: gt.x, groups: gt.groups, done: past, wall: gt.wall || null, until: gt.until || null });
       if (!past && s.holdX == null) s.holdX = gt.x;
     }
     for (i = 0; i < L.spawns.length; i++) {
@@ -485,15 +485,16 @@ var Sim = (function () {
     }
     p.idleT = (mx || p.air || fire) ? 0 : p.idleT + 1;
 
-    // firing: held, tapped, or left to the gun when auto-fire is on (not in the middle of a sneeze)
-    var sneezing = p.sneezeT > 0;
-    var want = fire && !sneezing, blade = (fire || inp.auto) && !walking && !sneezing ? knifeTarget(s) : null;
+    // firing: held, tapped, or left to the gun when auto-fire is on (not in the middle of a sneeze). While children are
+    // out (Ibb's school: s.calm) his gun points at the ground: nothing is fired, cut or thrown
+    var sneezing = p.sneezeT > 0, lowered = !!s.calm;
+    var want = fire && !sneezing && !lowered, blade = (fire || inp.auto) && !walking && !sneezing && !lowered ? knifeTarget(s) : null;
     p.knifeT++;
-    if (!want && inp.auto && !walking && !sneezing) want = !!blade || !!assist(s, muzzle(p), true) || (s.bars.length > 0 && barAhead(s));
+    if (!want && inp.auto && !walking && !sneezing && !lowered) want = !!blade || !!assist(s, muzzle(p), true) || (s.bars.length > 0 && barAhead(s));
     if (want && p.fireCd <= 0) { if (blade) knife(s, blade); else shoot(s); }
-    else if (firePressed && !blade && !sneezing && p.weapon === 'side' && p.fireCd <= T.SIDE_CD - T.SIDE_TAP - 1) shoot(s);
+    else if (firePressed && !blade && !sneezing && !lowered && p.weapon === 'side' && p.fireCd <= T.SIDE_CD - T.SIDE_TAP - 1) shoot(s);
 
-    if (grenPressed && !sneezing && p.grenCd <= 0 && p.grenades > 0) {
+    if (grenPressed && !sneezing && !lowered && p.grenCd <= 0 && p.grenades > 0) {
       p.grenades--; p.grenCd = T.GREN_CD; p.throwT = 0;
       s.stats.grenades++;
       var up = p.aim === 'up', dg = p.aim === 'diag';           // lobbed high with the stick up, long and high at 45 degrees
@@ -728,6 +729,9 @@ var Sim = (function () {
       return;
     }
     if (!G.awake) return;
+    // (Ibb's school being let out: anyone of theirs still about holds where he is, off the screen while the yard is clear and
+    // everywhere while the children are out: nothing moves against them; school.js)
+    if (e.hostile && (s.calm || (s.hush && !onScreen(s, e.x, 30)))) { e.moving = 0; return; }
     if (!e.seen) {
       // men walking in from the edge keep walking; men at their posts wait to be seen
       if (!e.post) {
@@ -1273,6 +1277,7 @@ var Sim = (function () {
     for (k in s.groups) {
       var G = s.groups[k], def = L.groups[k];
       if (G.done) continue;
+      if (s.hush) continue;                                 // (Ibb's school being let out: nobody wakes, nobody comes in)
       if (!G.awake) {
         if (G.afterT < 0 && ((def.trig != null && p.x >= def.trig) || (def.after && s.groups[def.after].done) || (def.wall && barGone(s, def.wall)))) G.afterT = def.delay || 0;
         if (G.afterT >= 0 && --G.afterT <= 0) G.awake = true;
@@ -1314,6 +1319,7 @@ var Sim = (function () {
       var all = true;
       for (var j = 0; j < gt.groups.length; j++) if (!s.groups[gt.groups[j]].done) all = false;
       if (gt.wall && !barGone(s, gt.wall)) all = false;            // (and a barricade across the way has to go first)
+      if (gt.until && X[gt.until] && !X[gt.until].done(s)) all = false;      // (and Ibb's school: every class out and away)
       if (all) { gt.done = true; s.gateWait = 0; ev(s, { t: 'go', gate: gt.id }); continue; }
       gate = gt;
       break;
@@ -1330,7 +1336,8 @@ var Sim = (function () {
         var en = s.enemies[i];
         if (en.alive && en.hostile && gate.groups.indexOf(en.g) >= 0 && onScreen(s, en.x, 40)) live++;
       }
-      s.gateWait = (live || waiting || (gate.wall && !barGone(s, gate.wall))) ? 0 : s.gateWait + 1;      // (a barricade still up is Yazeed's to break, not the failsafe's)
+      var still = (gate.wall && !barGone(s, gate.wall)) || (gate.until && X[gate.until] && !X[gate.until].done(s));
+      s.gateWait = (live || waiting || still) ? 0 : s.gateWait + 1;      // (a barricade still up is Yazeed's to break, a classroom his to open: not the failsafe's)
       if (s.gateWait > 420) {
         s.failsafe++;
         for (i = 0; i < s.enemies.length; i++) {

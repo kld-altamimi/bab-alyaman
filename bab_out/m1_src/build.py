@@ -45,7 +45,7 @@ SOUQ_CODE = ('level_zabid', 'tailor', 'render_tailor')
 # with the road from Taiz to it (the Souq off the road, as at Ibb's release). Without it, none of Ibb is in the page.
 # Its painted zones come as a stage of their own (gen/stage_ibb.json, tools/export_ibb.py; 24 Oct: zone by zone).
 IBB = '--ibb' in sys.argv
-IBB_CODE = ('level_ibb', 'render_ibb')
+IBB_CODE = ('level_ibb', 'school', 'render_ibb')      # (school.js, 29 Oct: Jibla's classrooms and their children)
 pics = ['atlas', 'font', 'sky', 'far', 'sea', 'play_a', 'road', 'r2b', 'sand', 'b2r', 'play_b', 'fore', 'fore_road', 'fore_sand', 'fore_b', 'map']
 for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid'), ('ibb', 'ibb')):
     f = GAME + 'gen/stage_%s.json' % art
@@ -137,7 +137,7 @@ data = '\n'.join([
     'var IMAGES = %s;' % js(images),
 ])
 code = []
-for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'menu', 'audio', 'input', 'main'):
+for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'school', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'menu', 'audio', 'input', 'main'):
     if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE) or (not IBB and f in IBB_CODE):
         continue
     src = read(GAME + 'src/%s.js' % f)

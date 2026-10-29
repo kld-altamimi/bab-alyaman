@@ -7,6 +7,7 @@ require(path.join(__dirname, '../src/boss.js'));
 require(path.join(__dirname, '../src/roaster.js'));
 try { require(path.join(__dirname, '../src/tailor.js')); } catch (e) {}
 try { require(path.join(__dirname, '../src/fly.js')); } catch (e) {}          // (Taiz: loaded so the other missions are checked with it in place)
+try { require(path.join(__dirname, '../src/school.js')); } catch (e) {}       // (Ibb's school: its classrooms)
 const LEVEL = require(path.join(__dirname, '../src/level.js'));
 LEVEL.ground = require(path.join(__dirname, '../gen/ground.json'));
 const MOCHA = require(path.join(__dirname, '../src/level_mocha.js'));
@@ -392,6 +393,8 @@ function smartBot(opts) {
       if (det && reach && Sim.onScreen(s, det.x, -12) && foes.length <= 1) goal = { k: 'detainee', o: det };
     }
     if (goal && goal.k === 'detainee' && (goal.o.st !== 'tied' || goal.o.gone)) goal = null;
+    // --- Ibb's school: the yard clear and a classroom still shut: walk up to it, the nearest first
+    const doors = Sim.ext.school ? Sim.ext.school.waiting(s) : [];
     const loot = s.pickups.find(q => !q.gone && !q.air && Sim.onScreen(s, q.x, -10) && Math.abs(q.y - p.y) < 30);
 
     if (duck) { inp.my = 1; if (flee) inp.mx = flee; }
@@ -413,6 +416,11 @@ function smartBot(opts) {
         inp.mx = (p.y < 150 && p.x > 708) ? -1 : (p.x < 706 ? 1 : (p.y < 128 ? -1 : 0));
       }
       if (jumpNow) jumpHold = 22;
+    } else if (doors.length && !foes.length) {
+      let dn = doors[0];
+      for (const d of doors) if (Math.abs(d.x - p.x) < Math.abs(dn.x - p.x)) dn = d;
+      inp.mx = Math.abs(dn.x - p.x) > 4 ? (dn.x > p.x ? 1 : -1) : 0;
+      if (p.plat >= 0 && !p.air) { inp.my = 1; if (dropT <= 0) { jumpHold = 3; dropT = 30; } }      // (down off the walkway or the steps to the yard)
     } else if (surr.length && !foes.length && capT < 260 && Math.abs(surr[0].y - p.y) < 60) {
       // walk into the man with his hands up; if he is under us, step off; if it takes too long, leave him
       capT++;

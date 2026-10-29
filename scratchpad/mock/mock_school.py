@@ -13,6 +13,9 @@ from paint import Layer, from_image
 import stage_ibb as I
 import stage_ibb_z2 as Z2
 import look_ibb as LK
+import sys as _sys
+_sys.path.insert(0, '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchpad/game/tools')
+import ibb_kids as K
 
 OUT = '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchpad/ibb/s3/'
 LAY = OUT + 'layers/'
@@ -95,11 +98,15 @@ def kid(girl=False, frame=0, bag=0, wave=False):
     return im
 
 
-def put_kid(im, x, feet, **k):
-    s = kid(**k)
-    if k.get('flip'):
-        pass
-    im.alpha_composite(s, (int(x - 7), int(feet - 23)))
+def put_kid(im, x, feet, girl=False, frame=0, bag=0, wave=False, flip=True):
+    """One of the school's children as the game draws them (tools/ibb_kids.py; 29 Oct, redrawn in the cast's style),
+    running for home (to the left), or stopped and waving."""
+    name = ('girl%d' if girl else 'boy%d') % (1 + bag % 2)
+    f, ax, ay = K.kid(name, 'wave' if wave else ('run_a', 'run_b')[frame % 2])
+    if flip:
+        f = f.transpose(Image.FLIP_LEFT_RIGHT)
+        ax = f.width - 1 - ax
+    im.alpha_composite(f, (int(x - ax), int(feet - ay)))
 
 
 def door_open(im, x, y_base):
