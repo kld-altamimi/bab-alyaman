@@ -460,9 +460,10 @@
         case 'op_go': after(10, function () { speak('yazeed_quiet', { pri: 6, wait: true, keep: true }); }); break;
         // ---- Ibb: Brigadier Breaking on Sumara pass (spokesman.js): his lines, cut off, his leaps, the feedback, his men
         case 'spk_say': speak(e.id, { pri: 5 }); break;
-        case 'spk_chip': Sound.sfx('clang', { gain: 0.5, rate: 1.35, pan: panOf(e.x) }); break;
+        // (the microphone hit: a dull knock through the speakers, no ring and no screech: Khaled, 30 Oct 13:56, "annoying")
+        case 'spk_chip': Sound.sfx('thunk', { gain: 0.5, rate: 0.72, pan: panOf(e.x) }); break;
         case 'spk_cut':
-          Sound.sfx('clang', { gain: 0.9, rate: 1.1, pan: panOf(e.x) }); Sound.voice('feedback', { over: true, gain: 0.7 });
+          Sound.sfx('thunk', { gain: 0.9, rate: 0.52, pan: panOf(e.x) }); Sound.sfx('pop', { gain: 0.5, rate: 0.66, pan: panOf(e.x) });
           speak('spk_what', { pri: 8 }); buzz(30);
           break;
         case 'spk_leap': Sound.sfx('jump', { gain: 0.8, rate: 0.85, pan: panOf(e.x) }); break;
@@ -473,6 +474,8 @@
         case 'spk_spare': Sound.sfx('pick_gren', { gain: 0.7 }); break;
         case 'spk_fixed': Sound.sfx('clang', { gain: 0.4, rate: 1.6 }); break;
         case 'cable_wind': Sound.sfx('rope', { gain: 0.45, rate: 1.2 + Math.random() * 0.3, pan: panOf(e.x) }); break;
+        case 'spk_fall': Sound.sfx('whoosh', { gain: 0.45, rate: 0.6, pan: panOf(e.x) }); break;
+        case 'spk_topple': Sound.sfx('land', { gain: 1, rate: 0.6, pan: panOf(e.x) }); Sound.sfx('thunk', { gain: 0.8, rate: 0.48, pan: panOf(e.x) }); buzz(60); break;
         // the screens back on: him, still speaking (statement E), though he stands there tied up
         case 'spk_rerender':
           Sound.sfx('beep', { gain: 0.6, rate: 0.7 }); Sound.sfx('spinup', { gain: 0.4, rate: 1.3 });
@@ -484,7 +487,7 @@
         case 'spk_smash':
           Sound.sfx('crash', { pan: panOf(e.x) }); Sound.sfx('boom_s', { gain: 0.6, pan: panOf(e.x) }); buzz([60, 40, 100]);
           queue.length = 0; line = null;
-          Sound.voice('feedback', { gain: 0.6 });                // (his statement cut off mid-word, in a screech)
+          Sound.hush();                                          // (his statement cut off mid-word)
           after(80, function () {
             speak('uncle_again', { pri: 7, wait: true, keep: true });
             speak('tech_cannot', { pri: 7, wait: true, keep: true });
@@ -540,12 +543,16 @@
           buzz(60);
           bossSays(e.k, 'phase' + e.n);
           break;
-        case 'boss_dying': Sound.sfx(BOSSLINES[e.k || 'boat'].fall || 'boss_fall', { pan: panOf(e.x) }); break;
+        case 'boss_dying':
+          Sound.sfx(BOSSLINES[e.k || 'boat'].fall || 'boss_fall', { pan: panOf(e.x) });
+          if (e.k === 'spokesman') { Sound.sfx('thunk', { gain: 0.9, rate: 0.5, pan: panOf(e.x) }); Sound.stopMusic(0.6); buzz([40, 30, 60]); }      // (his fight's music stops on the last shot)
+          break;
         case 'boss_dead':
           if (e.k === 'spokesman') {
-            // tied up in his own cable: no bang, the cable pulled tight; his statement cut off for good
-            Sound.sfx('rope'); after(10, function () { Sound.sfx('freed', { gain: 0.6, rate: 0.8 }); });
-            buzz([40, 30, 80]); Sound.stopMusic(1.6);
+            // down, tied up in his own cable: OFF AIR, the cable pulled tight; his statement cut off for good
+            Render.setBanner(T('OFF AIR!'), '', 170);
+            Sound.sfx('rope'); after(10, function () { Sound.sfx('freed', { gain: 0.7, rate: 0.8 }); });
+            buzz([40, 30, 80]);
             break;
           }
           if (e.k === 'tailor') {

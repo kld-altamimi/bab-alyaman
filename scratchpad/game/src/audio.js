@@ -198,6 +198,8 @@ var Sound = (function () {
     return len;
   }
 
+  // the line being spoken, cut short (Ibb: his statement, when the rack goes)
+  function hush() { if (voiceNow && ctx) { fadeOut(voiceNow, 0.05); voiceNow = null; } }
   function fadeOut(h, len) {
     try {
       var t = ctx.currentTime;
@@ -325,7 +327,7 @@ var Sound = (function () {
     return { state: ctx ? ctx.state : 'not started', rate: ctx ? ctx.sampleRate : 0, ready: isReady(), failed: failed, decoded: nDone + '/' + all.length, how: how,
              session: !!navigator.audioSession, latency: ctx && ctx.baseLatency != null ? Math.round(ctx.baseLatency * 1000) : null };
   }
-  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
+  return { prefetch: prefetch, want: want, hasTrack: hasTrack, unlock: unlock, resume: resume, sfx: sfx, voice: voice, hush: hush, startMusic: startMusic, stopMusic: stopMusic, menu: menu, jingle: jingle, sea: sea, loop: loop, loopsOff: loopsOff,
            track: function () { return track; },
            // which loop is sounding now ('title', 'map', 'strait', 'battery', 'mocha', 'roaster'), or null
            playing: function () { return loopSrc ? loopSrc.track : null; },

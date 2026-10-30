@@ -10,10 +10,14 @@
 //   torchlight, cornered; there he has spare microphones. Every second line calls a few of his men in. Shots pass through
 //   him while he is not stunned, as they pass his screens; the podiums stop a low shot; a microphone he is not speaking
 //   into is no target.
-//   The catch. Out of him, he is tied up in his own microphone cable and stays at his podium; his men give up.
-//   The reveal. The screens come back on, all five: he is still speaking (statement E), though he stands there tied up with
+//   The catch (Khaled, 30 Oct 13:56: "too quick"): out of him, his men give up at once (and what they had fired is gone),
+//   and he takes his time going down: he reels from the last shot, spins as his own microphone cable winds round him, and
+//   goes over backwards behind his podium, tied up, where he stays (OFF AIR on the screen). Nothing else happens until that
+//   has sunk in and Yazeed walks on.
+//   The reveal. The screens come back on, all five: he is still speaking (statement E), though he lies there tied up with
 //   his mouth shut, and on the screens the ear on the viewer's left is too big and there are two Yemens on the backdrop (a
-//   close-up comes up). The cables lead to their van; with Yazeed at it, its side door slides open on the back room: a rack
+//   close-up comes up on the left of the picture); Yazeed is held a moment to hear him, then free to go on (Khaled, 13:56).
+//   The cables lead to their van; with Yazeed at it, its side door slides open on the back room: a rack
 //   of machines with a button marked RENDER, and three of the Uncle's men in headphones, who come out with their hands up
 //   (they are in nothing the game hits; walk up to capture them). Smash the rack and every screen in Ibb goes dark at once;
 //   the Uncle on the radio; the cloud clears onto the Dhamar plateau; the way out opens (the level's last gate waits on
@@ -35,14 +39,18 @@ var Sim = Sim || require('./sim.js');
     CALL: [0, 2, 2, 1], MEN_MAX: 4,  // men called in every second line, by phase; never more than this many of them about
     WAVE_V: 150, WAVE_H: 9, WAVE_AT: 34, WAVE_HW: 8,      // the feedback along the ground
     FIX: 70,                         // the last podium: a spare microphone clipped on
-    DIE: 96,                         // tied up in his cable
+    REEL: 30, SPIN: 140, TOPPLE: 30, DIE: 180,           // tied up in his cable: reeling until REEL, spinning as it winds
+                                     // until SPIN, going over backwards for TOPPLE; caught at DIE (3 s from the last shot)
     MIC_DX: 6, MIC_HW: 4, MIC_TOP: 29, MIC_BOT: 15,       // the live microphone: ahead of his podium, toward Yazeed; its height off the floor
     BEHIND: 3, BODY_HW: 7, BODY_TOP: 33,                  // him behind his podium; his box, stunned, above it
     POD_HW: 11, POD_H: 15,           // a podium stops a shot this low
     PTS: 8000, CAUGHT_PTS: 1000, GREN_DMG: 4,
     PASS_HINT: 8,                    // shots through him before the word about his microphone
     // the reveal
-    RERENDER: 80, CLOSEUP: 280,      // the screens back on this long after the catch; the close-up
+    SETTLE: 120, WALK: 32,           // caught: this long for it to sink in; then once Yazeed has walked on this far, the
+    CLEAR_X: 176,                    // screens come back on (with him this far into the picture, clear of the close-up on
+                                     // its left: render_spokesman.js draws it to x 158)
+    HOLD: 400,                       // ... and Yazeed is held this long (the close-up up), to hear the start of statement E
     REACH: 100,                      // Yazeed this near the van's door: it opens (and they have room to come out to him)
     TECH_GAP: 24, RACK_HP: 6,        // the technicians out one after another; the rack's shots
     RADIO: 520, CLEAR_T: 240         // from the rack smashed to the cloud clearing; how long it takes
@@ -150,7 +158,10 @@ var Sim = Sim || require('./sim.js');
         if ((b.x1 - b.x) * dir <= 0) { b.x = b.x1; land(s, b); }
         break;
       case 'dying':
-        if (b.stT % 12 === 2) ev(s, { t: 'cable_wind', x: b.x, y: floorY(s) - 20 });
+        // reeling from the last shot; spinning as the cable winds round him; over backwards, away from Yazeed
+        if (b.stT >= SP.REEL && b.stT < SP.SPIN && (b.stT - SP.REEL) % 18 === 0) ev(s, { t: 'cable_wind', x: b.x, y: floorY(s) - 20 });
+        if (b.stT === SP.SPIN) ev(s, { t: 'spk_fall', x: b.x, y: floorY(s) - 20 });
+        if (b.stT === SP.SPIN + SP.TOPPLE) ev(s, { t: 'spk_topple', x: b.x - b.face * 20, y: floorY(s), dir: -b.face });
         if (b.stT >= SP.DIE) die(s, b);
         break;
     }
@@ -243,9 +254,19 @@ var Sim = Sim || require('./sim.js');
     b.hurtT = 0;
     if (b.hp <= 0) {
       b.hp = 0; to(b, 'dying'); s.spk.waves.length = 0;
+      giveUp(s);
       ev(s, { t: 'boss_dying', k: 'spokesman', x: b.x, y: floorY(s) - 30 });
     }
     return b.hp < before;
+  }
+  // the last shot in him: his men give up there and then, and nothing of theirs is left flying (Yazeed watches him go down)
+  function giveUp(s) {
+    for (var i = 0; i < s.enemies.length; i++) {
+      var e = s.enemies[i];
+      if (e.alive && e.hostile && e.g === 'BOSS' && e.st !== 'shock') { e.st = 'shock'; e.stT = 0; }
+    }
+    for (i = 0; i < s.bullets.length; i++) if (!s.bullets[i].own) s.bullets[i].gone = true;
+    for (i = 0; i < s.bombs.length; i++) if (!s.bombs[i].own) s.bombs[i].gone = true;
   }
   function die(s, b) {
     var G = s.groups.BOSS;
@@ -254,13 +275,7 @@ var Sim = Sim || require('./sim.js');
     s.stats.bossT = s.time - b.t0;
     G.hold = false;
     ev(s, { t: 'boss_dead', k: 'spokesman', x: b.x, y: floorY(s) - 40, pts: SP.PTS });
-    // his men give up
-    for (var i = 0; i < s.enemies.length; i++) {
-      var e = s.enemies[i];
-      if (e.alive && e.hostile && e.g === 'BOSS' && e.st !== 'shock') { e.st = 'shock'; e.stT = 0; }
-    }
-    s.spk.rv = { st: 'wait', t: 0 };
-    s.hush = true;
+    s.spk.rv = { st: 'wait', t: 0, x0: null };
   }
   // tied up at his podium: walk up to him and he is yours
   function capture(s, b) {
@@ -280,10 +295,16 @@ var Sim = Sim || require('./sim.js');
     rv.t++;
     switch (rv.st) {
       case 'wait':
-        if (rv.t >= SP.RERENDER) { s.spk.fake = true; rv.st = 'rerender'; rv.t = 0; ev(s, { t: 'spk_rerender', x: A.podiums[2], y: floorY(s) - 60 }); }
+        // caught: a moment for it to sink in; then, once Yazeed walks on (or is already at the van), the screens come back on
+        // and he is held, to hear him
+        if (rv.t === SP.SETTLE) rv.x0 = p.x;
+        if (rv.t > SP.SETTLE && !p.dead && ((p.x >= rv.x0 + SP.WALK && p.x - s.cam >= SP.CLEAR_X) || p.x >= V.door[0] - 40)) {
+          s.spk.fake = true; rv.st = 'rerender'; rv.t = 0; s.script = { mx: 0 };
+          ev(s, { t: 'spk_rerender', x: A.podiums[2], y: floorY(s) - 60 });
+        }
         break;
       case 'rerender':
-        if (rv.t >= SP.CLOSEUP) { rv.st = 'cables'; rv.t = 0; ev(s, { t: 'spk_cables', x: V.door[0], y: floorY(s) - 30 }); }
+        if (rv.t >= SP.HOLD) { s.script = null; rv.st = 'cables'; rv.t = 0; ev(s, { t: 'spk_cables', x: V.door[0], y: floorY(s) - 30 }); }
         break;
       case 'cables':
         if (!p.dead && p.x >= V.door[0] - SP.REACH) { rv.st = 'open'; rv.t = 0; ev(s, { t: 'van_open', x: V.door[0], y: V.sill - 10 }); }
@@ -296,7 +317,7 @@ var Sim = Sim || require('./sim.js');
         break;
       case 'clearing':
         s.spk.clear = Math.min(1, rv.t / SP.CLEAR_T);
-        if (rv.t >= SP.CLEAR_T) { rv.st = 'done'; rv.t = 0; s.hush = false; ev(s, { t: 'spk_clear' }); }
+        if (rv.t >= SP.CLEAR_T) { rv.st = 'done'; rv.t = 0; ev(s, { t: 'spk_clear' }); }
         break;
     }
     // the technicians, out of the back room one after another once its door is open, whether or not the rack is smashed

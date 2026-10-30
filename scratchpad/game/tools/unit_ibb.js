@@ -301,8 +301,10 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
 // the bot at both fire settings and checked on every tick: he is hurt only while he is stunned, and a stun takes a fifth of
 // him at most; he is stunned only through the microphone he is speaking into; the reveal comes in its order (caught, the
 // screens back on him, the cables, the van's door, the three technicians, the rack smashed, the cloud clearing) and the way
-// out opens only after it; the technicians are in nothing the game hits. And by hand: shots and blasts on him while he is
-// not stunned leave him exactly as he would have been.
+// out opens only after it; the technicians are in nothing the game hits. Since 0.16.94 (Khaled, 30 Oct 13:56): his going
+// down takes its time and nothing of theirs touches Yazeed from the last shot on; the screens come back on only a while
+// after he is caught and once Yazeed walks on, and Yazeed is held there, not moving and firing nothing, to hear him. And by
+// hand: shots and blasts on him while he is not stunned leave him exactly as he would have been.
 (function spokesman() {
   const L = IBB, A = L.arena, X = Sim.ext.spokesman, SP = Sim.SP, lines = AUDIO.speech.ibb.lines;
   const B = require(path.join(__dirname, 'bot.js'));
@@ -318,10 +320,18 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     const bot = B.smartBot({ auto: auto }), tag = 'seed ' + seed + (auto ? ', auto fire' : '');
     const order = [], at = {};
     let seq = 0, offHurt = 0, deep = 0, badCut = 0, cuts = 0, techHit = 0, techs = new Set(), lastHp = SP.HP, chips = 0;
+    const tk = {}; let afterHits = 0, held = 0, heldMoved = 0, heldFired = 0, heldX = null, settleX = null;
     for (let t = 0; t < 60 * 300 && s.status === 'play'; t++) {
       const b0 = s.boss && s.boss.kind === 'spokesman' ? s.boss : null, st0 = b0 && b0.st, hp0 = b0 ? b0.hp : SP.HP;
       const inp = bot(s); inp.viewW = 468;
+      const rv0 = s.spk && s.spk.rv;
+      const holding = rv0 && rv0.st === 'rerender', nOwn = s.bullets.filter(q => q.own).length;
       Sim.step(s, inp);
+      if (holding && s.spk.rv.st === 'rerender') {
+        held++;
+        if (heldX === null) heldX = s.p.x; else if (Math.abs(s.p.x - heldX) > 0.01 && !s.p.air) heldMoved++;
+        if (s.bullets.filter(q => q.own).length > nOwn) heldFired++;
+      }
       const b = s.boss && s.boss.kind === 'spokesman' ? s.boss : null;
       if (b && b.hp < hp0 && st0 !== 'stun') offHurt++;
       if (b && b.hp < SP.HP - SP.SEG * b.cuts) deep++;
@@ -334,6 +344,9 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
         if ((e.t === 'kill' || e.t === 'hit') && e.id != null && s.enemies.some(q => q.id === e.id && q.tech != null)) techHit++;
         if (e.t === 'go' && e.gate === 'van') at.go = seq;
         if (e.t === 'clear') at.clear = seq;
+        if (['boss_dying', 'boss_dead', 'spk_rerender', 'spk_cables'].includes(e.t) && (e.k === 'spokesman' || !/^boss_/.test(e.t)) && !(e.t in tk)) tk[e.t] = { t: t, x: s.p.x };
+        if (e.t === 'spk_rerender') settleX = s.spk.rv.x0;
+        if ((e.t === 'life_lost' || e.t === 'plate_lost') && 'boss_dying' in tk) afterHits++;
       }
       for (const q of s.enemies) if (q.tech != null && (!q.alive || q.hostile)) techHit++;
     }
@@ -346,6 +359,32 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(techs.size === 3 && techHit === 0, tag + ': the three technicians out (' + techs.size + '), in nothing the game hits (' + techHit + ')');
     ok(at.go > at.spk_clear && at.clear > at.go, tag + ': the way out opened once the cloud cleared, and the mission ended after it');
     ok(b && b.st === 'dead' && s.spk.off && s.spk.clear === 1 && X.done(s), tag + ': caught, every screen dark, the plateau showing');
+    const fall = tk.boss_dead && tk.boss_dying ? tk.boss_dead.t - tk.boss_dying.t : -1, gap = tk.spk_rerender && tk.boss_dead ? tk.spk_rerender.t - tk.boss_dead.t : -1;
+    ok(fall >= 150, tag + ': he takes his time going down (' + (fall / 60).toFixed(1) + ' s from the last shot)');
+    ok(afterHits === 0, tag + ': from the last shot on nothing of theirs touches Yazeed (' + afterHits + ')');
+    ok(gap >= SP.SETTLE && settleX !== null && (tk.spk_rerender.x >= settleX + SP.WALK - 0.01 || tk.spk_rerender.x >= A.van.door[0] - 40),
+       tag + ': the screens come back on a while after he is caught (' + (gap / 60).toFixed(1) + ' s) and once Yazeed has walked on (' + Math.round(settleX) + ' to ' + Math.round(tk.spk_rerender.x) + ')');
+    ok(held >= SP.HOLD - 2 && heldMoved === 0 && heldFired === 0 && tk.spk_cables && tk.spk_cables.t - tk.spk_rerender.t >= SP.HOLD,
+       tag + ': held there to hear him for ' + (held / 60).toFixed(1) + ' s, not moving (' + heldMoved + ') and firing nothing (' + heldFired + '), then free to go on');
+  }
+  // by hand: he goes down with Yazeed standing still on the lookout's near side: the screens stay dark as long as Yazeed
+  // stands there, and come back on once he walks on
+  {
+    const s = Sim.create(L, { viewW: 468, seed: 9, zone: 3 });
+    for (const g in s.groups) if (g !== 'BOSS') { s.groups[g].done = true; s.groups[g].pending.length = 0; s.groups[g].awake = true; }
+    for (const g of s.gates) if (g.id !== 'arena' && g.id !== 'van') g.done = true;
+    s.enemies.length = 0; s.p.x = L.groups.BOSS.trig + 6; s.p.y = Sim.groundY(L, s.p.x); s.cam = A.x0 - 120; s.p.inv = 9999;
+    let t = 0;
+    for (; t < 60 * 20 && !(s.boss && s.boss.st === 'speak'); t++) { Sim.step(s, { viewW: 468 }); s.p.inv = 9999; }
+    const b = s.boss;
+    b.st = 'stun'; b.stT = 0; b.cuts = 5; b.floor = 0; X.hurt(s, 99);
+    for (t = 0; t < SP.DIE + SP.SETTLE + 300; t++) { Sim.step(s, { viewW: 468 }); s.p.inv = 9999; }
+    const stayed = s.spk.rv && s.spk.rv.st === 'wait', x0 = s.spk.rv && s.spk.rv.x0;
+    let at = null, sx = null;
+    for (t = 0; t < 900 && s.spk.rv.st === 'wait'; t++) { Sim.step(s, { viewW: 468, mx: 1 }); s.p.inv = 9999; }
+    if (s.spk.rv.st === 'rerender') { at = s.p.x; sx = s.p.x - s.cam; }
+    ok(stayed && at !== null && at - x0 >= SP.WALK && sx >= SP.CLEAR_X && sx <= SP.CLEAR_X + 6,
+       'Yazeed standing still after he goes down: the screens stay dark (' + (stayed ? 'they did' : 'they came on') + '); they come back on once he has walked on (' + (at !== null ? Math.round(at - x0) : '?') + ' px) clear of the close-up (at ' + (sx !== null ? Math.round(sx) : '?') + ' px in the picture)');
   }
   // by hand: two games on the lookout, the same; in one of them every kind of shot and blast goes off on him, his podium
   // and the microphones he is not speaking into, whenever he is not stunned. He does exactly the same in both.

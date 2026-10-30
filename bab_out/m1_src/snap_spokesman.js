@@ -119,10 +119,25 @@ fs.mkdirSync(OUT, { recursive: true });
     await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'stun' && s.boss.stT > 30; });
     await snap('f9_dark_stun');
     await hurtHim(20);
-    await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'dying' && s.boss.stT > 50; });
+    // his going down (0.16.94): reeling, spinning in the cable, over backwards, OFF AIR
+    await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'dying' && s.boss.stT > 14; });
+    await snap('r0_reel');
+    await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'dying' && s.boss.stT > 92; });
     await snap('r1_caught');
+    await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'dying' && s.boss.stT > 158; });
+    await snap('r1b_fall');
+    await until(() => { const s = window.__m1.sim(); return s.boss && s.boss.st === 'dead' && s.spk.rv && s.spk.rv.t > 40; });
+    await snap('r1c_offair');
+    // standing still: nothing comes; then he walks on, and the screens come back on with him held
+    await until(() => { const s = window.__m1.sim(); return s.spk.rv && s.spk.rv.st === 'wait' && s.spk.rv.t > 200; }, null, 20000);
+    await snap('r1d_waiting');
+    await page.keyboard.down('ArrowRight');
+    await until(() => { const s = window.__m1.sim(); return s.spk.rv && s.spk.rv.st === 'rerender'; }, null, 20000);
+    await page.keyboard.up('ArrowRight');
     await until(() => { const s = window.__m1.sim(); return s.spk.rv && s.spk.rv.st === 'rerender' && s.spk.rv.t > 70; });
     await snap('r2_closeup');
+    await until(() => { const s = window.__m1.sim(); return s.spk.rv && s.spk.rv.st === 'rerender' && s.spk.rv.t > 300; }, null, 20000);
+    await snap('r2b_held');
     await until(() => { const s = window.__m1.sim(); return s.spk.rv && s.spk.rv.st === 'cables' && s.spk.rv.t > 30; }, null, 30000);
     await snap('r3_cables');
     // Yazeed walks up to the van

@@ -35,6 +35,15 @@
       cx.restore();
     } else cx.drawImage(IMI, f[0], f[1], f[2], f[3], x - f[4], y - f[5], f[2], f[3]);
   }
+  // the same, turned about its anchor (his feet) by ang
+  function isprRot(name, x, y, ang, flip) {
+    var f = FS.frames[name];
+    if (!f) return;
+    cx.save(); cx.translate(Math.round(x), Math.round(y)); cx.rotate(ang);
+    if (flip) cx.scale(-1, 1);
+    cx.drawImage(IMI, f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]);
+    cx.restore();
+  }
   function hash(a, b) { var t = (a * 374761393 + b * 668265263) | 0; t = Math.imul(t ^ (t >>> 13), 1274126177); return ((t ^ (t >>> 16)) >>> 0) / 4294967296; }
   function mine(s) { return s.boss && s.boss.kind === 'spokesman' ? s.boss : null; }
 
@@ -88,7 +97,7 @@
     switch (b.st) {
       case 'stun': return 'spk_stun';
       case 'fix': return (t >> 3) % 2 ? 'spk_stun' : 'spk_bl';
-      case 'dying': return t < 50 ? ((t >> 2) % 2 ? 'spk_stun' : 'spk_h2') : 'spk_caught';
+      case 'dying': return t < SP.REEL ? ((t >> 2) % 2 ? 'spk_stun' : 'spk_h2') : 'spk_caught';
       case 'dead': return 'spk_caught';
     }
     var m = b.st === 'speak' ? lineMouth(s, K, 'sp_') : 0;
@@ -100,18 +109,30 @@
   // at his podium (drawn on the picture, before anyone in front of it), the podiums over him
   function drawHimAtPodium(s, b, K) {
     var name = himFrame(s, b, K), fl = b.face < 0;
+    if (b.st === 'dying' || b.st === 'dead') { drawCaught(s, b, K); return; }
     ispr(name, b.x, b.y, fl);
     if (b.phase === 2 && (b.st === 'speak' || b.st === 'ready' || b.st === 'after')) {
       // the ring round his ear
       var r = (K.tick() >> 3) % 2;
       ispr('spk_ring', b.x + (fl ? 9 : -9) + (r ? (fl ? 1 : -1) : 0), b.y - 25 - r, fl);
     }
-    if (b.st === 'dying' || b.st === 'dead') {
-      // his own cable round him, more of it as it winds
-      var turns = b.st === 'dead' ? 5 : Math.min(5, Math.floor(b.stT / 12));
+  }
+  // caught (Khaled, 30 Oct 13:56: his going down was too quick): he reels from the last shot, then spins round and round as
+  // his own cable winds about him (more turns of it each time), then goes over backwards about his feet, away from Yazeed,
+  // and lies there tied up behind his podium
+  function drawCaught(s, b, K) {
+    var t = b.st === 'dead' ? SP.DIE : b.stT, x = Math.round(b.x), y = Math.round(b.y), fl = b.face < 0, k;
+    if (t < SP.REEL) { ispr(himFrame(s, b, K), x + ((t >> 1) % 2 ? 1 : -1), y, fl); return; }
+    if (t < SP.SPIN) {
+      var turns = Math.min(5, 1 + Math.floor((t - SP.REEL) / 18)), round = Math.floor((t - SP.REEL) / 7) % 2 === 1;
+      ispr('spk_caught', x, y, round ? !fl : fl);
       cx.fillStyle = '#16161a';
-      for (var k = 0; k < turns; k++) cx.fillRect(Math.round(b.x) - 7, Math.round(b.y) - 26 + k * 4, 14, 1);
+      for (k = 0; k < turns; k++) cx.fillRect(x - 7, y - 30 + k * 4, 14, 1);
+      return;
     }
+    var u = Math.min(1, (t - SP.SPIN) / SP.TOPPLE), ang = u * u * Math.PI / 2 * (fl ? 1 : -1);
+    isprRot('spk_caught', x, y - Math.round(7 * u * u), ang, fl);
+    if (b.st === 'dead' && !b.captured && (K.tick() >> 4) % 2) K.text('s_lav', T('WALK IN'), x - (fl ? -18 : 18), y - 30, 'c');
   }
   function drawPodiums(s, b, K) {
     var A = s.L.arena, P = s.spk.pods;
@@ -260,7 +281,13 @@
       case 'spk_spare': K.pop(e.x, e.y - 20, T('A SPARE!'), 's_lav'); return true;
       case 'spk_fixed': K.part('spark', e.x, e.y, { life: 4, name: 'fx_spark2' }); return true;
       case 'cable_wind': for (k = 0; k < 3; k++) K.part('clod', e.x + (Math.random() - 0.5) * 16, e.y + (Math.random() - 0.5) * 16, { life: 10, vx: (Math.random() - 0.5) * 80, vy: -30, g: 200, col: '#26262c' }); return true;
-      case 'spk_rerender': closeT = SP.CLOSEUP; K.flash(2); return true;
+      case 'spk_fall': K.shake(2); return true;
+      case 'spk_topple':
+        // down on the floor behind his podium: a thud and the dust
+        K.shake(6); K.flash(1);
+        for (k = 0; k < 4; k++) K.part('puff', e.x + (k - 1.5) * 9, e.y - 2, { life: 9 + k, flip: k % 2 === 1 });
+        return true;
+      case 'spk_rerender': closeT = SP.HOLD; K.flash(2); return true;
       case 'spk_cables': say('cables', 160); return true;
       case 'van_open': K.part('puff', e.x, e.y, { life: 10 }); return true;
       case 'tech_out': if (e.n === 0) say('rack', 160); return true;
@@ -281,11 +308,12 @@
     cx = K.ctx();
     var W = K.W(), mid = Math.floor(W / 2);
     if (closeT > 0) {
-      // the close-up: the screen at the billboard's size, his mouth with the line
+      // the close-up: the screen at the billboard's size, his mouth with the line, on the left of the picture (Khaled,
+      // 30 Oct 13:56: in the middle it covered everything); up while Yazeed is held to hear him
       if (!paused) closeT--;
-      var a = Math.min(1, Math.min(closeT, SP.CLOSEUP - closeT) / 12), m = lineMouth(s, K, 'sp_');
+      var a = Math.min(1, Math.min(closeT, SP.HOLD - closeT) / 12), m = lineMouth(s, K, 'sp_');
       cx.globalAlpha = a;
-      var x0 = mid - 72, y0 = 18;
+      var x0 = 10, y0 = 38;
       cx.fillStyle = '#16181c'; cx.fillRect(x0 - 4, y0 - 4, 152, 104);
       cx.fillStyle = '#4a4e56'; cx.fillRect(x0 - 4, y0 - 4, 152, 1);
       ispr('bf' + (m < 0 ? 0 : m), x0, y0);
