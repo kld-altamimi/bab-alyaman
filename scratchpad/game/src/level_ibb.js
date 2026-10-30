@@ -445,9 +445,8 @@ var LEVEL_IBB = (function () {
                       E: ['sp_important', 'sp_E2', 'sp_E3', 'sp_E4', 'sp_E5', 'sp_E6', 'sp_E7', 'sp_ops', 'sp_E9', 'sp_end'] } },
     // the opening: Salem's 4x4 up the road from off the left of the picture, stopping under the billboard (opening.js)
     opening: { from: -90, stop: 176 },
-    // Yazeed's word at a place (main.js): the Queen Arwa mosque over the low wall in Jibla's upper street (the back layer's
-    // mosque is in the middle of the picture with Yazeed here)
-    remarks: [{ x: 3040, id: 'yazeed_mosque' }],
+    // (no word of Yazeed's at the mosque: Khaled, 30 Oct 14:36, "Remove the grandma lines"; main.js's `remarks` stays for
+    // a line at a place in another level)
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
     // is told in pieces, a few lines a set, through the zones); they stand on the verge behind the road
     screens: [

@@ -1,5 +1,6 @@
 // run_ibb_full.js - Ibb start to finish in the page, the bot playing and every frame drawn (the opening, the fight, the
-// reveal, the plateau): the mission must clear with no page errors. Then, live, Yazeed's word at the mosque in Jibla.
+// reveal, the plateau): the mission must clear with no page errors. Then, live, that Yazeed says nothing at the mosque in
+// Jibla (the line was taken out on 30 Oct).
 // Usage: node run_ibb_full.js <url>
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -59,7 +60,7 @@ const URL = process.argv[2];
   let said = null;
   for (let i = 0; i < 40 && !said; i++) { await page.waitForTimeout(250); said = await page.evaluate(() => { const l = window.__m1.line(); return l && l.id === 'yazeed_mosque' ? l.text : null; }); }
   await page.screenshot({ path: '/tmp/claude-0/-home-claude/aa3bb6be-67d4-5082-8011-7c7396202436/scratchpad/ibb/s12/pics/mosque_line.png' });
-  console.log('mosque line:', said, 'x', await page.evaluate(() => Math.round(window.__m1.sim().p.x)));
+  console.log('mosque line (removed 30 Oct, Khaled):', said ? 'STILL PLAYS: ' + said : 'none, as it should be', 'x', await page.evaluate(() => Math.round(window.__m1.sim().p.x)));
   console.log(errors.length ? 'page errors: ' + errors.join(' | ') : 'no page errors');
   await browser.close();
 })();
