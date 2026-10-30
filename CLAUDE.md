@@ -7,8 +7,10 @@ of these files, never the place where edits happen. If the artifact and the repo
 
 - `index.html` — the entire game in one file: markup, CSS, all scripts, and the art (embedded as data URIs).
   Edit it in place; do not split it into modules or move the art out.
-- `audio/` — twelve MP3s the game fetches at runtime by relative path (`audio/<name>.mp3`). Keep the folder beside
-  `index.html`; file names are referenced from the `AUDIO` manifest inside `index.html`.
+- `audio/` — fifteen MP3s the game fetches at runtime by relative path (`audio/<name>.mp3`): the twelve of the first three
+  missions, and Ibb's three (`music_ibb.mp3`, `music_spokesman.mp3`, and `speech_ibb.mp3` with the Spokesman's and Ibb's
+  cast's lines, fetched only with Ibb). Keep the folder beside `index.html`; file names are referenced from the `AUDIO`
+  manifest inside `index.html`.
 - `analytics.js` — PostHog tracking. **Gameplay edits must not touch this file.** The game calls `window.HM` at a handful of
   points (`mission_start`, the simulation event tap in `react()`, `game_over`, `mission_complete`, `mission_leave`,
   and `quit` on tab-hide, plus `continue`, `skip_ahead` and `boot`). If a mission id, zone name or boss key is renamed, the event properties follow
