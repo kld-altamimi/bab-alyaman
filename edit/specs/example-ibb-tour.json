@@ -1,0 +1,18 @@
+{
+ "_note": "The Ibb release reel's shape (30 Oct): four moments in the mission's order, no boss fight. Frame numbers are from the old rig, which ran one frame later than rig/film.py: film a plan and take the frames from its log before reusing them.",
+ "name": "bab-alyemen-ibb-tour",
+ "out": "work/out/ibb-tour",
+ "runs": {"T": "work/runs/ibbT"},
+ "shots": [
+  {"run": "T", "a": 1, "n": 310, "x0": 0, "y0": 36, "sc": 4},
+  {"run": "T", "a": 2980, "n": 170, "x0": 10, "y0": 40, "xi": 0.005},
+  {"run": "T", "a": 5207, "n": 240, "x0": 12, "y0": 0, "sc": 3},
+  {"run": "T", "a": 6656, "n": 240, "x0": 104, "y0": 0}
+ ],
+ "music": {"file": "music_ibb.mp3", "from": 0.82},
+ "head": [["المهمة 4: إب", "b_org"], ["متاحة الآن", "b_red"]],
+ "card": [["المهمة 4: إب", "b_org", 6], ["الوديان الخضراء", "b_org", 5], ["متاحة الآن", "b_red", 6], ["العبها الآن من المتصفح", "b_org", 4]],
+ "card_frames": 240,
+ "subs": "auto",
+ "sub_min": 15
+}
