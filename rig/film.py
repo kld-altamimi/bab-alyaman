@@ -50,11 +50,12 @@ HOOK = """(function(){
     if (window.__botOn && s && s.status === 'play' && !(s.heli && s.heli.st === 'fly')) {
       var p = window.__bot(s); for (var k in p) base[k] = p[k];
     }
+    if (s && s.status !== 'play' && D.frame() % 10 === 0) D.log.push(['cam', D.frame(), { status: s.status, state: window.__m1.state(), cam: Math.round(s.cam), px: Math.round(s.p.x - s.cam) }]);
     if (s && s.status === 'play') {
       var f = D.frame();
       if (window.__shield) s.p.inv = Math.max(s.p.inv, 2);       // nothing hurts Yazeed (inv 2 doesn't blink)
       if (window.__cleanFire && base.fire && !(s.heli && s.heli.st === 'fly')) {
-        var any = !!(s.boss && s.boss.st !== 'dead'), e2, q;
+        var any = !!(s.boss && s.boss.st !== 'dead' && Math.abs(s.boss.x - (s.cam + s.viewW / 2)) < s.viewW / 2 + 30), e2, q;   // a boss still off-screen is nothing to fire at
         for (q = 0; !any && q < (s.enemies || []).length; q++) { e2 = s.enemies[q]; if (e2.alive && e2.hostile && Sim.onScreen(s, e2.x, 0)) any = true; }
         for (q = 0; !any && q < (s.bars || []).length; q++) { e2 = s.bars[q]; if (!e2.gone && Sim.onScreen(s, e2.x0 || e2.x || 0, 0)) any = true; }
         for (q = 0; !any && q < (s.props || []).length; q++) { e2 = s.props[q]; if (!e2.gone && e2.hp > 0 && e2.k !== 'cover' && Math.abs(e2.x - s.p.x) < 170 && Sim.onScreen(s, e2.x, 0)) any = true; }
@@ -62,7 +63,7 @@ HOOK = """(function(){
       }
       if (window.__holdFireUntil && f <= window.__holdFireUntil) { base.fire = false; base.grenade = false; }
       if (f % 10 === 0) {
-        var b = s.boss, o = { cam: Math.round(s.cam), px: Math.round(s.p.x - s.cam), py: Math.round(s.p.y), zone: s.zone, plates: s.p.plates, lives: s.p.lives };
+        var b = s.boss, o = { cam: Math.round(s.cam), px: Math.round(s.p.x - s.cam), py: Math.round(s.p.y), zone: s.zone, plates: s.p.plates, lives: s.p.lives, fire: !!base.fire, mx: base.mx || 0, my: base.my || 0, face: s.p.face };
         if (b) { o.bk = b.kind; o.bst = b.st; o.bx = Math.round(b.x - s.cam); o.by = Math.round(b.y); o.hp = b.hp; }
         if (s.rally) { o.rst = s.rally.st; o.rx = Math.round(s.rally.x - s.cam); }
         if (s.heli) { o.hx = Math.round(s.heli.x - s.cam); o.hy = Math.round(s.heli.y); o.hst = s.heli.st; }

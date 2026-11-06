@@ -248,3 +248,6 @@ for t in range(TOTAL): enc.stdin.write(frame(t).tobytes())
 enc.stdin.close(); enc.wait()
 json.dump({'shots': SHOTS, 'subs': SUBS, 'card': CARD_AT, 'total': TOTAL}, open(OUT + 'edit.json', 'w'), ensure_ascii=False, indent=1)
 print('done', OUT + NAME)
+# the quality gate: a frozen picture or a white strobe reads as "buggy" (Khaled, 30 Oct and 6 Nov); fix before showing it
+qc = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'qc.py'), OUT + NAME, str(L['win_y']), '648'], capture_output=True, text=True)
+print(qc.stdout.strip()); print('QC', 'passed' if qc.returncode == 0 else 'FAILED: fix it before showing the reel')
