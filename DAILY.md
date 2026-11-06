@@ -32,8 +32,10 @@ the Artifact tool (`publish`, `url` = the page, `asset: true`, `file_paths`). Tr
    and `bash /home/claude/mk/setup.sh <repo>`; `export MK_WORK=/home/claude/mk/work`. Load the tools you'll need
    (ToolSearch: ArtifactData, and Projects, WebSearch if deferred). If setup fails, carry on with words-only work and
    say so in the run log.
-2. **Read.** In the Project (Projects tool, if this session has it): `claude/DECISIONS.md` (Khaled's binding decisions;
-   the marketing ones are summarised under Guardrails), `claude/topics/marketing.md`, `claude/topics/marketing-taste.md`.
+2. **Read.** In the Project (Projects tool, if this session has it): `claude/STATE.md` first (the project on one screen,
+   rewritten every night by the conductor), then `claude/DECISIONS.md` (Khaled's standing decisions; marketing's own are
+   kept in `claude/topics/marketing.md` and summarised under Guardrails), `claude/topics/marketing.md`,
+   `claude/topics/marketing-taste.md`.
    On the page: `answers` where `picked_up` is null; all `items` (to know what's open, ready, posted); `items` with
    `section` "taste" (the taste notes, the same as the Project file). What changed in the game since the last run:
    `git -C <repo> log --since=<last run> origin/main` (new missions, lines, features are material).
@@ -133,7 +135,7 @@ apps), and the week's direction in two lines.
   manifests in the build for real lines), what's new in it, the day's news and the Saudi calendar (Friday and Saturday
   are the weekend).
 
-## Guardrails (Khaled's decisions; `claude/DECISIONS.md` wins if it says more)
+## Guardrails (Khaled's decisions; `claude/DECISIONS.md` and marketing.md's Decisions win if they say more)
 
 - Arabic only; Saudi audience; comedic, a laugh amid the tension, no softening.
 - Subtitles on game frames and clips only with lines the game really says (a real line may appear in another scene).
