@@ -29,11 +29,15 @@ copy $SP/bosses              $DEST/scratchpad/bosses              '*.js'
 copy $SP/firecmp             $DEST/scratchpad/firecmp             '*.js'
 copy $SP/taizmap             $DEST/scratchpad/taizmap             'capture.js' 'dump_layout.js' 'map.tpl.html' 'test_map.js'
 copy $SP/gamedev-page        $DEST/scratchpad/gamedev-page        'game-development.html' 'kit_v2.py' 'test_page.js'
+copy $SP/guard               $DEST/scratchpad/guard               'variants.py' 'guard_audit.js'
+copy $SP/mapmove             $DEST/scratchpad/mapmove             'apply_hunks.py'
 copy $OUT/m1_src             $DEST/bab_out/m1_src                 '*.py' '*.js' '*.html' 'version.json'
 cp -p $SP/sync_sources.sh "$DEST/sync_sources.sh"
 cd "$DEST"
 git add -A
 if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
+# DRY=1: show what would be committed, then unstage and stop
+if [ "${DRY:-}" = 1 ]; then git status --short; git reset -q; exit 0; fi
 git commit -q -F - <<EOF
 $MSG
 

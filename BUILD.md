@@ -20,6 +20,14 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
   unintended changes.
 - `scratchpad/refill/`, `scratchpad/taizmap/`, `scratchpad/gamedev-page/` — the checkpoint refill patch and its
   measurements, the Taiz Level Map tools, and the topic page.
+- `scratchpad/guard/` — the enemy-rule rig: `python3 variants.py [names]` makes copies of the sources in
+  `guard/var/<name>/`, each with one change (its edit lists are the 25 Oct guard experiments, adopted in 0.16.85, so only
+  `base` applies to today's sources: write new edits for a new comparison); `node guard_audit.js guard/var/<name> [seeds]`
+  plays a copy with the seeded bots (the Strait, the Coffee Port, Ibb on foot, Taiz) and reports, for every ordinary
+  enemy, whether he got an attack off, the shots that glanced off, and what the run cost the bot.
+- `scratchpad/mapmove/apply_hunks.py` — ports a diff made straight in `index.html` into the sources:
+  `python3 apply_hunks.py <diff> scratchpad/game/src [--dry]` (each hunk's old text must be found once across the
+  sources; the BUILD and LANG_AR hunks are skipped).
 - `bab_out/m1_src/` — `build.py` (writes the single-file `index.html`, art as lossless WebP data URIs; `version.json`
   holds the release and build numbers), `page.tpl.html`, `build_standalone.py`, browser tests `test_*.js` (Playwright)
   and picture scripts `snap_*.js`.
