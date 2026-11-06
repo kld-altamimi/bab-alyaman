@@ -13,6 +13,8 @@ Env (defaults in brackets):
   SHIELD=<event>  nothing hurts Yazeed after that event (staging: show it to Khaled as staging)
   HOLDFIRE=<event>:<n>:<frames>  he holds fire that long after the n-th such event (staging)
   PORT  the local server's port (one per parallel run)
+  MUTEVOICES=1  the game's voices left out of game.pcm (effects only), for a reel that lays its lines itself (reel.py
+                "lines"): each line then plays where its subject is on screen; the subtitles log still records them
 Outputs: <outdir>/f/NNNNNN.png (shoot), <outdir>/game.pcm (48 kHz stereo s16, voices and effects, music muted: lay the
 music in the edit), <outdir>/log.json {log, subs, errs, frames, samples}.
 Note: a shoot can come out one frame early against its plan (or another shoot); compare the voice entries of the two
@@ -80,7 +82,7 @@ def wanted(f):
 srv = common.serve(PORT)
 t0 = time.time()
 with sync_playwright() as p:
-    bw, pg, errs, tracks = common.boot(p, PORT, {'seed': SEED, 'lensec': max(60, STOP // 60 + 30), 'muteVoices': False}, want=MISSION)
+    bw, pg, errs, tracks = common.boot(p, PORT, {'seed': SEED, 'lensec': max(60, STOP // 60 + 30), 'muteVoices': os.environ.get('MUTEVOICES') == '1'}, want=MISSION)
     print('tracks', tracks, flush=True)
     pg.evaluate(HOOK)
     pg.evaluate("window.__clean = true; window.__pilotOn = true;")

@@ -1,0 +1,24 @@
+{
+ "_note": "Yazeed doesn't talk much, v3 (6 Nov). Filmed with MUTEVOICES=1 (seed 41): S = m1 zone 0 [0,420); B = m1 zone 3 [3780,4030); R = ibb zone 2 [1690,2070); W = mocha zone 0 [1240,1600). Each line laid where what it's about is on screen. The rally is cut from Yazeed reaching the chairs (1884) to the Spokesman's jump (1964), skipping the game's 1.3 s pause after 'Nice beret.'. The boat beat ends before its first hit (white strobe from 4014). The Roaster beat of v2 is gone: off-screen until it rushes in at 1590, then its hit wash blinks 15 times a second.",
+ "name": "bab-alyemen-yazeed-v3",
+ "out": "work/out/d20261106-reel-v3",
+ "runs": {"S": "work/runs/s_m10", "B": "work/runs/s_m1", "R": "work/runs/s_ibb", "W": "work/runs/s_mo0"},
+ "shots": [
+  {"run": "S", "a": 2, "n": 176, "x0": 12, "y0": 0, "sc": 3},
+  {"run": "B", "a": 3830, "n": 182, "x0": 12, "y0": 0, "sc": 3},
+  {"run": "R", "a": 1770, "n": 114, "x0": 24, "y0": 0, "sc": 3},
+  {"run": "R", "a": 1964, "n": 94, "x0": 24, "y0": 0, "sc": 3, "xi": 0.005},
+  {"run": "W", "a": 1275, "n": 190, "x0": 12, "y0": 0, "sc": 3}
+ ],
+ "music": {"file": "music_strait.mp3", "from": 0},
+ "head": [["يزيد ما يتكلم كثير", "b_org"]],
+ "card": [["العبها الآن من المتصفح", "b_org", 4]],
+ "card_frames": 240,
+ "subs": [],
+ "lines": [
+  {"id": "yazeed_sand", "at": 25, "hold": 20},
+  {"id": "yazeed_flying", "at": 238, "hold": 3},
+  {"id": "yazeed_beret", "at": 442},
+  {"id": "yazeed_tea", "at": 578}
+ ]
+}

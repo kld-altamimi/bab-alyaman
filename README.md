@@ -31,8 +31,8 @@ numpy, scipy and ffmpeg (Chromium and Playwright come with the machine; don't re
 | `rig/pilot.js` | game-development's pilot for Taiz's Apache (used by film.py when the Apache flies) |
 | `lettering/strips.py` | any string drawn by the game's text renderer, as a transparent strip (`strings/` holds past sets) |
 | `layout/compose.py` | a picture post: logo, title row, a game frame, optional game subtitle or comic bubbles, call to play, handle |
-| `edit/reel.py` | a reel from filmed runs, from a JSON spec: title row, the game's subtitles, end card, one music track |
-| `edit/qc.py` | the quality gate a reel must pass: no frozen picture over 1.5 s, no white strobe (what reads as "buggy") |
+| `edit/reel.py` | a reel from filmed runs, from a JSON spec: title row, the game's subtitles or laid lines, end card, one music track; refuses a shot whose picture stands still over 0.4 s |
+| `edit/qc.py` | the quality gate a reel must pass: no still picture over 0.4 s, no strobe (3+ blinks a second, a boss's hit flash), what reads as "buggy" |
 | `assets/` | the logo, the handle, Noto Kufi Arabic (OFL), a fallback copy of smartBot |
 | `reference/` | the scripts behind past posts, kept as they were (paths point at an old scratchpad): read them for how a post was made |
 
@@ -62,7 +62,11 @@ in `bubbles` drawn as a comic, or on cards, never in the subtitle band.
 **A reel.** Write a spec (see the top of `edit/reel.py`) and run `python3 edit/reel.py spec.json --preview`, then without
 `--preview` for the upright cut and with `--x` for the 4:5 cut for X. It letters every subtitle, name and title it needs
 by itself (strips land in `$MK_WORK/text`) and runs `edit/qc.py` on the result. Check the sheet, then the video: frames at
-each cut, loudness (about −15 LUFS, true peak under −1 dB), and the QC line (a frozen picture or a white strobe fails it).
+each cut, loudness (about −15 LUFS, true peak under −1 dB), and the QC line (a still picture or a strobe fails it).
+A line plays while what it's about is on screen: film with `MUTEVOICES=1` and lay the lines with the spec's `lines`
+(`edit/specs/yazeed-v3.json` does). Then cut the dead time: the bot stands still while it waits (a boss's entrance with
+the camera locked, a scripted pause), and with a still background that's a frozen picture. A cut inside a still stretch
+is invisible; a laid line can run across it.
 
 **Lettering only.** `python3 lettering/strips.py strings.json [outdir]` with `{"name": ["m_lav", "…"]}`. Fonts: `m_org`
 (speaker names), `m_lav` (subtitle lines), `b_org` / `b_red` (titles), `s_lav` (small).
@@ -74,3 +78,7 @@ each cut, loudness (about −15 LUFS, true peak under −1 dB), and the QC line 
 - AAC overshoots on bright tones: reel.py's encode keeps a low-pass and a limiter before it.
 - A crop narrower than the game's screen can hide the man Yazeed is shooting at: use a wider shot (`sc: 3`) for fights.
 - The world's canvas is 384x216 on these runs; scale by whole numbers only.
+- A boss's hit flash strobes once the heavy MG is on it (the boat: full white; the Roaster: a half-white wash, 15 times a
+  second): end a boss beat before its first hit (its `hp` in the `cam` log starts falling). The Roaster stays off-screen
+  through its whole intro and rushes in at `boss_start`, so it has under half a second on screen before the hits.
+- The rally (Ibb): after "Nice beret." the game holds 80 frames (1.3 s) before the Spokesman jumps: cut across it.

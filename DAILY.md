@@ -53,6 +53,9 @@ the Artifact tool (`publish`, `url` = the page, `asset: true`, `file_paths`). Tr
    - a ready post ✓ Posted (`choice` "posted"): stage "posted", kind "info", chip "Result due", status "progress";
      delete `ask`, `asked`, `labels`, `rec`, `when`, `who`, `know`, `rank`; give it `order` one below the lowest posted
      order (newest first); add or update its shelf item (`section` "shelf", the picture or clip, `order` likewise).
+     Since 6 Nov the page saves Posted in its own slot, doc `<item id>:out`, so a comment never blocks it: read answers by
+     `item` and `choice`, never by doc id. A post with a Posted answer is out, whatever else came with it: a ✎ note on it
+     is feedback for the taste notes (and the next post), not a remake.
    - a ready post ✎ (`change` + note): fix it and re-present it with a new key (`<id>:posted2`, `:posted3`…).
    - a question answered (`opt:<id>` and maybe a note): act on it and learn from it (step 6).
    - an answer on anything else (older items, concepts, requests): do what it says if it's yours to do; otherwise leave
@@ -64,12 +67,18 @@ the Artifact tool (`publish`, `url` = the page, `asset: true`, `file_paths`). Tr
      text 3–4 s, natural play, no boss endings, one piece of the game's music from start to end.
    - Look at what you made before showing it: a contact sheet of the reel, the picture itself; every subtitle checked
      against the run's `subs` log.
-   - Nothing that reads as "buggy" (he said it twice: 30 Oct, 6 Nov, "let's address the root cause"): run
+   - Nothing that reads as "buggy" (he said it three times: 30 Oct, 6 Nov twice, "let's address the root cause"): run
      `python3 edit/qc.py <reel.mp4>` (`edit/reel.py` runs it too) and fix every failure before showing the reel. Never use
      frames after the mission's status leaves "play" (the game stands still at its end: a frozen picture); never hold
-     the bot back or keep Yazeed standing to fit a line; when a line's own scene is still, put the line over a moving
-     scene (a real line in another scene is allowed); a boss still off-screen is not a target (`rig/film.py` knows);
+     the bot back or keep Yazeed standing to fit a line; a boss still off-screen is not a target (`rig/film.py` knows);
      cut before a boss's full-white hit flash (it strobes; a game issue, reported via the conductor).
+   - Stills: a game picture that doesn't move for more than 0.4 s reads as a hang. Yazeed's reel v2 (6 Nov) had 1.1 s
+     and 1.4 s stills, and he called it buggy again: the bot stood waiting for a boss's entrance (camera locked, nothing
+     on screen to fire at, the background still) and at the rally's scripted pause. `edit/reel.py` refuses a shot with
+     such a still and `edit/qc.py` fails the reel. Start a boss beat when the boss is on screen, and cut the dead time.
+   - A line plays while what it's about is on screen («هذي... دلّة؟» over an empty beach read as broken). Film with
+     `MUTEVOICES=1` and lay each line with the spec's `lines` (a real game line, placed where it reads; the subtitles
+     come with it): its own scene's timing doesn't bind you.
    - Upload, then set the item: `stage` "ready", `kind` "posted", `labels` {"approve": "Posted", "change": "Fix
      something first"}, `ask` "<id>:posted", `asked`/`updated` now, `text` = the caption exactly as it goes out, `body`
      = what it is in a few lines + a spare caption + "Link: none in the post; it lives in the bio." (X), `image` or

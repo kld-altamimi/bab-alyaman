@@ -19,8 +19,15 @@ Spec (JSON):
  "card_frames": 240,
  "subs": "auto",          the game's subtitles from each run's log; or a list [[from, to, who, line], …] in reel frames
  "sub_min": 15,           a subtitle shown for fewer frames than this (a line's tail as a shot starts) is left out
- "drop": ["يلّا."]        lines never shown
+ "drop": ["يلّا."],       lines never shown
+ "lines": [{"id": "yazeed_roaster", "at": 250}, …]   a real game line laid at reel frame `at`: its voice from the build's
+          audio at the game's own level, its subtitle in the game's Arabic, the music and effects under it as the game
+          does. For shots filmed with MUTEVOICES=1, so each line plays while what it's about is on screen (a real line in
+          another scene is allowed). With "lines", the logs' own subtitles and voices are left out (they were silent).
+          Optional per line: "hold" frames the subtitle stays after the voice (default 24), "min" its shortest (90)
 }
+A shot whose picture doesn't move for more than 0.4 s is refused (it reads as a hang; Khaled, 6 Nov: "The video is
+buggy"): take frames where it moves. --allow-still overrides it, only for a still that is the point.
 Rules this follows (Khaled's): pace 3–4 s a beat with text; no clipped word at a cut (check the log: a new line cuts the
 one playing); one piece of music; the card names the mission, says it's out and how to play."""
 import json, os, sys, subprocess, hashlib
@@ -60,9 +67,30 @@ for s in SHOTS:
         assert os.path.exists(RUNS[s['run']] + 'f/%06d.png' % f), ('missing frame', s, f)
 print('shots', [(s['run'], s['a'], s['n'], s['r']) for s in SHOTS], 'card', CARD_AT, 'total', TOTAL, round(TOTAL / FPS, 2), 's')
 
+# ---- stills: a game picture that doesn't move for more than 0.4 s reads as a hang (a bot waiting for a boss's
+# entrance, a scripted pause): refused before anything is made
+def still_runs(s, most=24):
+    x0, y0, sc = s['x0'], s['y0'], s.get('sc', 4); box = (x0, y0, x0 + 1080 // sc, y0 + 648 // sc)
+    prev, start, out = None, None, []
+    for f in range(s['a'], s['a'] + s['n'] + 1):
+        b = Image.open(RUNS[s['run']] + 'f/%06d.png' % f).convert('RGB').crop(box).tobytes() if f < s['a'] + s['n'] else None
+        if b is not None and b == prev:
+            if start is None: start = f - 1
+        else:
+            if start is not None and f - start > most: out.append((start, f))
+            start = None
+        prev = b
+    return out
+STILLS = [(k, r) for k, s in enumerate(SHOTS) for r in still_runs(s)]
+for k, (a_, b_) in STILLS:
+    print("STILL: shot %d, source frames %d-%d (%.2f s): the picture doesn't move; take frames where it does" % (k, a_, b_, (b_ - a_) / FPS))
+if STILLS and not PREVIEW and '--allow-still' not in sys.argv: sys.exit(1)
+
 # ---- subtitles
 SUBS = []
-if SPEC.get('subs', 'auto') == 'auto':
+LAID = bool(SPEC.get('lines'))
+if SPEC.get('subs', 'auto') == 'auto' and LAID: pass          # the shots were filmed silent: their subtitles don't apply
+elif SPEC.get('subs', 'auto') == 'auto':
     for s in SHOTS:
         subs = LOGS[s['run']]['subs']
         for n, (f, txt) in enumerate(subs):
@@ -74,6 +102,23 @@ if SPEC.get('subs', 'auto') == 'auto':
             SUBS.append((reel(s, a), reel(s, b), who, line))
 else:
     SUBS = [tuple(x) for x in SPEC['subs']]
+# the laid lines: a real game line each, placed where what it's about is on screen
+import re
+LANG = src[src.find('var LANG_AR'):src.find('var AUDIO = ')]
+def ar(en):
+    m = re.search('"' + re.escape(en) + r'"\s*:\s*"((?:[^"\\]|\\.)*)"', LANG)
+    return json.loads('"' + m.group(1) + '"') if m else en
+def voice_of(vid):
+    if vid in MAN['voices']: return 'voices', MAN['voices'][vid]
+    for sp in (MAN.get('speech') or {}).values():
+        if vid in sp.get('lines', {}): return sp['file'], sp['lines'][vid]
+    sys.exit('no such line in the build: ' + vid)
+LINES = []
+for o in SPEC.get('lines', []):
+    f_, v_ = voice_of(o['id']); n_ = int(round(v_['at'][1] * FPS))
+    LINES.append(dict(o, file=f_, v=v_, n=n_))
+    SUBS.append((o['at'], min(o['at'] + max(n_ + o.get('hold', 24), o.get('min', 90)), CARD_AT), ar(v_['who']), ar(v_['text'])))
+    print('line', o['id'], 'at reel frame', o['at'], '(%.2f s), voice %.2f s:' % (o['at'] / FPS, v_['at'][1]), ar(v_['text']))
 print('subtitles', SUBS)
 
 # ---- lettering: every string the reel needs, drawn by the game (missing ones rendered now)
@@ -192,6 +237,28 @@ for n, s in enumerate(SHOTS):
     if n == len(SHOTS) - 1: fo = int(0.5 * SR); seg[-fo:] *= np.linspace(1, 0, fo)[:, None]
     p = s['r'] * SPF - (XF if full else 0); lo, hi = max(0, p), min(N, p + len(seg))
     game[lo:hi] += seg[lo - p:hi - p]
+# the laid lines: each voice at the game's own level (VOICE 1.2 x MASTER 0.85), the effects under it as the game does
+VOICE, SFX, SFX_UNDER = 1.2, 0.62, 0.44
+VOX = {}
+def vox(fname):
+    if fname not in VOX:
+        pcm = decode(os.path.join(mk.BUILD, 'audio', fname + '.mp3'))
+        k = np.nonzero(np.abs(pcm).max(axis=1) > 0.15)[0]
+        VOX[fname] = (pcm, (k[0] / SR - MAN['mark']) if len(k) else 0.0)      # the game's own alignment (Sound's shift)
+    return VOX[fname]
+if LINES:
+    sfxg = np.ones(N, np.float32)
+    for L_ in LINES:
+        p = L_['at'] * SPF; sfxg[p:p + int(L_['v']['at'][1] * SR)] = SFX_UNDER / SFX
+    sg, cur = np.empty(N, np.float32), 1.0
+    da_, ua_ = 1 - np.exp(-1 / (0.04 * SR)), 1 - np.exp(-1 / (0.15 * SR))
+    for k in range(N): tg = sfxg[k]; cur += (tg - cur) * (da_ if tg < cur else ua_); sg[k] = cur
+    game *= sg[:, None]
+    for L_ in LINES:
+        pcm, sh = vox(L_['file']); s0 = int(round((L_['v']['at'][0] + sh) * SR))
+        seg = pcm[s0:s0 + int(round(L_['v']['at'][1] * SR))] * (VOICE * MASTER)
+        p = L_['at'] * SPF; m_ = min(len(seg), N - p)
+        if m_ > 0: game[p:p + m_] += seg[:m_]
 TARGET, CUT, LIFT = -19.0, -6.0, 2.0          # a gentle leveller on the game's own mix
 win = int(0.25 * SR); pw = np.convolve((game ** 2).mean(axis=1), np.ones(win) / win, 'same')
 want_db = np.clip(TARGET - 10 * np.log10(pw + 1e-10), CUT, LIFT)
@@ -199,8 +266,8 @@ gl, cur = np.empty(N, np.float32), 0.0
 att, rel = 1 - np.exp(-1 / (0.08 * SR)), 1 - np.exp(-1 / (0.5 * SR))
 for k in range(N): tg = want_db[k]; cur += (tg - cur) * (att if tg < cur else rel); gl[k] = cur
 game *= (10 ** (gl / 20))[:, None]
-duck = []
-for s in SHOTS:
+duck = [(L_['at'], L_['at'] + L_['n']) for L_ in LINES]
+for s in ([] if LAID else SHOTS):
     for k, f, d in LOGS[s['run']]['log']:
         if k != 'voice' or (isinstance(d[1], dict) and d[1].get('over')): continue
         v = SPEECH.get(d[0]) or MAN['voices'].get(d[0])
