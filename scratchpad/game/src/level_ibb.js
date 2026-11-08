@@ -445,6 +445,10 @@ var LEVEL_IBB = (function () {
                       E: ['sp_important', 'sp_E2', 'sp_E3', 'sp_E4', 'sp_E5', 'sp_E6', 'sp_E7', 'sp_ops', 'sp_E9', 'sp_end'] } },
     // the opening: Salem's 4x4 up the road from off the left of the picture, stopping under the billboard (opening.js)
     opening: { from: -90, stop: 176 },
+    // Yazeed one sandal short through Jibla (sandal.js; the mock of 6 Nov, Khaled: "build it as proposed"): a lit stick at
+    // his feet as he comes into Jibla takes a sandal; he has it again on the terraces. Jibla's screens tell statement B
+    // ("One enemy sandal has been captured."), the first of them straight after the stick
+    sandal: { at: Z2 + 50, back: Z3 },
     // (no word of Yazeed's at the mosque: Khaled, 30 Oct 14:36, "Remove the grandma lines"; main.js's `remarks` stays for
     // a line at a place in another level)
     // his screens: the billboard (statement C, the warning, whole) and the sets, each with the lines it plays (statement A
@@ -454,11 +458,11 @@ var LEVEL_IBB = (function () {
       { x: 548, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_important', 'sp_A2', 'sp_A3', 'sp_A4'] },
       { x: 860, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_A5', 'sp_A6', 'sp_A7', 'sp_A8'] },
       { x: 1940, size: 'tv', zone: 0, gy: VERGE + 10, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4', 'sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
-      { x: 2172, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_ops', 'sp_end', 'sp_A11'] },
+      { x: 2172, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_B5', 'sp_B6', 'sp_end'] },
       { x: 2600, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_B2', 'sp_B3'] },
       { x: 2712, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_B4', 'sp_B5', 'sp_B6', 'sp_end'] },
-      { x: 3230, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_C2', 'sp_C3', 'sp_C4'] },
-      { x: 3460, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_A2', 'sp_A3', 'sp_A4', 'sp_A5', 'sp_A6'] },
+      { x: 3230, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_important', 'sp_B2', 'sp_B3', 'sp_B4', 'sp_B5'] },
+      { x: 3460, size: 'tv', zone: 1, gy: VERGE + 10, lines: ['sp_B5', 'sp_B6', 'sp_end'] },
       { x: 4136, size: 'tv', zone: 2, gy: 174, lines: ['sp_C5', 'sp_C6', 'sp_C7', 'sp_end'] },
       { x: 4860, size: 'tv', zone: 2, gy: 126, lines: ['sp_A7', 'sp_A8', 'sp_A11'] },
       { x: 5592, size: 'tv', zone: 2, gy: 110, lines: ['sp_important', 'sp_B2', 'sp_B3', 'sp_B4'] },

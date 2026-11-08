@@ -217,11 +217,54 @@
     if (p.hidden) return true;                 // (in Salem's 4x4, drawn with it: the opening)
     if (!s.calm || !sheet()) return false;
     var gun = p.weapon === 'hmg' ? 'hmg' : 'side';
-    if (legs === 'jump' || legs === 'fall') { K.spr('yazeed_' + legs + '_' + gun + '_ddiag', p.x, p.y, p.face < 0); return true; }
-    if (legs !== 'stand' && legs !== 'pass' && legs !== 'run') return false;
     cx = K.ctx();
+    if (legs === 'jump' || legs === 'fall') { var jn = 'yazeed_' + legs + '_' + gun + '_ddiag'; K.spr(jn, p.x, p.y, p.face < 0); bareFoot(s, jn, p.x, p.y, p.face < 0); return true; }
+    if (legs !== 'stand' && legs !== 'pass' && legs !== 'run') return false;
     ispr('ylow_' + legs + '_' + gun, p.x, p.y, p.face < 0);
+    bareFoot(s, 'ylow_' + legs + '_' + gun, p.x, p.y, p.face < 0);
     return true;
+  }
+  // Yazeed one sandal short through Jibla (sandal.js): the few pixels of his bare front foot, laid over whichever of his
+  // frames he is drawn with (ibb_sprites.py made a patch for each; rig.bare says which)
+  function bareFoot(s, name, x, y, flip) {
+    if (!s.sandal || s.sandal.st !== 'short') return;
+    var pn = FS.rig && FS.rig.bare && FS.rig.bare[name];
+    if (pn) ispr(pn, x, y, flip);
+  }
+  function yazeedOver(s, p, name, x, y, flip, K) {
+    if (!s.sandal || s.sandal.st !== 'short' || !sheet()) return;
+    cx = K.ctx();
+    bareFoot(s, name, x, y, flip);
+  }
+  // the stick on its way down and fizzing at his feet, and the sandal: turning over in the air, then lying where it fell
+  function drawSandal(s, K) {
+    var sd = s.sandal, tk = K.tick();
+    if (!sd) return;
+    if (sd.st === 'stick') {
+      var u = Math.min(1, sd.t / Sim.SANDAL.FLY), sx = sd.sx + (sd.tx - sd.sx) * u, sy = sd.sy + (sd.ty - sd.sy) * u * u;
+      K.spr('fx_stick' + ((sd.t >> 2) % 4), sx, sy - 3);
+      if ((tk >> 1) % 2) K.spr('fx_spark', sx + 2, sy - 7);
+    } else if (sd.st === 'fuse') {
+      K.spr('fx_stick0', sd.tx, sd.ty - 3);
+      if ((tk >> 1) % 2) K.spr('fx_spark', sd.tx + 2, sd.ty - 7);
+    }
+    if (sd.fx == null || sd.fx < s.cam - 40 || sd.fx > s.cam + K.W() + 40) return;
+    if (sd.fair) ispr('sandal_r' + ((sd.t >> 2) % 4), sd.fx, sd.fy - 2);
+    else if (sd.lie) ispr('sandal', sd.fx, sd.fy);
+  }
+  // the pop: a puff where the stick was, nothing more; the sandal landing raises a little dust
+  function misc(e, s, K) {
+    var k;
+    if (e.t === 'sandal_pop') {
+      for (k = 0; k < 6; k++) K.part('smoke', e.x + (Math.random() - 0.5) * 14, e.y - 4 - Math.random() * 6, { life: 26 + Math.random() * 12, vx: (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 30 });
+      K.shake(2);
+      return true;
+    }
+    if (e.t === 'sandal_down') {
+      for (k = 0; k < 3; k++) K.part('smoke', e.x + (Math.random() - 0.5) * 8, e.y - 2, { life: 14, vx: (Math.random() - 0.5) * 30, vy: -14 });
+      return true;
+    }
+    return e.t === 'sandal_throw' || e.t === 'sandal_land';
   }
 
   function scene(s, paused, K) {
@@ -236,6 +279,7 @@
     }
     // (the opening's 4x4 on the road, in front of the billboard on the verge it stops under)
     if (s.open && s.open.st !== 'gone') drawOpening(s, K);
+    if (s.sandal) drawSandal(s, K);           // (the stick at his feet as he comes into Jibla, and his sandal: sandal.js)
     if (s.kids && s.kids.length) drawKids(s);
   }
 
@@ -271,7 +315,19 @@
     lastEnd = s.tick + (v ? Math.round(v.at[1] * 60) : 120); lastSrc = best.i;
     return v ? { id: id, o: { pri: 0.5 } } : null;
   }
+  // Jibla's teacher (Khaled's pick, 6 Nov: look A): his own sprite from this sheet where render.js would draw Taiz's tied
+  // man: roped to his flagpole; freed, both hands up to his pupils as they run home; then walking after them, his book in
+  // his hand (what he does is school.js's, unchanged)
+  function detainee(s, o, K) {
+    var Sc = s.L.school;
+    if (!Sc || Math.abs(o.px - Sc.teacher) > 2 || !sheet()) return false;
+    cx = K.ctx();
+    if (o.st === 'tied') ispr('tch_tied', o.x, o.y);
+    else if (o.st === 'freed') ispr('tch_wave', o.x, o.y);
+    else ispr((Math.floor(o.t / 7) % 2) ? 'tch_walk1' : 'tch_walk2', o.x, o.y, true);
+    return true;
+  }
   function reset() { cur = null; lastEnd = -999; lastSrc = -1; rallyLi = 0; rallyEnd = -999; st.L = null; st.at = []; st.s = null; }
 
-  Render.bosses.ibb = { ground: ground, scene: scene, talk: talk, reset: reset, yazeed: yazeed };
+  Render.bosses.ibb = { ground: ground, scene: scene, talk: talk, reset: reset, yazeed: yazeed, yazeedOver: yazeedOver, detainee: detainee, misc: misc };
 })();

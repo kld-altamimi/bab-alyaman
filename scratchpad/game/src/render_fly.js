@@ -268,7 +268,7 @@
   function flash(e) {
     if (!(e.hurtT < 3)) return false;
     var t0 = FLASH[e.id];
-    if (t0 == null || tick - t0 > 9 || tick < t0) FLASH[e.id] = t0 = tick;
+    if (t0 == null || tick - t0 > 19 || tick < t0) FLASH[e.id] = t0 = tick;      // (at most three flashes a second, as everywhere: render.js)
     return tick - t0 < 3;
   }
 
@@ -1400,7 +1400,7 @@
     var gp = at(R.gun), ga = h.face > 0 ? h.gunA : Math.PI - h.gunA;
     if (turn > 0.6) tsprRot('apache_gun', gp[0], gp[1], ga);
     cx.save(); cx.translate(Math.round(h.x), Math.round(h.y)); cx.scale(sxs, 1);
-    var f = FS.frames['apache_t' + fi + (p.hurtT < 3 ? '!' : '')];
+    var f = FS.frames['apache_t' + fi + (K.hit(p, 3) ? '!' : '')];
     cx.drawImage(HS, f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]);
     cx.restore();
     // the rotor, a blur over the hub, the tail rotor turning

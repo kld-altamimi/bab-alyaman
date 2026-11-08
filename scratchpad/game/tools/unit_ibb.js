@@ -14,6 +14,7 @@ require(path.join(__dirname, '../src/fly.js'));
 require(path.join(__dirname, '../src/school.js'));
 require(path.join(__dirname, '../src/rally.js'));
 require(path.join(__dirname, '../src/opening.js'));
+require(path.join(__dirname, '../src/sandal.js'));
 require(path.join(__dirname, '../src/spokesman.js'));
 const IBB = require(path.join(__dirname, '../src/level_ibb.js'));
 const AUDIO = JSON.parse(fs.readFileSync(path.join(__dirname, '../gen/audio.json'), 'utf8'));
@@ -422,6 +423,49 @@ function ok(c, msg) { if (!c) { fails++; console.log('FAIL ' + msg); } }
     ok(tries > 100 && same && a.boss && a.boss.hp === SP.HP && ['speak', 'ready', 'leap'].every(q => sawSt.has(q)),
        'shots and blasts on him, his podiums and the microphones he is not speaking into, while he is not stunned: he does exactly as he would have, unhurt (' + tries + ' tries; ' + [...sawSt].join(', ') + ')');
   }
+})();
+
+// ------------------------------------------------------------------ one sandal short (sandal.js; the mock of 6 Nov, Khaled: "build it as proposed")
+(function sandal() {
+  const L = IBB, S = L.sandal, X = Sim.ext.sandal, lines = AUDIO.speech.ibb.lines;
+  const alley = L.gates.find(g => g.id === 'alley');
+  ok(!!X && !!S && S.at > L.zones[1].x && S.at < alley.x - 150 && S.back === L.zones[2].x, 'the stick comes down as he comes into Jibla, well short of its first fight; the sandal is his again on the terraces');
+  // Jibla's screens tell statement B, and the first of them after the stick says the sandal line
+  const jib = L.screens.filter(q => q.zone === 1);
+  ok(jib.length >= 3 && jib.every(q => q.lines.every(id => /^sp_(B\d|important|end)$/.test(id))), 'Jibla\'s screens tell statement B (' + jib.map(q => q.lines.join('+')).join(' | ') + ')');
+  const first = jib.filter(q => q.x > S.at).sort((a, b) => a.x - b.x)[0];
+  ok(!!first && first.lines.includes('sp_B5') && !!lines.sp_B5 && /sandal/.test(lines.sp_B5.text), 'the first screen after the stick says "' + (lines.sp_B5 && lines.sp_B5.text) + '"');
+  // where it starts: both sandals on any new start; one short on a continue in Jibla (the stick does not come again)
+  for (const [z, extra, want] of [[0, {}, 'on'], [1, {}, 'on'], [2, {}, 'on'], [1, { stats: { deaths: 1, continues: 1 } }, 'short'], [0, { stats: { deaths: 1, continues: 1 } }, 'on'], [2, { stats: { deaths: 1, continues: 1 } }, 'on']]) {
+    const s = Sim.create(L, Object.assign({ viewW: 468, zone: z }, extra));
+    ok(!!s.sandal && s.sandal.st === want, 'from zone ' + z + (extra.stats ? ' on a continue' : '') + ': ' + want + ' (' + (s.sandal && s.sandal.st) + ')');
+  }
+  // the scene, walking into Jibla from its checkpoint; and the very same walk with no scene, to compare
+  function walk(scene) {
+    const s = Sim.create(scene ? L : Object.assign({}, L, { sandal: null }), { viewW: 468, seed: 9, zone: 1 });
+    const out = { order: [], at: {}, hurt: 0, trace: [] };
+    for (let t = 0; t < 60 * 5; t++) {
+      Sim.step(s, { viewW: 468, mx: t < 150 ? 1 : 0, fire: false });
+      out.trace.push([s.p.x, s.p.y, s.p.vx, s.p.vy, s.bombs.length, s.bullets.length, s.enemies.filter(e => e.alive).length].map(v => Math.round(v * 1000)).join(','));
+      for (const e of s.events) {
+        if (/^sandal_/.test(e.t)) { out.order.push(e.t); out.at[e.t] = t; }
+        if (e.t === 'life_lost' || e.t === 'plate_lost' || e.t === 'hurt') out.hurt++;
+      }
+    }
+    out.s = s;
+    return out;
+  }
+  const a = walk(true), b = walk(false);
+  ok(a.order.join(',') === 'sandal_throw,sandal_land,sandal_pop,sandal_down', 'the stick comes down, fizzes and pops, and the sandal lands: once each, in order (' + a.order.join(',') + ')');
+  ok(a.at.sandal_pop - a.at.sandal_throw < 60, 'the whole of it in under a second (' + ((a.at.sandal_pop - a.at.sandal_throw) / 60).toFixed(2) + ' s to the pop)');
+  ok(a.s.sandal.st === 'short' && a.s.sandal.lie && a.s.sandal.fx < a.s.p.x - 20, 'he goes on one sandal short; the sandal lies behind him (' + Math.round(a.s.sandal.fx) + ', he is at ' + Math.round(a.s.p.x) + ')');
+  ok(a.trace.join('|') === b.trace.join('|'), 'the scene changes nothing: the same walk with and without it moves him, the shots, the bombs and the men the same');
+  ok(a.hurt === b.hurt, 'what touches him is the same with and without it (' + a.hurt + ', ' + b.hurt + ': the men up the street): the stick is in nothing the game hits');
+  // the terraces: both sandals again
+  const c = Sim.create(L, { viewW: 468, zone: 1, stats: { deaths: 1, continues: 1 } });
+  ok(c.sandal.st === 'short', 'a continue in Jibla: one short');
+  c.p.x = S.back + 4; X.step(c);
+  ok(c.sandal.st === 'back' && !X.short(c), 'on the terraces he has it again');
 })();
 
 // ------------------------------------------------------------------ the whole range, by a bot

@@ -55,12 +55,12 @@
     } else if (f.st === 'dressed') name = 'tl_pose';
     if (name) {
       K.spr(name, x + jx, top + dy + bob, flip);
-      if (f.hurtT < 2 && K.frame(name + '!')) K.spr(name + '!', x + jx, top + dy + bob, flip, 0.6);
+      if (K.frame(name + '!') && K.hit(f, 2)) K.spr(name + '!', x + jx, top + dy + bob, flip, 0.6);
     } else if (f.st === 'bare') {
       // its clothes gone: a dress form on a pole, rocking on its stand from the shot
       var w = f.wob > 0 ? Math.sin(f.wob * 0.9) * 0.16 * (f.wob / 12) : 0;
       K.sprRot('tl_bare', x, top + dy, w, false);
-      if (f.hurtT < 2) { var c2 = K.ctx(); c2.globalAlpha = 0.6; K.sprRot('tl_bare!', x, top + dy, w, false); c2.globalAlpha = 1; }
+      if (K.hit(f, 2)) { var c2 = K.ctx(); c2.globalAlpha = 0.6; K.sprRot('tl_bare!', x, top + dy, w, false); c2.globalAlpha = 1; }
     } else if (f.st === 'down') {
       // knocked off its stand, lying on the floor beside it
       var fall = f.fall || 1;

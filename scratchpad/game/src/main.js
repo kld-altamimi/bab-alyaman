@@ -587,6 +587,11 @@
         // ---- Ibb: the school (school.js)
         case 'class_open': Sound.sfx('door_creak', { gain: 0.9, pan: panOf(e.x) }); break;
         case 'kid_stop': after(8, function () { speak('yazeed_home', { pri: 4, who: 'YAZEED' }); }); break;
+        // Yazeed one sandal short (sandal.js): the stick coming down, fizzing, the pop, the sandal landing behind him
+        case 'sandal_throw': Sound.sfx('throw', { gain: 0.6, pan: panOf(e.x) }); break;
+        case 'sandal_land': Sound.sfx('fuse', { gain: 0.8, pan: panOf(e.x) }); break;
+        case 'sandal_pop': Sound.sfx('pop', { gain: 1, pan: panOf(e.x) }); break;
+        case 'sandal_down': Sound.sfx('step', { gain: 0.6, pan: panOf(e.x) }); break;
         // ---- Ibb: the rally on the terraces' top (rally.js): Yazeed's word cuts the Spokesman short; his jump, the applause;
         //      his landing on the deck
         case 'rally_heard': speak('yazeed_beret', { pri: 4, who: 'YAZEED' }); break;

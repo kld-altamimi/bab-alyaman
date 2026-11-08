@@ -27,7 +27,7 @@
       if ((tick >> 2) % 2) K.spr('hud_alert', lx - 4, gy - 50);
     }
     // a hit shows as a white flash laid over it (half strength: with the heavy MG on it, it is hit every few frames)
-    var white = b.hurtT < 2 || (b.st === 'dying' && (tick >> 1) % 3 === 0), wh = '', cx = K.ctx();
+    var white = K.hit(b, 2) || (b.st === 'dying' && K.dyingFlash()), wh = '', cx = K.ctx();      // (at most three flashes a second: render.js)
     var tk = ((Math.floor(Math.abs(b.tread) / 3) % 3) + 3) % 3;
     if (b.st === 'lungetell') tk = (tick >> 1) % 3;                         // the tracks spinning on the spot
     var fast = b.st === 'spraytell' || b.st === 'spray' || b.st === 'dying';

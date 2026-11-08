@@ -708,6 +708,158 @@ def technician(n, pose='up', flip=False):
     return compose(L, flip=flip, foot=B.foot)
 
 
+# ---------------------------------------------------------------- Jibla's teacher (Khaled's pick, 6 Nov: look A)
+# The children's teacher, tied to the flagpole in his own yard (the mission's one to free). Until 0.19.99 he was Taiz's
+# tied man in a thobe; now a lean man of his own in the cast's kit, as the technicians: a green jacket over grey trousers,
+# dark hair, a grey beard, his red reader in his hand. Tied to the pole; freed, both hands up to his pupils as they run
+# home (the mock's "A waves"); then he walks after them with his book. He faces right; the game flips him to walk left.
+BOOK = [
+    'KKLLJ',
+    'KLLMJ',
+    'KLLMJ',
+    'KLLLJ',
+]
+
+
+def teacher(pose='walk1', flip=False):
+    """pose: 'tied' (roped to the pole), 'wave' (freed, both hands up), 'walk1' / 'walk2' (the book in his hand; the
+    second a step on, his body up a pixel)."""
+    p = pal('sage', 'dark', 'black', 'skin2')
+    B = ms3.LEAN
+    at = ms3.at
+    dy = -1 if pose == 'walk2' else 0
+    L = []
+    if pose == 'tied':
+        L.append(at('post', (3, -10), p))
+    if pose == 'wave':
+        L.append(at('arm_raise_l', (3, 0), p))
+    L += [at(TROUSERS_L, (2, 20), p), at('jacket_l', B.torso, p, 0, dy), at('belt_l', B.belt, p, 0, dy)]
+    if pose == 'tied':
+        L.append(at('rope_s', (5, 11), p))
+    elif pose != 'wave':
+        L += [at('forearm_l', B.forearm, p, 0, dy), at('sleeve_l', B.sleeve, p, 0, dy)]
+    L.append(at(FACES['elder'], B.face, p, 0, dy))
+    L.append(at(HAIR, B.wrap, p, 0, 1 + dy, ink=INK2))
+    if pose != 'tied':
+        L.append(at(BOOK, (16, 12 + dy), p))                # (held up against his chest, in front of his beard)
+    if pose == 'wave':
+        L.append(at('arm_raise_fl', (17, 2), p))
+    return compose(L, flip=flip, foot=B.foot)
+
+
+def teacher_frames():
+    return [('tch_%s' % k,) + teacher(k) for k in ('tied', 'wave', 'walk1', 'walk2')]
+
+
+# ---------------------------------------------------------------- Yazeed one sandal short (Khaled, 6 Nov: "build it as proposed")
+# Statement B ends «One enemy sandal has been captured.»: as he comes into Jibla a lit stick takes the sandal off his front
+# foot (as on the mock page), he goes through Jibla with that foot bare and has it back for the terraces (sandal.js). His
+# frames stay the atlas's: for each one this sheet holds the few pixels that differ with the foot bare, a patch that
+# render_ibb.js lays over him while the sandal is lost (frames with the same legs share one; rig.bare maps a frame to its
+# patch). And the sandal itself: lying on the ground, and turning over in the air.
+SANDAL = [
+    '..C..C..',
+    '.CBBBBC.',
+    'AAAAAAAA',
+]
+
+
+def _bare(rows, c0):
+    """The front foot from column c0 on with its sandal gone: the straps skin, the sole a row of skin (the mock's)."""
+    out = []
+    for i, r in enumerate(rows):
+        head, tail = r[:c0], r[c0:]
+        if i == len(rows) - 1 and 'A' in tail:
+            a = tail.index('A'); n = len(tail[a:].rstrip('.').rstrip('q'))
+            run = 'p' + 'q' * (n // 3) + 'r' * (n - n // 3 - 2) + 's'
+            tail = tail[:a] + run + tail[a + n:]
+        else:
+            tail = tail.replace('A', 'r')
+        out.append(head + tail)
+    return out
+
+
+def _yazeed_calls():
+    """Every frame of Yazeed's that Ibb can show, as (name, () -> (image, ax, ay)): the atlas's (export_art.py) and this
+    sheet's own with the gun pointed at the ground (yazeed_low)."""
+    import sprites as SP
+    def f(*a, **k):
+        return lambda: (lambda b: (b['im'], b['ax'], b['ay']))(SP.build(*SP.yazeed(*a, **k)))
+    out = []
+    for legs in ('stand', 'pass', 'run', 'jump', 'fall', 'crouch'):
+        for gun in ('side', 'hmg'):
+            out.append(('yazeed_%s_%s_fwd' % (legs, gun), f(legs, gun, 'fwd')))
+            out.append(('yazeed_%s_%s_throw' % (legs, gun), f(legs, gun, 'fwd', throw=True)))
+            if legs != 'crouch':
+                out.append(('yazeed_%s_%s_up' % (legs, gun), f(legs, gun, 'up')))
+                out.append(('yazeed_%s_%s_diag' % (legs, gun), f(legs, gun, 'diag')))
+            if legs in ('jump', 'fall'):
+                out.append(('yazeed_%s_%s_down' % (legs, gun), f(legs, gun, 'down')))
+                out.append(('yazeed_%s_%s_ddiag' % (legs, gun), f(legs, gun, 'ddiag')))
+        for st_ in (1, 2):
+            out.append(('yazeed_%s_knife%d' % (legs, st_), (lambda l, s_: lambda: (lambda b: (b['im'], b['ax'], b['ay']))(SP.build(*SP.yazeed_knife(l, s_))))(legs, st_)))
+    for legs in ('stand', 'pass', 'run'):
+        for gun in ('side', 'hmg'):
+            out.append(('ylow_%s_%s' % (legs, gun), f(legs, gun, 'ddiag')))
+    return out
+
+
+_BARE = None
+
+
+def bare_frames():
+    """-> (frames, map): the patches (only what differs, anchored as the frame is) and frame name -> patch name."""
+    global _BARE
+    if _BARE:
+        return _BARE
+    import sprites as SP
+    calls = _yazeed_calls()
+    normal = {n: c() for n, c in calls}
+    keep = (SP.LEG_NEAR, PARTS['legs_run'], PARTS['legs_crouch'], SP.EXTRA['toes_squat'])
+    SP.LEG_NEAR = _bare(SP.LEG_NEAR, 0)
+    PARTS['legs_run'] = _bare(PARTS['legs_run'], 14)
+    PARTS['legs_crouch'] = _bare(PARTS['legs_crouch'], 10)
+    SP.EXTRA['toes_squat'] = _bare(SP.EXTRA['toes_squat'], 8)
+    try:
+        bare = {n: c() for n, c in calls}
+    finally:
+        SP.LEG_NEAR, PARTS['legs_run'], PARTS['legs_crouch'], SP.EXTRA['toes_squat'] = keep
+    frames, mp, seen = [], {}, {}
+    for n, _ in calls:
+        (a, ax, ay), (b, bx, by) = normal[n], bare[n]
+        # both on one canvas, their anchors at the same point
+        W = H = 160; C = 80
+        A_ = np.zeros((H, W, 4), np.uint8); B_ = np.zeros((H, W, 4), np.uint8)
+        A_[C - ay:C - ay + a.height, C - ax:C - ax + a.width] = np.asarray(a.convert('RGBA'))
+        B_[C - by:C - by + b.height, C - bx:C - bx + b.width] = np.asarray(b.convert('RGBA'))
+        d = np.any(A_ != B_, axis=2)
+        if not d.any():
+            continue
+        ys, xs = np.nonzero(d)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        P = np.zeros((y1 - y0, x1 - x0, 4), np.uint8)
+        P[d[y0:y1, x0:x1]] = B_[y0:y1, x0:x1][d[y0:y1, x0:x1]]
+        key = (P.tobytes(), P.shape, C - x0, C - y0)
+        if key not in seen:
+            seen[key] = 'ybare%d' % len(seen)
+            frames.append((seen[key], Image.fromarray(P, 'RGBA'), C - x0, C - y0))
+        mp[n] = seen[key]
+    _BARE = (frames, mp)
+    return _BARE
+
+
+def sandal_frames():
+    """The sandal lying on the ground (anchored at its sole's middle) and turning over in the air (anchored at its
+    middle): four quarter turns."""
+    p = pal('cream', 'cream', 'blue', 'skin2')
+    im, ax, ay = compose([(SANDAL, 0, 0, p)], foot=(4, len(SANDAL)))
+    out = [('sandal', im, ax, ay)]
+    for k, t in enumerate((None, Image.ROTATE_90, Image.ROTATE_180, Image.ROTATE_270)):
+        r = im if t is None else im.transpose(t)
+        out.append(('sandal_r%d' % k, r, r.width // 2, r.height // 2))
+    return out
+
+
 def arena_frames():
     """The lookout on the pass (zone 4): each podium's screen, his face in it (three mouths and a blink), and its bezel;
     the screens frozen, cut off (snow), and back on once he is caught (the rendered him: the ear, two Yemens), the last
@@ -748,7 +900,7 @@ def frames():
     items.append(('tvb', screen('tv', 0, True), 0, 0))
     items.append(('tv_box',) + tv_box())
     items.append(('crate',) + crate())
-    items += kid_frames() + yazeed_low()
+    items += kid_frames() + yazeed_low() + teacher_frames() + sandal_frames() + bare_frames()[0]
     items.append(('podium',) + podium())          # (the terraces' stage: his podium on its deck, render_ibb.js)
     items += stage_frames()
     items += arena_frames()
@@ -771,7 +923,7 @@ def sheet():
     for n, im, x, y, ax, ay in place:
         out.alpha_composite(im, (x, y))
         meta[n] = [x, y, im.width, im.height, int(ax), int(ay)]
-    return out, meta, dict(board=[144, 96], tv=[32, 21])
+    return out, meta, dict(board=[144, 96], tv=[32, 21], bare=bare_frames()[1])
 
 
 if __name__ == '__main__':

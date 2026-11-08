@@ -10,6 +10,23 @@ var Render = (function () {
   var parts = [], decals = [], posts = [], popups = [], shake = 0, flashT = 0, tick = 0, refillT = 0;
   var achoo = { t: -999, x: 0 };                  // (the last ACHOO! put up over a Dhanab: when, and where)
   var banner = null, hint = null, goT = 0, behindT = 0, zoneT = 0, zoneName = '';
+  // A hit shows as a white flash, but never more than three times a second (Khaled, 7 Nov: the usual limit for players
+  // who are sensitive to flashing light): under a stream of rounds a boss, a vehicle, a man or a barricade flashes once,
+  // then not again for a third of a second; the sparks, the sounds and the health bar still show every hit. The wash over
+  // the whole screen after a big blast keeps the same limit, and a dying boss flickers at the same rate.
+  var FLASH_GAP = 20, flashAt = new WeakMap(), screenAt = -999;
+  function hitFlash(o, n) {
+    if (!o || !(o.hurtT < n)) return false;
+    var t0 = flashAt.get(o);
+    if (t0 === undefined || tick - t0 >= FLASH_GAP || tick < t0) { t0 = tick; flashAt.set(o, t0); }
+    return tick - t0 < n;
+  }
+  function dyingFlash() { return tick % FLASH_GAP < 2; }
+  function screenFlash(v) {
+    if (flashT > 0) { flashT = Math.max(flashT, v); return; }          // (still showing: it lasts a little longer, not a second flash)
+    if (tick >= screenAt && tick - screenAt < FLASH_GAP) return;
+    flashT = v; screenAt = tick;
+  }
   var spin = {}, gunAng = 2.2, duckT = 0;
   var opts = { boxes: false, calm: false };
   // other bosses draw themselves (render_<kind>.js): bosses[kind] = { draw(s, b, paused, K), events(e, s, K), hud(s, b, K) }
@@ -318,7 +335,7 @@ var Render = (function () {
       if (decals.length > 14) decals.shift();
     }
     shake = Math.max(shake, big ? 12 : (e.kind === 'kdrone' ? 4 : 7));
-    flashT = big ? 3 : flashT;
+    if (big) screenFlash(3);
   }
   function onEvents(s, events) {
     for (var ri = 0; ri < events.length; ri++) if (events[ri].t === 'refill') refillT = 60;      // (a checkpoint refill: the HUD glints)
@@ -410,7 +427,7 @@ var Render = (function () {
           for (k = 0; k < 10; k++) part('clod', e.x0 + Math.random() * 46, e.top + 10 + Math.random() * 20, { life: 30 + Math.random() * 20, vx: e.dir * (40 + Math.random() * 160), vy: -90 - Math.random() * 150, g: 640, dark: Math.random() < 0.5 });
           for (k = 0; k < 4; k++) part('smoke', e.x0 + 8 + k * 10, e.top + 18, { life: 30, vx: (Math.random() - 0.5) * 30, vy: -30 });
           pop(e.x, e.top - 6, T('BARRICADE {0}', [e.pts]), 's_org');
-          shake = Math.max(shake, 8); flashT = Math.max(flashT, 1);
+          shake = Math.max(shake, 8); screenFlash(1);
           break;
         case 'plate_lost':
           shake = Math.max(shake, 6);
@@ -467,13 +484,13 @@ var Render = (function () {
             embers(e.x, e.y, 16, 320);
             pop(e.x, e.y - 30, e.n === 2 ? T('ONE ROTOR DOWN') : T('TWO ROTORS DOWN'), 's_lav');
             shake = Math.max(shake, 12);
-            flashT = 2;
-          } else if (e.t === 'boss_dying') { shake = Math.max(shake, 12); flashT = 3; }
+            screenFlash(2);
+          } else if (e.t === 'boss_dying') { shake = Math.max(shake, 12); screenFlash(3); }
           else if (e.t === 'boss_dead') {
             pop(e.x, e.y - 50, String(e.pts), 'm_org');
             embers(e.x, e.y, 26, 420);
             for (k = -1; k <= 1; k += 2) part('piece', e.x + k * 30, e.y - 20, { life: 110, vx: k * (90 + Math.random() * 60), vy: -300, g: 560, spin: k * 0.4, name: 'rotor0', oy: 0 });
-            shake = 26; flashT = 5;
+            shake = 26; screenFlash(5);
           }
           break;
         case 'launch': part('puff', e.x, e.y, { life: 8 }); break;
@@ -637,7 +654,7 @@ var Render = (function () {
       var aim = p.throwT < 9 ? 'throw' : (p.aim === 'diag' ? 'diag' : 'fwd');
       spr('yazeed_stand_hmg_' + aim, D.BED - (p.fireT < 2 ? 1 : 0), 10 - D.STAND + dy, false);
     }
-    spr(wreck ? 'shass_burnt' : (riding && p.hurtT < 3 ? 'shass!' : 'shass'), 0, 10 + dy);
+    spr(wreck ? 'shass_burnt' : (riding && hitFlash(p, 3) ? 'shass!' : 'shass'), 0, 10 + dy);
     spr(wn, -wr, 1 - lift + droop); spr(wn, wr, 1 - lift + droop);
     cx.restore();
     if (c.st === 'wait' && (tick >> 4) % 2) { text('s_lav', T('GET IN'), c.x - 24, c.y - 66, 'c'); spr('hud_alert', c.x - 24, c.y - 52); }
@@ -674,7 +691,7 @@ var Render = (function () {
       spr('truck_gun', gx - 6 + rec, t.y - 22 + bob);
       if (t.gst === 'tell' && (tick >> 2) % 2) spr('hud_alert', gx - 2, t.y - 66);
     }
-    spr(body + (t.hurtT < 2 ? '!' : ''), t.x, t.y + bob, flip);
+    spr(body + (hitFlash(t, 2) ? '!' : ''), t.x, t.y + bob, flip);
     var wn = wheelName(Math.abs(t.wheel), moving ? t.vx : 0);
     spr(wn, t.x - wr, t.y - 9); spr(wn, t.x + wr, t.y - 9);
     // still coming in: it flashes, and his shots glance off it
@@ -721,7 +738,7 @@ var Render = (function () {
     cx.translate(Math.round(b.x), Math.round(b.y));
     cx.rotate(clamp(b.tilt || 0, -1.3, 1.3) * 0.1);
     if (face < 0) cx.scale(-1, 1);
-    var white = b.hurtT < 2 || (b.st === 'dying' && (tick >> 1) % 3 === 0);
+    var white = hitFlash(b, 2) || (b.st === 'dying' && dyingFlash());
     spr(white ? 'boat!' : 'boat', 0, 0);
     for (i = 0; i < R.rotors.length; i++) {
       if (i >= 4 - lost && i >= 2) continue;                    // the far ones go first
@@ -826,6 +843,9 @@ var Render = (function () {
         if ((tick >> 4) % 2) text('s_org', gr ? 'G' : 'H', o.x - 2, o.y - 27);
       }
       else if (o.k === 'detainee' && !L.fly) {          // (Taiz's, on the roofs with their lanterns and the rope: render_fly.js)
+        var ownDet = false;                              // (one a mission draws itself: Ibb's teacher, render_ibb.js)
+        for (var dbk in bosses) if (bosses[dbk].detainee && bosses[dbk].detainee(s, o, K)) { ownDet = true; break; }
+        if (ownDet) continue;
         var dn = o.look || 'det';                       // (the Souq's shopkeepers have their own clothes)
         if (o.st === 'tied') spr(dn + '_tied', o.x, o.y);
         else if (o.st === 'freed') spr(dn + '_freed', o.x + 5, o.y);
@@ -870,7 +890,7 @@ var Render = (function () {
         spr(name, e.x, e.y, flip, Math.max(0.15, 1 - e.emerge / Sim.T.EMERGE));
         continue;
       }
-      if (e.hurtT < 3 && A.frames[name + '!']) name += '!';
+      if (A.frames[name + '!'] && hitFlash(e, 3)) name += '!';
       var rx = (e.st === 'burst' && e.stT % 8 < 3) || e.snapT < 3 || (e.st === 'fire' && (e.stT < 5 || (e.stT > 15 && e.stT < 20))) ? -e.face : 0;
       // a man behind the bags keeps his head down, and comes up over a few frames to aim
       var down = e.covered && e.hostile ? (Sim.ducked(e) ? 9 : (e.st === 'aim' && e.stT < 4 ? 9 - e.stT * 3 : 0)) : 0;
@@ -894,7 +914,7 @@ var Render = (function () {
         // a barricade: whole, knocked about, nearly gone; a flash where it is hit
         var bf = cvp.hp / cvp.hp0, bn = 'barr' + (bf > 0.6 ? 0 : (bf > 0.3 ? 1 : 2));
         spr(bn, cvp.x, cvp.y + 1);
-        if (cvp.hurtT < 2) { cx.globalAlpha = 0.5; spr(bn + '!', cvp.x, cvp.y + 1); cx.globalAlpha = 1; }
+        if (hitFlash(cvp, 2)) { cx.globalAlpha = 0.5; spr(bn + '!', cvp.x, cvp.y + 1); cx.globalAlpha = 1; }
         continue;
       }
       if (cvp.art) spr(cvp.art, cvp.x, cvp.y + 1);                                    // a sprite of its own, standing at the cover's x
@@ -925,7 +945,12 @@ var Render = (function () {
         // (a mission that draws him its own way for a while says so: Ibb's school, his gun pointed at the ground)
         var own = false;
         for (var ybk in bosses) if (bosses[ybk].yazeed && bosses[ybk].yazeed(s, p, playerLegs(p), K)) { own = true; break; }
-        if (!own) spr(playerFrame(p), p.x - (p.fireT < 2 ? p.face : 0) + snz * p.face, p.y - (p.crouch && Math.abs(p.vx) > 1 && Math.floor(p.runD / 5) % 2 ? 1 : 0) + snz, p.face < 0);
+        if (!own) {
+          var yfr = playerFrame(p), yx = p.x - (p.fireT < 2 ? p.face : 0) + snz * p.face, yy = p.y - (p.crouch && Math.abs(p.vx) > 1 && Math.floor(p.runD / 5) % 2 ? 1 : 0) + snz;
+          spr(yfr, yx, yy, p.face < 0);
+          // (and what a mission lays over him: Ibb's bare foot, one sandal short through Jibla)
+          for (var yok in bosses) if (bosses[yok].yazeedOver) bosses[yok].yazeedOver(s, p, yfr, yx, yy, p.face < 0, K);
+        }
       }
       SRC = null;
     }
@@ -1237,7 +1262,7 @@ var Render = (function () {
   K = {
     spr: spr, sprRot: sprRot, text: text, textW: textW, lineH: lineH, part: part, pop: pop, embers: embers, dotted: dotted, clamp: clamp,
     ctx: function () { return cx; }, tick: function () { return tick; }, W: function () { return W; }, H: H,
-    shake: function (v) { shake = Math.max(shake, v); }, flash: function (v) { flashT = Math.max(flashT, v); },
+    shake: function (v) { shake = Math.max(shake, v); }, flash: screenFlash, hit: hitFlash, dyingFlash: dyingFlash,
     frame: function (n) { return A.frames[n]; }, rig: function (n) { return A.rig && A.rig[n]; },
     src: function (c) { SRC = c || null; },
     sub: function () { return sub; }
