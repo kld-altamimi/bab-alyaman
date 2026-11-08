@@ -5,8 +5,12 @@ of these files, never the place where edits happen. If the artifact and the repo
 
 ## Layout
 
-- `index.html` — the entire game in one file: markup, CSS, all scripts, and the art (embedded as data URIs).
-  Edit it in place; do not split it into modules or move the art out.
+- `index.html` — the game in one file: markup, CSS, all scripts, and the art (embedded as data URIs), except the
+  pictures in `pics/`. Edit it in place; do not split it into modules.
+- `pics/` — Taiz's and Ibb's pictures (18 WebP files), fetched when the mission is picked so the title doesn't wait for
+  them (Khaled's Now on the load fix, 6 Nov; live since 0.19.99); listed in `IMAGES_LATER` inside `index.html` with a
+  `?v=` hash. Keep the folder beside `index.html`; the build writes it (`LATER` in `build.py`), and every other picture
+  stays in the page.
 - `audio/` — fifteen MP3s the game fetches at runtime by relative path (`audio/<name>.mp3`): the twelve of the first three
   missions, and Ibb's three (`music_ibb.mp3`, `music_spokesman.mp3`, and `speech_ibb.mp3` with the Spokesman's and Ibb's
   cast's lines, fetched only with Ibb). Keep the folder beside `index.html`; file names are referenced from the `AUDIO`
