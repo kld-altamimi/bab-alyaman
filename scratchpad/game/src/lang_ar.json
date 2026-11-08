@@ -272,6 +272,8 @@
  "Total": "المجموع",
  "Checkpoints": "نقاط الحفظ",
  "Loading sound": "جارٍ تحميل الصوت",
+ "Loading pictures": "جارٍ تحميل الصور",
+ "The pictures did not load. Tap to try again.": "تعذّر تحميل الصور. اضغط للمحاولة مرة أخرى.",
  "The picture did not load. Reload the page to try again.": "تعذّر تحميل الصور. أعد تحميل الصفحة وحاول مرة أخرى.",
  "This browser is too old to show the game's pictures. Update it and try again.": "هذا المتصفح أقدم من أن يعرض صور اللعبة. حدّثه ثم حاول مرة أخرى.",
  "Low Power Mode on? Turning it off makes the game smoother": "هل وضع الطاقة المنخفضة مفعّل؟ إيقافه يجعل اللعبة أنعم",

@@ -20,9 +20,14 @@ os.makedirs(OUT + 'audio')
 open(OUT + 'index.html', 'w', encoding='utf-8').write(doc)
 for f in sorted(os.listdir(SITE + 'audio')):
     shutil.copy(SITE + 'audio/' + f, OUT + 'audio/' + f)
+# the pictures fetched on pick (6 Nov: Taiz's and Ibb's), beside the page like the music
+if os.path.isdir(SITE + 'pics'):
+    shutil.copytree(SITE + 'pics', OUT + 'pics')
 with zipfile.ZipFile(ZIP, 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(OUT + 'index.html', 'index.html')
     for f in sorted(os.listdir(OUT + 'audio')):
         z.write(OUT + 'audio/' + f, 'audio/' + f, compress_type=zipfile.ZIP_STORED)
+    for f in sorted(os.listdir(OUT + 'pics')) if os.path.isdir(OUT + 'pics') else []:
+        z.write(OUT + 'pics/' + f, 'pics/' + f, compress_type=zipfile.ZIP_STORED)
 names = zipfile.ZipFile(ZIP).namelist()
 print('zip %.2f MB:' % (os.path.getsize(ZIP) / 1048576), names)

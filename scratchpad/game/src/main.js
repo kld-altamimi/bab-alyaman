@@ -982,6 +982,16 @@
   // another is started; zone: the checkpoint, 0 for the start)
   function begin(id, zone) {
     if (id && LEVELS[id]) cur = id;
+    if (!picsReady(cur)) {
+      // (its pictures are still arriving, or were never asked for: fetch them and start once they are here; if they
+      // will not come, back to the map, where the card's button says so and tries again on a tap)
+      wantPics(cur);
+      var want = cur, z0 = zone, iv = window.setInterval(function () {
+        if (picsReady(want)) { window.clearInterval(iv); if (cur === want && state !== 'play') begin(want, z0); }
+        else if (picsFailed(want)) { window.clearInterval(iv); if (state !== 'play') toMap(want); }
+      }, 60);
+      return;
+    }
     var L = LEVELS[cur];
     Sound.want(musicFor(cur));                // (its music, if it is not in hand already; the last mission's is let go)
     run = { from: Math.max(0, Math.min(L.zones.length - 1, zone | 0)), skipped: false };
@@ -1019,6 +1029,26 @@
     Render.setBanner(T('SKIPPED AHEAD'), T(L.zones[z].name).toUpperCase(), 130);
     keepAwake();
   }
+  // A mission's pictures (6 Nov, the load before the title; Khaled's Now): Taiz's and Ibb's are files in pics/ beside the
+  // page, fetched when the mission is picked (its card looked at for a moment, or a start), as its music is, so the title
+  // no longer waits for them (the Strait's, and Mocha's for now, are still in the page). A mission starts only with its
+  // pictures in hand: play() waits on the card's button, begin() comes back on its own once they are here.
+  var picsT = {};                  // per mission: 'busy' | 'ready' | 'failed'
+  function picsOf(id) { return (typeof IMAGES_LATER !== 'undefined' && IMAGES_LATER[id]) || null; }
+  function picsReady(id) { var p = picsOf(id); if (!p) return true; for (var n in p) if (!imgs[n]) return false; return true; }
+  function picsFailed(id) { return picsT[id] === 'failed'; }
+  function wantPics(id) {
+    var p = picsOf(id);
+    if (!p || picsReady(id) || picsT[id] === 'busy') return;
+    picsT[id] = 'busy';
+    var names = Object.keys(p).filter(function (n) { return !imgs[n]; }), left = names.length, bad = false;
+    names.forEach(function (n) {
+      var im = new Image();
+      im.onload = function () { imgs[n] = im; if (--left === 0 && !bad) picsT[id] = 'ready'; };
+      im.onerror = function () { bad = true; picsT[id] = 'failed'; };      // (the ones that did arrive are kept; a retry fetches only the rest)
+      im.src = p[n];
+    });
+  }
   // the music a mission plays: its stage theme and its boss's
   function musicFor(id) { var L = LEVELS[id]; return L ? [L.music || 'strait', L.bossMusic || 'battery'].concat(L.speech ? ['speech:' + id] : []) : []; }
   // a mission's card on the map: its music is fetched once the card has been looked at for a moment (not while the map
@@ -1027,7 +1057,7 @@
   function wantSoon(id) {
     window.clearTimeout(wantT);
     if (!LEVELS[id]) return;
-    wantT = window.setTimeout(function () { if (mv.sel === id && state === 'map') Sound.want(musicFor(id)); }, 500);
+    wantT = window.setTimeout(function () { if (mv.sel === id && state === 'map') { Sound.want(musicFor(id)); wantPics(id); } }, 500);
   }
   // its place in a sentence: "the battery", "Container beach"
   function zoneWords(L, z) { var n = L.zones[z].name; return Lang.rtl() ? T(n) : (/^The /.test(n) ? 'the ' + n.slice(4) : n); }
@@ -1039,21 +1069,26 @@
   function play(id, skip) {
     var m = Menu.mission(id);
     if (fade.dir > 0 || !m || !m.built || !(playable(id) || (skip && skippable(id)))) return;
+    if (el('bPlay').getAttribute('aria-busy')) return;      // (already waiting for its sound or pictures)
     Sound.unlock();
     Sound.sfx('ui_select');
     Sound.stopMusic(0.5);                     // the march goes as the picture goes dark
     var from = prefs.dev ? (fromSel[id] || 0) : 0;
     var b = el('bPlay'), go = function () { transit(function () { begin(id, from); }); };
-    Sound.want(musicFor(id));
-    var ready = function () { return Sound.hasFailed() || (Sound.isReady() && Sound.hasTrack(musicFor(id)[0])); };
-    if (ready()) { go(); return; }
-    // the sound is still arriving: give it a moment rather than start in silence
-    b.setAttribute('aria-busy', 'true'); b.textContent = T('Loading sound');
+    Sound.want(musicFor(id)); wantPics(id);
+    var sound = function () { return Sound.hasFailed() || (Sound.isReady() && Sound.hasTrack(musicFor(id)[0])); };
+    if (sound() && picsReady(id)) { go(); return; }
+    // the sound is still arriving: give it a moment rather than start in silence. The pictures must arrive: the button
+    // waits for them, and says so if they will not come (a tap tries again)
+    b.setAttribute('aria-busy', 'true'); b.textContent = T(picsReady(id) ? 'Loading sound' : 'Loading pictures');
     var t0 = Date.now(), iv = window.setInterval(function () {
-      if (ready() || Date.now() - t0 > 4000) {
+      var s = sound() || Date.now() - t0 > 4000;
+      if (state !== 'map' || mv.sel !== id) { window.clearInterval(iv); b.removeAttribute('aria-busy'); return; }      // (left the card: nothing to start)
+      if (s && picsReady(id)) {
         window.clearInterval(iv); b.removeAttribute('aria-busy'); card();
         if (state === 'map') go();
-      }
+      } else if (picsFailed(id)) { window.clearInterval(iv); b.removeAttribute('aria-busy'); card(); }
+      else if (s) b.textContent = T('Loading pictures');
     }, 60);
   }
   function pause() {
@@ -1440,6 +1475,7 @@
     var b = el('bPlay'), canPlay = s === 'open' || s === 'cleared', skip = !canPlay && m.built && !!LEVELS[id] && s !== 'soon';
     b.disabled = !canPlay && !skip;
     b.textContent = T(s === 'cleared' ? 'Play again' : (s === 'open' ? 'Start mission' : (skip ? 'Skip ahead' : (s === 'soon' ? 'Coming soon' : 'Locked'))));
+    if ((canPlay || skip) && picsFailed(id) && !picsReady(id)) b.textContent = T('The pictures did not load. Tap to try again.');
     // where it starts: any of its checkpoints, in developer mode only (players always start at the start; Khaled, 19 Oct)
     var row = el('mFromRow'), sel = el('mFrom'), L = LEVELS[id];
     row.hidden = !prefs.dev || !(canPlay || skip) || !L;

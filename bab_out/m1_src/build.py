@@ -97,8 +97,18 @@ def webp(n, raw):
     return open(p, 'rb').read()
 
 
-images = {}
-total_png = total_pic = 0
+# The load before the title (6 Nov, game-performance's finding, Khaled's Now; queue 1): Taiz's and Ibb's pictures are not in
+# the page. They are files in pics/ beside it (like a mission's music in audio/), fetched when the mission is picked (the
+# card looked at, or begin()), and the title no longer waits for them. The Strait's stay in the page, so ?play opens
+# straight onto Mission 1; Mocha's stay for now. --embed-all puts every picture back in the page, as before.
+LATER = {} if '--embed-all' in sys.argv else {'taiz': ['taiz', 'taiz_stage'], 'ibb': ['ibb'] + json.load(open(GAME + 'gen/stage_ibb.json'))['pictures']}      # (names not in `pics` are simply not built)
+later_of = {n: m for m, ns in LATER.items() for n in ns}
+PICS = SITE + 'pics/'
+os.makedirs(PICS, exist_ok=True)
+for f in os.listdir(PICS):
+    os.remove(PICS + f)
+images, images_later = {}, {}
+total_png = total_pic = total_later = 0
 for n in pics:
     raw = open(GAME + 'art/out/%s.png' % n, 'rb').read()
     total_png += len(raw)
@@ -106,6 +116,11 @@ for n in pics:
         pic, kind = raw, 'png'
     else:
         pic, kind = webp(n, raw), 'webp'
+    if n in later_of:
+        total_later += len(pic)
+        open(PICS + '%s.%s' % (n, kind), 'wb').write(pic)
+        images_later.setdefault(later_of[n], {})[n] = 'pics/%s.%s?v=%s' % (n, kind, hashlib.sha1(pic).hexdigest()[:8])      # (the hash: a changed picture is fetched afresh past any cache)
+        continue
     total_pic += len(pic)
     images[n] = 'data:image/%s;base64,' % kind + base64.b64encode(pic).decode()
 # the page only needs the lines the game can speak
@@ -135,6 +150,7 @@ data = '\n'.join([
     'var GROUNDS = %s;' % js(grounds),
     'var STAGE_TAIZ = %s;' % js(stage_taiz),
     'var IMAGES = %s;' % js(images),
+    'var IMAGES_LATER = %s;' % js(images_later),      # (a mission's pictures fetched on pick: files in pics/)
 ])
 code = []
 for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'school', 'rally', 'opening', 'spokesman', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'render_spokesman', 'menu', 'audio', 'input', 'main'):
@@ -183,8 +199,8 @@ SKELETON = '''<!doctype html>
 wrapped = SKELETON + page + ('\n' + LOCAL if '--local-fonts' in sys.argv else '') + '\n</body>\n</html>\n'
 open(SITE + 'index.html', 'w', encoding='utf-8').write(wrapped)
 aud = sum(os.path.getsize(SITE + 'audio/' + f) for f in os.listdir(SITE + 'audio'))
-print('build "%s"%s%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64), sound files %.2f MB; title in first 8 KB: %s'
-      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', ' WITH IBB' if IBB else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, aud / 1048576, '<title>' in page[:8000]))
+print('build "%s"%s%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64; %.0f KB more as %d files in pics/, fetched on pick: %s), sound files %.2f MB; title in first 8 KB: %s'
+      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', ' WITH IBB' if IBB else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, total_later / 1024, len(os.listdir(PICS)), ', '.join('%s %d' % (m, len(v)) for m, v in sorted(images_later.items())), aud / 1048576, '<title>' in page[:8000]))
 if NO_SOUQ:
     # the music the page can ask for (the folder keeps every file; copy only these to the repo)
     print('music files this page uses:', sorted(set(v['file'] for v in audio_small['music'].values())))
