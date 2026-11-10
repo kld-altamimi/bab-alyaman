@@ -16,8 +16,11 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
   `unit_taiz.js`, `bot.js` (a playing bot; `run()`, `smartBot()`, `fuzzBot()`), `sweep.js`, `fuzz.js`.
 - `scratchpad/mock/` — stage painters and character sheets (Python, Pillow).
 - `scratchpad/snd/` — the synthesiser: instruments, `voice.py` (the babble with subtitles), music and effects exports.
-- `scratchpad/experiments/` — `baseline.js`, `baseline_mocha.js`: seeded bot runs whose end states guard against
-  unintended changes.
+- `scratchpad/experiments/` — the bot baselines: `node baselines.js` plays seeded bot runs of every released mission
+  (the Strait, the Coffee Port, Taiz with unit_taiz.js's pilot from `tools/taiz_bot.js`, Ibb) and compares their end
+  states with `baselines.json` (exit 1 if any moved); `node baselines.js --record <why>` re-records them after a change
+  meant to move play (recorded 10 Nov on the sources of test 0.19.100). `baseline.js` and `baseline_mocha.js` are the
+  older Strait and Coffee Port scripts (same seeds, same hashes).
 - `scratchpad/refill/`, `scratchpad/taizmap/`, `scratchpad/gamedev-page/` — the checkpoint refill patch and its
   measurements, the Taiz Level Map tools, and the topic page.
 - `scratchpad/guard/` — the enemy-rule rig: `python3 variants.py [names]` makes copies of the sources in

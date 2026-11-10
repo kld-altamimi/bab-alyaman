@@ -1,0 +1,159 @@
+{
+ "recorded": "2026-11-10T00:04:00.881Z",
+ "note": "sources 9793c68 (test 0.19.100): the refill, Taiz, enemies who get their shots in, Ibb",
+ "runs": {
+  "strait 7": {
+   "hash": "eefcad02ab73",
+   "status": "clear",
+   "time": 119,
+   "score": 25100,
+   "deaths": 0,
+   "kills": 80,
+   "ms": 529
+  },
+  "strait 11 auto": {
+   "hash": "6d30a2ddba15",
+   "status": "clear",
+   "time": 122.8,
+   "score": 25050,
+   "deaths": 0,
+   "kills": 81,
+   "ms": 269
+  },
+  "strait 23": {
+   "hash": "1b85a8b2fab9",
+   "status": "clear",
+   "time": 122.3,
+   "score": 25600,
+   "deaths": 0,
+   "kills": 83,
+   "ms": 360
+  },
+  "strait fuzz": {
+   "hash": "defacc2a4763",
+   "status": "play",
+   "time": 119.3,
+   "score": 19150,
+   "deaths": 5,
+   "kills": 79,
+   "ms": 354
+  },
+  "mocha 7": {
+   "hash": "90cb866c26cd",
+   "status": "clear",
+   "time": 111.9,
+   "score": 18900,
+   "deaths": 0,
+   "kills": 53,
+   "ms": 511
+  },
+  "mocha 11 auto": {
+   "hash": "32aabb6b4838",
+   "status": "clear",
+   "time": 87.8,
+   "score": 19200,
+   "deaths": 0,
+   "kills": 52,
+   "ms": 225
+  },
+  "mocha 23": {
+   "hash": "7e9ce8346acd",
+   "status": "clear",
+   "time": 122.6,
+   "score": 19250,
+   "deaths": 0,
+   "kills": 51,
+   "ms": 407
+  },
+  "mocha fuzz": {
+   "hash": "819496385014",
+   "status": "play",
+   "time": 120,
+   "score": 9600,
+   "deaths": 6,
+   "kills": 59,
+   "ms": 233
+  },
+  "taiz pilot 468 stick": {
+   "hash": "9767be852c6b",
+   "status": "clear",
+   "time": 153.6,
+   "score": 26350,
+   "deaths": 0,
+   "kills": 77,
+   "ms": 1169
+  },
+  "taiz pilot 384 stick": {
+   "hash": "f94bcdb6ec2f",
+   "status": "clear",
+   "time": 166.5,
+   "score": 26850,
+   "deaths": 1,
+   "kills": 80,
+   "ms": 989
+  },
+  "taiz pilot 449": {
+   "hash": "b3e69b824931",
+   "status": "clear",
+   "time": 165.9,
+   "score": 26950,
+   "deaths": 1,
+   "kills": 79,
+   "ms": 1019
+  },
+  "taiz pilot 468": {
+   "hash": "6d1f8daaabff",
+   "status": "clear",
+   "time": 158.1,
+   "score": 26950,
+   "deaths": 1,
+   "kills": 80,
+   "ms": 613
+  },
+  "taiz fuzz": {
+   "hash": "7046934c4442",
+   "status": "play",
+   "time": 180,
+   "score": 500,
+   "deaths": 0,
+   "kills": 3,
+   "ms": 398
+  },
+  "ibb 7": {
+   "hash": "776d76cd165d",
+   "status": "clear",
+   "time": 191.6,
+   "score": 33950,
+   "deaths": 0,
+   "kills": 155,
+   "ms": 1141
+  },
+  "ibb 11 auto": {
+   "hash": "1c1bb094eb4b",
+   "status": "clear",
+   "time": 190.3,
+   "score": 33150,
+   "deaths": 0,
+   "kills": 150,
+   "ms": 837
+  },
+  "ibb 23": {
+   "hash": "256f63aa8fec",
+   "status": "clear",
+   "time": 183.7,
+   "score": 32850,
+   "deaths": 0,
+   "kills": 154,
+   "ms": 719
+  },
+  "ibb fuzz": {
+   "hash": "58f42a6d609b",
+   "status": "play",
+   "time": 120,
+   "score": 8150,
+   "deaths": 5,
+   "kills": 70,
+   "ms": 726
+  }
+ }
+}
