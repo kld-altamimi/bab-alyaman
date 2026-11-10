@@ -62,3 +62,13 @@ The folders mirror the workspace they were written in, so the scripts' paths kee
   as a `back` layer at 0.7, drawn before the play strips); `tools/export_ibb.py` writes the pictures (`art/out/i_*.png`)
   and `gen/stage_ibb.json`, which `build.py --ibb` packs; `mock/z1_look.py` and `mock/z2_look.py` picture a zone with its
   screens and people before it goes in, and `mock/mock_school.py` is the storyboard of zone 2's classrooms (a mock only).
+- Dhamar (Mission 5, the Wadi; stage 1, 10 Nov, the development run): `game/tools/committee_sprites.py` composes the
+  Committee in person (stand, vote, the laugh's three frames, the three jackets, patting, caught; `note()`, `wad()`,
+  `table()`) and `committee_portrait.py` his portrait at a parametric scale; `snd/committee_voice.py` his voice (the
+  drone, the loudhailer motion, the laugh) as mp3 clips and `laugh_shape.json`; `mock/mock_dhamar_road.py` and
+  `mock/mock_dhamar_scenes.py` the five mocks (the checkpoint, the money fight, the vote in the steam, the Leader's
+  screen, the Negotiator's video). All write to `scratchpad/dhamar/s1/` (not in the repo; the mock page "BaY · Dhamar
+  mocks" holds the pictures and clips). Mocks only until Khaled's yes on the look and the laugh. Redrawn 11 Nov from the
+  photo and the wages clip Khaled sent (glasses, black curly hair, a short greying beard, a navy jacket, no shemagh);
+  the laugh is rebuilt on `snd/laugh.py`, a laugh synthesiser (glottal pulses with jitter and shimmer, breath on
+  each pulse, five formants, calls with their own h, bouts and breaths in) that any laughing character can use.
