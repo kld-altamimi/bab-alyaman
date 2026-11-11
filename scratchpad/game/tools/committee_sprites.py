@@ -149,13 +149,11 @@ COM = {
         '..343',
         '...43',
     ]),
-    # the far arm up with the loudhailer: the jacket's sleeve, the thobe's white cuff
+    # the far arm bent up across the chest, the hand round the loudhailer's handle under his chin: the jacket's sleeve,
+    # the thobe's white cuff (the loudhailer itself is the cast's, ms3's MARSHAL['megaphone'], held to his mouth)
     'far_arm': R([
-        '......qrs',
-        '....IJrrr',
-        '..bcIJrrq',
-        'bbccIJq..',
-        'bcccb....',
+        '.....IJqr',
+        'bbccIJrrq',
         'bccb.....',
     ]),
     # the jacket, dark worsted, buttoned, the white collar of the thobe in its V; a chest pocket and a hip pocket on the
@@ -295,7 +293,7 @@ COM = {
 # where his parts sit (fill coordinates): the house build, a little broader in the jacket; the head (16 rows) puts its
 # eye on the row the cast's eyes are on and its beard over the collar
 CB = Build(thobe=(3, 21), shoes=(3, 34), torso=(5, 8), belt=(6, 20), jamb=(13, 19), sleeve=(6, 11), forearm=(8, 15),
-           head=(9, -3), far_arm=(14, 2), megaphone=(20, -4), foot=(12, 36))
+           head=(9, -3), far_arm=(14, 11), megaphone=(20, 4), foot=(12, 36))
 
 JACKETS = {'full': 'jacket_full', 'sag': 'jacket_sag', 'out': 'jacket_out'}
 HEADS = {'closed': 'head', 'laugh': 'head_laugh', 'laugh2': 'head_laugh2', 'caught': 'head_caught'}
@@ -318,9 +316,13 @@ def _base(p, jacket='full', dy=0):
             (COM['jambiya'], B.jamb[0], B.jamb[1], p)]
 
 
-def _loudhailer(L, p, dy=0):
+def _loudhailer(L, p, dx=0, dy=0):
+    """The loudhailer held to his mouth (its mouthpiece on his lips, the bell pointing ahead), the far hand round its
+    handle; drawn after the head so it sits in front of the beard. dx, dy: the head's own offset (it stays on his mouth
+    when he throws his head back to laugh)."""
     B = CB
-    L += [(COM['far_arm'], B.far_arm[0], B.far_arm[1] + dy, p), (MARSHAL['megaphone'], B.megaphone[0], B.megaphone[1] + dy, p)]
+    L += [(MARSHAL['megaphone'], B.megaphone[0] + dx, B.megaphone[1] + dy, p),
+          (COM['far_arm'], B.far_arm[0] + (dx if dx > -2 else -1), B.far_arm[1] + dy, p)]
 
 
 def _notes(L, p, k):
@@ -337,10 +339,10 @@ def committee(mouth='half', jacket='full', flip=False):
     p = com_pal()
     B = CB
     L = _base(p, jacket)
-    _loudhailer(L, p)
     L += [(COM['arm_down'], B.forearm[0], B.forearm[1], p), (COM['stamp'], B.forearm[0] + 7, B.forearm[1] + 6, p),
           (COM['sleeve'], B.sleeve[0], B.sleeve[1], p)]
     _head(L, p, mouth)
+    _loudhailer(L, p)
     return compose(L, flip=flip, foot=B.foot)
 
 
@@ -356,14 +358,15 @@ def committee_vote(jacket='full', flip=False):
 
 def committee_laugh(k=1, jacket='full', flip=False):
     """The laugh, three frames: the head goes back, the shoulders go, the near hand holds the table, the loudhailer
-    stays up, and notes lift out of the pockets (more each frame)."""
+    stays on his mouth (he laughs into it), and notes lift out of the pockets (more each frame)."""
     p = com_pal()
     B = CB
     sh = (0, -1, 0)[k - 1]                          # the shoulders going: the trunk up a row on frame 2
     L = _base(p, jacket, dy=sh)
-    _loudhailer(L, p, dy=sh - (k - 1))
     L += [(COM['arm_table'], B.forearm[0], B.forearm[1] + sh, p), (COM['sleeve'], B.sleeve[0], B.sleeve[1] + sh, p)]
-    _head(L, p, 'laugh2' if k == 2 else 'laugh', dx=-min(k, 2), dy=-k + sh)
+    hx, hy = -min(k, 2), -k + sh
+    _head(L, p, 'laugh2' if k == 2 else 'laugh', dx=hx, dy=hy)
+    _loudhailer(L, p, dx=hx, dy=hy + (1 if k == 2 else 0))     # on his mouth; at the peak the jaw drops a row
     _notes(L, p, k)
     return compose(L, flip=flip, foot=B.foot)
 
@@ -373,9 +376,9 @@ def committee_pat(flip=False):
     p = com_pal()
     B = CB
     L = _base(p, 'out')
-    _loudhailer(L, p)
     L += [(COM['arm_pat'], B.forearm[0], B.forearm[1], p), (COM['sleeve'], B.sleeve[0], B.sleeve[1], p)]
     _head(L, p, 'half')
+    _loudhailer(L, p)
     return compose(L, flip=flip, foot=B.foot)
 
 

@@ -9,7 +9,8 @@
 # belt; no shemagh (he wears none). The game's own: the loudhailer up in one hand, the stamp on its chain under the
 # other, the gavel he never uses and the sign-in sheet with one name. Two frames: speaking (the drone) and the laugh as
 # in the clip (eyes squeezed shut behind the glasses, the cheeks up, the mouth wide, the head back and tilted, the
-# shoulders up, notes in the air). No emblem, no flag, no text anywhere. Own drawing.
+# shoulders up, notes in the air, the loudhailer at the corner of his mouth). No emblem, no flag, no text anywhere.
+# Own drawing.
 #   python3 committee_portrait.py   -> dhamar/s1/committee_portrait.png (both frames at scale 4, side by side)
 import os
 from PIL import Image, ImageDraw
@@ -122,6 +123,29 @@ def outline(im, colour=OL):
     return out
 
 
+def loudhailer(d, x0, y0, ux, uy, s, shoulder, length=9.0, w0=0.8, w1=3.6):
+    """A hand loudhailer with its mouthpiece at (x0, y0), pointing along (ux, uy); its handle hangs under the cone near the
+    mouthpiece, the far hand round it, the far arm (jacket sleeve, the thobe's white cuff) from the shoulder."""
+    n = (ux * ux + uy * uy) ** 0.5
+    ux, uy = ux / n, uy / n
+    px, py = -uy, ux                                                    # across the cone, "down" for a cone pointing right
+    if py < 0:
+        px, py = -px, -py
+    P = lambda t, w: (x0 + ux * t * s + px * w * s, y0 + uy * t * s + py * w * s)
+    # the far arm first, then the cone over it, then the hand round the handle
+    hx, hy = P(2.6, w0 + 2.6)
+    d.line([shoulder, (hx, hy + s)], fill=OL, width=4 * s)
+    d.line([shoulder, (hx, hy + s)], fill=COAT, width=3 * s)
+    d.ellipse([hx - 1.6 * s, hy + 0.4 * s, hx + 1.6 * s, hy + 2.2 * s], fill=THOBE, outline=OL)       # the cuff
+    d.polygon([P(0, -w0), P(length, -w1), P(length, w1), P(0, w0)], fill=RED, outline=OL)
+    d.polygon([P(length, -w1), P(length + 1, -w1), P(length + 1, w1), P(length, w1)], fill=WHITE_CHK, outline=OL)
+    d.line([P(1.0, -w0 * 0.4), P(length - 1.0, -w1 * 0.55)], fill=(214, 90, 60), width=max(1, s // 2))
+    d.polygon([P(-0.7, -w0 - 0.15), P(0, -w0 - 0.15), P(0, w0 + 0.15), P(-0.7, w0 + 0.15)], fill=RED_D, outline=OL)  # the mouthpiece
+    d.polygon([P(2.1, w0), P(3.1, w0 + 0.1), P(3.1, w0 + 2.4), P(2.1, w0 + 2.3)], fill=RUBBER, outline=OL)         # the handle
+    d.rounded_rectangle([hx - 1.4 * s, hy - 1.1 * s, hx + 1.4 * s, hy + 1.1 * s], radius=s, fill=SKIN, outline=OL)  # the hand
+    d.line([(hx - 0.8 * s, hy), (hx + 0.8 * s, hy)], fill=SKIN_D)
+
+
 def portrait(s=4, laugh=False):
     W, H = 48 * s, 32 * s
     hu = max(1, s // 2)
@@ -176,16 +200,6 @@ def portrait(s=4, laugh=False):
         d.ellipse([cx - s // 2, yy - s // 2, cx + s // 2, yy + s // 2], fill=GOLD, outline=GOLD_D)
     d.polygon([(cx - 2 * s, by + 2 * s), (cx + 2 * s, by + 2 * s), (cx + s, py), (cx - s, py)], fill=SHEATH, outline=OL)
     d.line([(cx - s, by + 3 * s), (cx - s // 2, py - s)], fill=SHEATH_D)
-    # the far arm up with the loudhailer (viewer's right), the thobe's white cuff at the wrist
-    ax = cx + 11 * s
-    d.rounded_rectangle([ax - 2 * s, sh - 2 * s + lift, ax + 2 * s, sh + 6 * s], radius=s, fill=COAT, outline=OL)
-    d.rectangle([ax - 2 * s, sh - 3 * s + lift, ax + 2 * s, sh - 2 * s + lift], fill=THOBE, outline=OL)
-    d.rounded_rectangle([ax - 2 * s, sh - 6 * s + lift, ax + 2 * s, sh - 3 * s + lift], radius=s, fill=SKIN, outline=OL)
-    my = sh - 8 * s + lift
-    d.rectangle([ax - 3 * s, my, ax, my + 2 * s], fill=RED_D, outline=OL)                           # the loudhailer's grip
-    d.polygon([(ax, my - 3 * s), (ax + 9 * s, my - 6 * s), (ax + 9 * s, my + 5 * s), (ax, my + 2 * s)], fill=RED, outline=OL)
-    d.polygon([(ax + 9 * s, my - 6 * s), (ax + 10 * s, my - 6 * s), (ax + 10 * s, my + 5 * s), (ax + 9 * s, my + 5 * s)], fill=WHITE_CHK, outline=OL)
-    d.line([(ax + 2 * s, my - 2 * s), (ax + 7 * s, my - 4 * s)], fill=(214, 90, 60))
     # the head: the grid at half a unit, with its own outline; in the laugh, back and tilted
     rows = HEAD_LAUGH if laugh else HEAD
     gw, gh = 24 * hu, len(rows) * hu
@@ -200,6 +214,14 @@ def portrait(s=4, laugh=False):
     d.rounded_rectangle([cx - 4 * s, sh - s, cx + 4 * s, sh + s // 2], radius=s // 2, fill=THOBE, outline=THOBE_D)  # the collar over it
     im.alpha_composite(head, (hx, hy))
     d = ImageDraw.Draw(im)
+    # the loudhailer in the far hand (viewer's right). Speaking (the drone, the minutes) he holds it ready at his chest;
+    # in the laugh it is at the corner of his mouth, pointing out and up: he laughs into it.
+    if laugh:
+        shear = int(round((22 - len(rows) / 2) * tilt))
+        mx, my = hx + pad + (19 + shear) * hu, hy + pad + 22 * hu
+        loudhailer(d, mx, my, 0.94, -0.34, s, shoulder=(cx + 12 * s, sh + 3 * s))
+    else:
+        loudhailer(d, cx + 8 * s, sh + 7 * s, 0.62, -0.78, s, shoulder=(cx + 12 * s, sh + 2 * s), length=7.5)
     # the table, in front of him; then the gavel (left) and the sign-in sheet with one name (right)
     d.rectangle([3 * s, py, W - 3 * s, py + s], fill=WOOD_L)
     d.rectangle([3 * s, py + s, W - 3 * s, H], fill=WOOD)
