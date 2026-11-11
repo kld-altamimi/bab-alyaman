@@ -199,8 +199,10 @@
     K.spr(wn, o.x - rig.wheel, y - 9 - lift); K.spr(wn, o.x + rig.wheel, y - 9 - lift);
   }
 
+  // (all of it Ibb's alone: Dhamar has a school and a stage of its own, and draws them itself, render_dhamar.js)
+  function ibb(s) { return s.L.art === 'ibb'; }
   function ground(s, paused, K) {
-    if ((!s.school && !s.L.stage) || !sheet()) return;
+    if (!ibb(s) || (!s.school && !s.L.stage) || !sheet()) return;
     cx = K.ctx();
     fresh(s);
     if (s.school) drawDoors(s, K, false);
@@ -214,6 +216,7 @@
   }
   // Yazeed, while a child is out: his gun pointed at the ground (render.js asks before it draws him; true: drawn here)
   function yazeed(s, p, legs, K) {
+    if (!ibb(s)) return false;
     if (p.hidden) return true;                 // (in Salem's 4x4, drawn with it: the opening)
     if (!s.calm || !sheet()) return false;
     var gun = p.weapon === 'hmg' ? 'hmg' : 'side';
@@ -232,7 +235,7 @@
     if (pn) ispr(pn, x, y, flip);
   }
   function yazeedOver(s, p, name, x, y, flip, K) {
-    if (!s.sandal || s.sandal.st !== 'short' || !sheet()) return;
+    if (!ibb(s) || !s.sandal || s.sandal.st !== 'short' || !sheet()) return;
     cx = K.ctx();
     bareFoot(s, name, x, y, flip);
   }
@@ -255,6 +258,7 @@
   // the pop: a puff where the stick was, nothing more; the sandal landing raises a little dust
   function misc(e, s, K) {
     var k;
+    if (!ibb(s)) return false;
     if (e.t === 'sandal_pop') {
       for (k = 0; k < 6; k++) K.part('smoke', e.x + (Math.random() - 0.5) * 14, e.y - 4 - Math.random() * 6, { life: 26 + Math.random() * 12, vx: (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 30 });
       K.shake(2);
@@ -268,7 +272,7 @@
   }
 
   function scene(s, paused, K) {
-    if ((!s.L.screens && !s.school) || !sheet()) return;
+    if (!ibb(s) || (!s.L.screens && !s.school) || !sheet()) return;
     cx = K.ctx();
     var cam = s.cam, W = K.W(), at = s.L.screens ? screens(s) : [];
     if (s.school) drawDoors(s, K, true);
@@ -285,7 +289,7 @@
 
   // ---------------------------------------------------------------- what they hear
   function talk(s, K) {
-    if (!s.L.screens && !s.rally) return null;
+    if (!ibb(s) || (!s.L.screens && !s.rally)) return null;
     if (s.spk && (s.spk.off || s.boss)) return null;       // (on the pass he speaks for himself, and then nothing does)
     fresh(s);
     var p = s.p, at = s.L.screens ? screens(s) : [], best = null, bd = 1e9;
@@ -320,7 +324,7 @@
   // his hand (what he does is school.js's, unchanged)
   function detainee(s, o, K) {
     var Sc = s.L.school;
-    if (!Sc || Math.abs(o.px - Sc.teacher) > 2 || !sheet()) return false;
+    if (!ibb(s) || !Sc || Math.abs(o.px - Sc.teacher) > 2 || !sheet()) return false;
     cx = K.ctx();
     if (o.st === 'tied') ispr('tch_tied', o.x, o.y);
     else if (o.st === 'freed') ispr('tch_wave', o.x, o.y);

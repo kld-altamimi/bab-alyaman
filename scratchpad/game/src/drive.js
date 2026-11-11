@@ -34,7 +34,8 @@ var Sim = Sim || require('./sim.js');
     s.trucks = []; s.drones = []; s.roadI = 0; s.ramLog = [];
     if (!L.road) return;
     var c = s.car, zr = -1, zb = -1;
-    for (i = 0; i < L.zones.length; i++) { if (L.zones[i].drive) zr = i; if (L.zones[i].battery) zb = i; }
+    // (battery: the Strait's, where the road ends at the Commander's barrier; parked: anywhere else Salem stops and stays, Dhamar's gate)
+    for (i = 0; i < L.zones.length; i++) { if (L.zones[i].drive) zr = i; if (L.zones[i].battery || L.zones[i].parked) zb = i; }
     if (zone === zr) {
       c.st = 'drive'; c.x = L.pickup.x; c.y = groundY(L, c.x); c.vx = 60;
       s.mode = 'drive';

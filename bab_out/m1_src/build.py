@@ -46,10 +46,17 @@ SOUQ_CODE = ('level_zabid', 'tailor', 'render_tailor')
 # Its painted zones come as a stage of their own (gen/stage_ibb.json, tools/export_ibb.py; 24 Oct: zone by zone).
 IBB = '--ibb' in sys.argv
 IBB_CODE = ('level_ibb', 'school', 'rally', 'opening', 'sandal', 'spokesman', 'render_ibb', 'render_spokesman')      # (school.js, 29 Oct: Jibla's classrooms and their children; rally.js: the Spokesman's stage)
+# --dhamar (11 Nov): a test build with Dhamar in it (Mission 5, the Wadi: zones 1-3 first, Khaled 11 Nov 03:25). Its level,
+# its code (dhamar.js: the checkpoints on the highway; render_dhamar.js), its sheet (tools/dhamar_sprites.py), its painted
+# stage (tools/export_dhamar.py), its music and its lines (audio/music_dhamar.mp3, speech_dhamar.mp3) go in; its pictures
+# are files in pics/ fetched on pick, as Ibb's; and on the map it is out, on the road on from Ibb (needs --ibb). Without
+# it, none of Dhamar is in the page.
+DHAMAR = '--dhamar' in sys.argv
+DHAMAR_CODE = ('level_dhamar', 'dhamar', 'render_dhamar')
 pics = ['atlas', 'font', 'sky', 'far', 'sea', 'play_a', 'road', 'r2b', 'sand', 'b2r', 'play_b', 'fore', 'fore_road', 'fore_sand', 'fore_b', 'map']
-for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid'), ('ibb', 'ibb')):
+for art, mission in (('mocha', 'mocha'), ('zabid', 'zabid'), ('ibb', 'ibb'), ('dhamar', 'dhamar')):
     f = GAME + 'gen/stage_%s.json' % art
-    if not os.path.exists(f) or (NO_SOUQ and art == 'zabid') or (not IBB and art == 'ibb'):
+    if not os.path.exists(f) or (NO_SOUQ and art == 'zabid') or (not IBB and art == 'ibb') or (not DHAMAR and art == 'dhamar'):
         continue
     st = json.load(open(f))
     atlas['stages'][art] = dict(layers=st['layers'], world=st['world'], fixed=st['fixed'])
@@ -66,6 +73,9 @@ IBB_SHEET = GAME + 'gen/ibb_sprites.json'
 if IBB:
     atlas['ibb'] = json.load(open(IBB_SHEET))
     pics.append('ibb')
+if DHAMAR:
+    atlas['dhamar'] = json.load(open(GAME + 'gen/dhamar_sprites.json'))
+    pics.append('dhamar')
 # Taiz's painted stage (21 Oct, the full level: tools/export_taiz.py): its pieces on one sheet, and where everything is
 TAIZ_STAGE = GAME + 'gen/stage_taiz.json'
 stage_taiz = None
@@ -101,7 +111,8 @@ def webp(n, raw):
 # the page. They are files in pics/ beside it (like a mission's music in audio/), fetched when the mission is picked (the
 # card looked at, or begin()), and the title no longer waits for them. The Strait's stay in the page, so ?play opens
 # straight onto Mission 1; Mocha's stay for now. --embed-all puts every picture back in the page, as before.
-LATER = {} if '--embed-all' in sys.argv else {'taiz': ['taiz', 'taiz_stage'], 'ibb': ['ibb'] + json.load(open(GAME + 'gen/stage_ibb.json'))['pictures']}      # (names not in `pics` are simply not built)
+LATER = {} if '--embed-all' in sys.argv else {'taiz': ['taiz', 'taiz_stage'], 'ibb': ['ibb'] + json.load(open(GAME + 'gen/stage_ibb.json'))['pictures'],
+                                               'dhamar': ['dhamar'] + json.load(open(GAME + 'gen/stage_dhamar.json'))['pictures']}      # (names not in `pics` are simply not built)
 later_of = {n: m for m, ns in LATER.items() for n in ns}
 PICS = SITE + 'pics/'
 os.makedirs(PICS, exist_ok=True)
@@ -130,6 +141,10 @@ if not IBB:
     audio_small['music'] = {k: v for k, v in audio['music'].items() if k not in ('ibb', 'ibbboss')}      # (Ibb's music: test builds only)
 if NO_SOUQ:
     audio_small['music'] = {k: v for k, v in audio_small['music'].items() if k not in ('souq', 'tailor')}
+if not DHAMAR:
+    audio_small['music'] = {k: v for k, v in audio_small['music'].items() if k != 'dhamar'}      # (Dhamar's music and lines: its test builds only)
+    if 'speech' in audio_small:
+        audio_small['speech'] = {k: v for k, v in audio_small['speech'].items() if k != 'dhamar'}
 
 # a quarter-second of silence, for the iPhone ring-switch workaround
 n, sr = 2000, 8000
@@ -153,14 +168,26 @@ data = '\n'.join([
     'var IMAGES_LATER = %s;' % js(images_later),      # (a mission's pictures fetched on pick: files in pics/)
 ])
 code = []
-for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'school', 'rally', 'opening', 'sandal', 'spokesman', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'render_spokesman', 'menu', 'audio', 'input', 'main'):
-    if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE) or (not IBB and f in IBB_CODE):
+for f in ('lang', 'level', 'level_mocha', 'level_zabid', 'level_taiz', 'level_ibb', 'level_dhamar', 'campaign', 'sim', 'drive', 'boss', 'roaster', 'tailor', 'fly', 'school', 'rally', 'opening', 'sandal', 'spokesman', 'dhamar', 'render', 'render_roaster', 'render_tailor', 'render_fly', 'render_ibb', 'render_spokesman', 'render_dhamar', 'menu', 'audio', 'input', 'main'):
+    if not os.path.exists(GAME + 'src/%s.js' % f) or (NO_SOUQ and f in SOUQ_CODE) or (not IBB and f in IBB_CODE) or (not DHAMAR and f in DHAMAR_CODE):
         continue
     src = read(GAME + 'src/%s.js' % f)
     if IBB and f == 'campaign':
         # Ibb out, and the road from Taiz going to it
         for old, new in (("name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: false,", "name: 'The Green Valleys', place: 'Ibb', road: 'Mountain road', built: true,"),
                          ("name: 'The Castle', place: 'Taiz', road: 'Mountain road', built: true, next: ['zabid'],", "name: 'The Castle', place: 'Taiz', road: 'Mountain road', built: true, next: ['ibb'],")):
+            assert src.count(old) == 1, old
+            src = src.replace(old, new)
+    if DHAMAR and f == 'campaign':
+        # Dhamar out, with the brief's card (draft 4): its briefing, its boss, its zones (the level's names, as any built
+        # mission's); the road on from Ibb is already drawn
+        # (and its number on the map 5, as in the outline the brief comes from: the mission after Ibb's 4; the map's other
+        # numbers are the release's, R6)
+        for old, new in (("{ id: 'dhamar', stage: 6, name: 'The Wadi', place: 'Dhamar', road: 'Mountain road', built: false,", "{ id: 'dhamar', stage: 5, name: 'The Wadi', place: 'Dhamar', road: 'Mountain road', built: true,"),
+                         ("brief: 'A dry riverbed across the high plain, a convoy that will not let you pass, and a road with room for one of you. Salem says he has driven worse.',",
+                          "brief: 'The high plain, cold and bright, and the Committee has come for men. The wages stopped; ask him about them and he laughs, and something falls out of his pocket. One man, a stamp, a loudhailer, and a whole convoy to carry whoever he drafts. Salem drives. Get past the checkpoints before the road north closes.',"),
+                         ("boss: 'An armoured bus, with the whole convoy\\'s luggage still tied to the roof.' },",
+                          "boss: 'Dhihint bin Ratib, the Committee: one man and a whole committee. Ask him about the wages and he laughs, and his pockets are full.' },")):
             assert src.count(old) == 1, old
             src = src.replace(old, new)
     if NO_SOUQ and f == 'campaign':
@@ -199,8 +226,8 @@ SKELETON = '''<!doctype html>
 wrapped = SKELETON + page + ('\n' + LOCAL if '--local-fonts' in sys.argv else '') + '\n</body>\n</html>\n'
 open(SITE + 'index.html', 'w', encoding='utf-8').write(wrapped)
 aud = sum(os.path.getsize(SITE + 'audio/' + f) for f in os.listdir(SITE + 'audio'))
-print('build "%s"%s%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64; %.0f KB more as %d files in pics/, fetched on pick: %s), sound files %.2f MB; title in first 8 KB: %s'
-      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', ' WITH IBB' if IBB else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, total_later / 1024, len(os.listdir(PICS)), ', '.join('%s %d' % (m, len(v)) for m, v in sorted(images_later.items())), aud / 1048576, '<title>' in page[:8000]))
+print('build "%s"%s%s%s: page %.0f KB (pictures %.0f KB as %s, %.0f KB as PNG, before base64; %.0f KB more as %d files in pics/, fetched on pick: %s), sound files %.2f MB; title in first 8 KB: %s'
+      % (BUILD, ' WITHOUT THE SOUQ' if NO_SOUQ else '', ' WITH IBB' if IBB else '', ' WITH DHAMAR' if DHAMAR else '', len(page.encode()) / 1024, total_pic / 1024, 'PNG' if '--png' in sys.argv else 'WebP', total_png / 1024, total_later / 1024, len(os.listdir(PICS)), ', '.join('%s %d' % (m, len(v)) for m, v in sorted(images_later.items())), aud / 1048576, '<title>' in page[:8000]))
 if NO_SOUQ:
     # the music the page can ask for (the folder keeps every file; copy only these to the repo)
     print('music files this page uses:', sorted(set(v['file'] for v in audio_small['music'].values())))

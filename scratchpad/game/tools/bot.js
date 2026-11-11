@@ -482,8 +482,8 @@ function smartBot(opts) {
         if (ad < 132 && ad > 44 && grenWait <= 0 && p.grenades > 0 && p.face === face) { inp.grenade = true; grenWait = 60; }
         const cornered = (face > 0 && p.x <= s.cam + 16) || (face < 0 && p.x >= s.cam + s.viewW * (1 - s.laneR) - 10);
         if (tgt.st === 'bashw' && ad < 46) { jumpNow = true; inp.mx = cornered ? face : -face; }
-        else if (ad < 62) { inp.mx = -face; if (cornered) { inp.mx = face; if (!p.air && ad < 40) { jumpNow = true; jumpHold = 26; } } }
-        else if (ad > 124) inp.mx = face;
+        else if (ad < 62 && p.weapon !== 'flame') { inp.mx = -face; if (cornered) { inp.mx = face; if (!p.air && ad < 40) { jumpNow = true; jumpHold = 26; } } }
+        else if (ad > (p.weapon === 'flame' ? 50 : 124)) inp.mx = face;
         else if (p.face !== face) inp.mx = face;
       } else if (Sim.ducked(tgt)) {
         if (ad < 132 && ad > 40 && grenWait <= 0 && p.grenades > 0 && p.face === face) { inp.grenade = true; grenWait = 50; }
@@ -502,7 +502,8 @@ function smartBot(opts) {
         if (!p.air && p.plat >= 0 && (ad < 40 || stuckT > 30)) { inp.my = 1; if (dropT <= 0) { jumpHold = 3; dropT = 30; } }      // or the way on is shut: step down to him
       } else if (above && !inCone) {
         // get under a different angle: back off or jump and shoot
-        if (ad < 70) inp.mx = -face; else if (ad > 170) inp.mx = face; else if (p.face !== face) inp.mx = face;
+        if (p.weapon === 'flame') inp.mx = ad > 40 ? face : 0;
+        else if (ad < 70) inp.mx = -face; else if (ad > 170) inp.mx = face; else if (p.face !== face) inp.mx = face;
         if (!p.air && hop <= 0) { jumpNow = true; hop = 34; }
       } else {
         // is there a wall of sandbags between us? then shooting is wasted: close in and throw, or walk round into it
@@ -513,7 +514,7 @@ function smartBot(opts) {
           inp.mx = (ad > 110 || gren <= 0) ? face : 0;
           if (!inp.mx && p.face !== face) inp.mx = face;
         } else {
-          const want = tgt.k === 'bomber' ? 110 : 128;
+          const want = p.weapon === 'flame' ? 40 : (tgt.k === 'bomber' ? 110 : 128);      // (Dhamar's torch: in close)
           inp.mx = ad > want + 30 ? face : 0;
           if (!inp.mx && p.face !== face) inp.mx = face;
         }

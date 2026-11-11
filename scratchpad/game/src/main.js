@@ -23,7 +23,7 @@
   var LEVELS = {}, cur = 'm1';
   [typeof LEVEL !== 'undefined' ? LEVEL : null, typeof LEVEL_MOCHA !== 'undefined' ? LEVEL_MOCHA : null,
    typeof LEVEL_ZABID !== 'undefined' ? LEVEL_ZABID : null, typeof LEVEL_TAIZ !== 'undefined' ? LEVEL_TAIZ : null,
-   typeof LEVEL_IBB !== 'undefined' ? LEVEL_IBB : null].forEach(function (L) { if (L) LEVELS[L.id] = L; });
+   typeof LEVEL_IBB !== 'undefined' ? LEVEL_IBB : null, typeof LEVEL_DHAMAR !== 'undefined' ? LEVEL_DHAMAR : null].forEach(function (L) { if (L) LEVELS[L.id] = L; });
   // the run being played: the checkpoint it started at, and whether one was skipped on the way (either makes it a
   // practice run: a clear still counts, but no best and no medals are kept). fromSel: the start chosen on each card.
   var run = { from: 0, skipped: false }, fromSel = {};
@@ -256,7 +256,7 @@
     }
     var dur = Sound.voice(id, { gain: o.gain });
     line = { id: id, who: T(o.who || v.who), text: T(v.text), until: gt + Math.round(dur * 60) + 26, pri: pri, rally: !!o.rally,
-             t0: sim ? sim.tick : 0, fa: v.fa || null };      // (when it began, for a mouth that goes with it; a line in Persian under it)
+             t0: sim ? sim.tick : 0, fa: v.fa || null, coin: o.coin || null };      // (when it began, for a mouth that goes with it; a line in Persian under it; coin: where a coin rings as it ends, Dhamar)
   }
   function yelp(e) {
     if (gt - (flags.yelpAt || -99) < 9) return;
@@ -274,7 +274,8 @@
     vent: 'A vent hisses before it blows: wait, then cross',
     spice: 'Crouch and shoot a spice sack: the Zanabeel cannot fight while they sneeze', sneeze: 'Keep out of the chilli: you cannot shoot while you sneeze',
     bar: 'Grenades break a barricade fastest. So does a drum', gap: 'Jump the gaps between the roofs',
-    mic: 'Shoot the microphone he is speaking into'
+    mic: 'Shoot the microphone he is speaking into',
+    flame: 'A gas torch: short reach, so get in close. It goes through a whole group'
   };
 
   function react(ev) {
@@ -284,6 +285,12 @@
       switch (e.t) {
         case 'shot':
           if (e.w === 'chin') { Sound.sfx('gun30', { gain: 0.95 }); break; }      // (the Apache's chain gun)
+          if (e.w === 'flame') {                                                  // (Dhamar's gas torch: a roar of puffs)
+            flags.flameN = (flags.flameN || 0) + 1;
+            if (flags.flameN % 2) Sound.sfx('hiss', { gain: 0.42, rate: 1.5 + Math.random() * 0.3 });
+            if (flags.flameN % 6 === 1) Sound.sfx('whoosh', { gain: 0.35, rate: 0.62 });
+            break;
+          }
           Sound.sfx(e.w === 'hmg' ? 'shot_hmg' : 'shot_side', { gain: e.w === 'hmg' ? 0.8 : 0.9 }); break;
         case 'eshot':
           if (e.k === 'heavy' || e.k === 'boss' || e.k === 'aa') Sound.sfx('heavy_shot', { gain: e.k === 'aa' ? 0.7 : 0.85, pan: panOf(e.x), rate: e.k === 'aa' ? 1.15 : 1 });
@@ -296,6 +303,7 @@
           if (e.hit === 'door') Sound.sfx('clang', { gain: 0.7, pan: panOf(e.x) }); else Sound.sfx('hit_body', { gain: 0.8, pan: panOf(e.x) });
           break;
         case 'hit':
+          if (e.kind === 'flame') break;                                          // (the torch's roar says it)
           if (e.kind === 'body') Sound.sfx('hit_body', { pan: panOf(e.x) });
           else if (e.kind === 'guard') Sound.sfx('ricochet', { gain: 0.5, pan: panOf(e.x) });        // a shot glancing off one still coming in
           else if (e.kind === 'door' || e.kind === 'metal') { Sound.sfx('clang', { gain: 0.9, pan: panOf(e.x) }); if (Math.random() < 0.22) Sound.sfx('ricochet', { gain: 0.5, pan: panOf(e.x) }); }
@@ -304,6 +312,7 @@
           break;
         case 'die':
           if (e.how === 'ram') { Sound.sfx('ram', { pan: panOf(e.x) }); buzz(15); }
+          if (e.how === 'flame') Sound.sfx('whoosh', { gain: 0.5, rate: 1.25, pan: panOf(e.x) });
           if (e.how === 'knife' && !flags.knifed) { flags.knifed = 1; }
           if (e.k !== 'aa' && e.k !== 'drone') yelp(e);                   // (a gun and a drone go up without a word)
           break;
@@ -366,6 +375,10 @@
         case 'pickup':
           if (e.k === 'bean' || e.k === 'chilli') { Sound.sfx('coin', { gain: 0.6, rate: 1.2 }); break; }
           if (e.k === 'hmg') { Sound.sfx('pick_weapon'); speak('ann_hmg', { pri: 6 }); }
+          else if (e.k === 'flame') {
+            Sound.sfx('pick_weapon'); speak('ann_flame', { pri: 6 });
+            if (!flags.flameTip) { flags.flameTip = 1; after(60, function () { hint(T(HINTS.flame)); }); }
+          }
           else Sound.sfx('pick_gren');
           break;
         case 'weapon_empty': speak('ann_pistol', { pri: 6 }); break;
@@ -387,7 +400,8 @@
           Sound.sfx('rope');
           after(12, function () { Sound.sfx('freed', { gain: 0.8 }); });
           if (e.look) { var sl = e.look; after(40, function () { speak(sl === 'shop_tea' ? 'shop_tea' : (sl === 'shop_cloth' ? 'shop_cloth' : 'shop_thanks'), { pri: 4, wait: true }); }); }
-          else after(40, function () { speak('elder_thanks', { pri: 4, wait: true }); });
+          else { var fl = sim.L.freedLine || 'elder_thanks'; after(40, function () { speak(fl, { pri: 4, wait: true }); }); }      // (Dhamar's teacher has his own)
+          if (sim.L.office) after(100, function () { Sound.sfx('stamp', { gain: 0.8 }); });      // (and stamps the Committee's poster: render_dhamar.js)
           break;
         case 'surrender':
           Sound.sfx('surrender', { gain: 0.7 });
@@ -508,7 +522,7 @@
         case 'dismount': Sound.sfx('jump', { gain: 0.7 }); break;
         case 'hop': Sound.sfx('hop', { gain: 0.9 }); break;
         case 'car_land': Sound.sfx('car_land', { gain: clamp(e.v / 420, 0.35, 1) }); if (e.v > 260) buzz(20); break;
-        case 'road_end': Sound.sfx('brake'); after(56, function () { speak('salem_out', { pri: 4, wait: true }); }); break;
+        case 'road_end': Sound.sfx('brake'); after(56, function () { speak(sim.L.outLine || 'salem_out', { pri: 4, wait: true }); }); break;
         case 'panic':
           if (!flags.carLine && Math.random() < 0.5) { flags.carLine = 1; speak('grunt_car', { pri: 2, who: WHO[e.k] || 'RIFLEMAN' }); }
           else yelp(e);
@@ -586,7 +600,7 @@
 
         // ---- Ibb: the school (school.js)
         case 'class_open': Sound.sfx('door_creak', { gain: 0.9, pan: panOf(e.x) }); break;
-        case 'kid_stop': after(8, function () { speak('yazeed_home', { pri: 4, who: 'YAZEED' }); }); break;
+        case 'kid_stop': after(8, function () { speak(sim.L.kidLine || 'yazeed_home', { pri: 4, who: 'YAZEED' }); }); break;
         // Yazeed one sandal short (sandal.js): the stick coming down, fizzing, the pop, the sandal landing behind him
         case 'sandal_throw': Sound.sfx('throw', { gain: 0.6, pan: panOf(e.x) }); break;
         case 'sandal_land': Sound.sfx('fuse', { gain: 0.8, pan: panOf(e.x) }); break;
@@ -594,7 +608,24 @@
         case 'sandal_down': Sound.sfx('step', { gain: 0.6, pan: panOf(e.x) }); break;
         // ---- Ibb: the rally on the terraces' top (rally.js): Yazeed's word cuts the Spokesman short; his jump, the applause;
         //      his landing on the deck
-        case 'rally_heard': speak('yazeed_beret', { pri: 4, who: 'YAZEED' }); break;
+        case 'rally_heard': speak((sim.L.stage && sim.L.stage.heard) || 'yazeed_beret', { pri: 6, who: 'YAZEED' }); break;
+        // ---- Dhamar: the vote at Hammam Ali (rally.js, its vote): the motion on whether Yazeed is there, denied, the
+        //      stamp; the whole gathering drafted in one motion, the stamp again
+        case 'rally_deny':
+          // (his hands up alone for a moment: the vote on whether Yazeed is there; then the verdict, and the stamp)
+          after(60, function () { speak(sim.L.stage.deny, { pri: 6, keep: true, wait: true }); });
+          after(200, function () { Sound.sfx('stamp', { gain: 0.9, pan: panOf(e.x) }); });
+          break;
+        case 'rally_draft':
+          speak(sim.L.stage.draft, { pri: 6, keep: true, wait: true });
+          after(64, function () { Sound.sfx('stamp', { gain: 0.9, pan: panOf(e.x) }); after(8, function () { Sound.sfx('stamp', { gain: 0.6, rate: 1.1, pan: panOf(e.x) }); }); });
+          break;
+        // ---- Dhamar: the highway (dhamar.js): at each checkpoint the queue asks, the speakers on the pole laugh back, a
+        //      note or two blows across the road; the 4x4 through one, through a barrier
+        case 'cp_ask': speak('grunt_wages', { pri: 4, who: 'A MAN IN THE QUEUE' }); break;
+        case 'cp_laugh': speak('cm_speakers', { pri: 5, wait: true, keep: true }); break;
+        case 'note_back': Sound.sfx('paper', { gain: 0.6, rate: 1.2, pan: panOf(e.x) }); Sound.sfx('coin', { gain: 0.35, rate: 1.3 }); break;
+        case 'bar_smash': Sound.sfx('crash', { gain: 0.55, rate: 1.2, pan: panOf(e.x) }); Sound.sfx('clang', { gain: 0.5, rate: 0.8, pan: panOf(e.x) }); buzz(25); break;
         case 'rally_jump':
           Sound.sfx('jump', { gain: 0.8, rate: 0.9, pan: panOf(e.x) });
           Sound.voice('clap_l', { over: true, gain: 0.6, pan: panOf(e.x - 120) });
@@ -774,6 +805,12 @@
     if (line && line.rally && !line.clapped && gt >= line.until - 26) {
       line.clapped = true;
       Sound.voice('clap_s', { over: true, gain: 0.55, pan: sim.L.stage ? panOf(sim.L.stage.x0 - 40) : 0 });
+    }
+    // (the Committee at his vote, Dhamar: as his laugh ends a coin drops out of his jacket and rings on the stone)
+    if (line && line.coin && !line.coined && gt >= line.until - 30) {
+      line.coined = true;
+      var cx0 = line.coin.x;
+      Sound.sfx('coin', { gain: 0.75, rate: 0.82, pan: panOf(cx0) }); after(9, function () { Sound.sfx('coin', { gain: 0.4, rate: 0.9, pan: panOf(cx0) }); });
     }
     if (line && gt >= line.until) line = null;
     if (!line && queue.length) { var q = queue.shift(); if (gt - q.at < 200 || q.o.keep) speak(q.id, q.o); }      // (unless its moment has passed: a story line's never does)
@@ -1628,6 +1665,7 @@
     if (r.knifed) facts.push([T('Knifed'), r.knifed]);
     facts.push([T('Captured'), r.captures], [T('Freed'), T('{0} of {1}', [r.freed, r.detainees])]);
     if (r.bossT) facts.push([T(L.bossFact || 'Boss beaten in'), clock(r.bossT)]);
+    if (L.checkpoints) facts.push([T('Wages returned'), r.wages]);          // (Dhamar: the notes the 4x4 went through)
     facts.push([T('Shots that hit'), Math.round(r.accuracy * 100) + '%'], [T('Plates lost'), r.plates], [T('Lives lost'), r.deaths], [T('Continues'), r.continues]);
     var ul = el('rFacts');
     ul.textContent = '';

@@ -9,6 +9,12 @@
 // (rally_gone), and the station's gate opens (the level's gate with `until: 'rally'`).
 // The level says where: L.stage = { gate, x0, x1, deck, podium, seats: [[x, y]], lines: [his statement's line ids] }
 // (render_ibb.js draws it all and has him heard: the nearest of his screens, or him, carries his voice).
+// Dhamar's is a vote (style: 'vote'; Khaled, 11 Nov: zones 1-3 built from the plan): the Committee at his table among the
+// hot pools convenes, moves, seconds and carries alone, the gathering's hands up through the steam. Once the car park is
+// cleared and Yazeed comes up, Yazeed's word (L.stage.heard); he puts it to the vote, alone, whether Yazeed is there, and
+// "Motion denied." (rally_deny, L.stage.deny); he drafts the whole gathering in one motion (rally_draft, L.stage.draft)
+// and herds them off to his convoy (rally_walk), out of the picture (rally_gone), and the way on opens. No jump, no run.
+// He and the gathering are scenery there too: nothing can touch them (render_dhamar.js draws them; main.js says the lines).
 var Sim = Sim || require('./sim.js');
 (function () {
   'use strict';
@@ -21,12 +27,19 @@ var Sim = Sim || require('./sim.js');
     JUMP: 44,           // the jump, up from behind the podium and back down onto the deck
     HIGH: 28,           // how high
     RUN: 110,           // his dash for the pass, px a second
-    FALL: 600           // off the stage's far end: gravity, px a second a second
+    FALL: 600,          // off the stage's far end: gravity, px a second a second
+    // the vote (Dhamar): Yazeed's word, said out; his hands up alone (the vote on whether Yazeed is there), "Motion
+    // denied." and the stamp; the gathering drafted in one motion ("Drafted. Report Tuesday."), their hands up, then they
+    // turn for the convoy; off they go, him behind them
+    V_HEARD: 160,
+    DENY: 230,
+    DRAFT: 180,
+    WALK: 58            // px a second, the gathering after him
   };
 
   function create(s) {
     var Lg = s.L.stage;
-    s.rally = Lg && Lg.gate ? { st: 'speech', t: 0, x: Lg.podium + R.BEHIND, y: Lg.deck, vy: 0, face: -1, runD: 0, clearT: 0 } : null;
+    s.rally = Lg && Lg.gate ? { st: 'speech', t: 0, x: Lg.chair != null ? Lg.chair : Lg.podium + R.BEHIND, y: Lg.deck, vy: 0, face: Lg.chair != null ? 1 : -1, runD: 0, clearT: 0, vote: Lg.style === 'vote' } : null;      // (chair: where he stands when it is not behind a podium: Dhamar's, left of his table, facing the gathering)
     if (s.rally && gateOf(s) && gateOf(s).done) s.rally.st = 'gone';         // (a game started past it)
   }
   function done(s) { return !s.rally || s.rally.st === 'gone'; }
@@ -56,7 +69,18 @@ var Sim = Sim || require('./sim.js');
     if (r.st === 'speech') {
       if (!p.dead && p.x >= Lg.x0 - R.REACH && Sim.onScreen(s, r.x, -12) && cleared(s)) { r.st = 'heard'; r.t = 0; ev(s, { t: 'rally_heard', x: r.x, y: r.y }); }
     } else if (r.st === 'heard') {
-      if (r.t >= R.HEARD) { r.st = 'jump'; r.t = 0; ev(s, { t: 'rally_jump', x: r.x, y: r.y }); }
+      if (r.vote && r.t >= R.V_HEARD) { r.st = 'deny'; r.t = 0; ev(s, { t: 'rally_deny', x: r.x, y: r.y }); }
+      else if (!r.vote && r.t >= R.HEARD) { r.st = 'jump'; r.t = 0; ev(s, { t: 'rally_jump', x: r.x, y: r.y }); }
+    } else if (r.st === 'deny') {
+      if (r.t >= R.DENY) { r.st = 'draft'; r.t = 0; ev(s, { t: 'rally_draft', x: r.x, y: r.y }); }
+    } else if (r.st === 'draft') {
+      if (r.t >= R.DRAFT) { r.st = 'walk'; r.t = 0; r.face = 1; ev(s, { t: 'rally_walk', x: r.x, y: r.y }); }
+    } else if (r.st === 'walk') {
+      r.x += R.WALK * DT; r.runD += R.WALK * DT;
+      // (gone once he is out of the picture, and the last of the gathering if any of it follows behind him)
+      var back = 0;
+      for (var i = 0; i < (Lg.seats || []).length; i++) back = Math.max(back, Lg.podium + R.BEHIND - Lg.seats[i][0]);
+      if (r.x - back > s.cam + s.viewW + 16) { r.st = 'gone'; r.t = 0; ev(s, { t: 'rally_gone' }); }
     } else if (r.st === 'jump') {
       var u = r.t / R.JUMP;
       r.y = Lg.deck - 4 * R.HIGH * u * (1 - u);

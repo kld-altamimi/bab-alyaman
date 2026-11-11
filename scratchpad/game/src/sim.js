@@ -41,7 +41,15 @@ var Sim = (function () {
     CLOUD_R: 30, CLOUD_GROW: 22, CLOUD_LIFE: 270, CLOUD_FADE: 70, CLOUD_DRIFT: 7,
     SNEEZE_T: 132, SNEEZE_IMM: 70, SNEEZE_EVERY: 34,
     P_SNEEZE: 50, P_SNEEZE_SLOW: 22, P_SNEEZE_IMM: 100,
-    BAR_GREN: 10, BAR_DRUM: 60, BAR_MINE: 30, BAR_W: 46, BAR_AUTO: 150, BAR_PRESS: 150, SACK_NEAR: 48
+    BAR_GREN: 10, BAR_DRUM: 60, BAR_MINE: 30, BAR_W: 46, BAR_AUTO: 150, BAR_PRESS: 150, SACK_NEAR: 48,
+    // Dhamar: the drafted cook's kitchen gas torch (Khaled, 11 Nov 03:33: "Yes"). It takes the place of Yazeed's gun until
+    // its gas runs out (as long as the heavy gun's belt lasts, fired without a break); a short reach (FLAME_REACH from his
+    // feet), through a whole group (each puff catches everyone it touches, once); deadly up close and nothing at a
+    // distance, so it makes nothing easier. A man it catches comes out blackened, his hair smoking, and runs off: nobody is
+    // shown burning (scorchRun). Doors and sandbags stop it as they stop a shot; children, the teacher and the rally are
+    // in nothing a shot looks in, so it cannot touch them either.
+    FLAME_AMMO: 200, FLAME_CD: 4, FLAME_V: 260, FLAME_LIFE: 26, FLAME_DRAG: 0.97, FLAME_RISE: 40, FLAME_SPREAD: 0.1, FLAME_REACH: 92,
+    SCORCH_RUN: 104
   };
 
   var KIND = {
@@ -207,6 +215,7 @@ var Sim = (function () {
       hurtT: 99, deadT: 0, walkD: 0, seen: false, lit: false, captured: false, offT: 0,
       tag: sp.tag || null, behind: sp.behind || null, covered: !!sp.covered, moving: 0, slot: 0
     };
+    if (sp.gives) e.gives = sp.gives;
     s.slotN = ((s.slotN || 0) + 1) % 5;
     e.slot = s.slotN * 12;
     if (sp.covered) e.cd += Math.round(60 * T.FIRST);
@@ -235,6 +244,7 @@ var Sim = (function () {
     side: { fwd: [18, 23], crouch: [18, 11], up: [8, 43], down: [8, 5], diag: [14, 37], ddiag: [13, 12] },
     hmg: { fwd: [32, 19], crouch: [32, 7], up: [11, 49], down: [8, -11], diag: [22, 39], ddiag: [22, 4] }
   };
+  MUZZLE.flame = MUZZLE.side;          // (the torch's nozzle is held where the pistol is)
   // x, y: the mouth of the gun, where the flash is drawn. sx, sy: where the shot itself starts, back along its line inside
   // the man, so that somebody standing on the muzzle is still hit.
   function muzzle(p) {
@@ -283,6 +293,7 @@ var Sim = (function () {
 
   function shoot(s) {
     var p = s.p, m = muzzle(p), d = assist(s, m, false), hmg = p.weapon === 'hmg';
+    if (p.weapon === 'flame') { flameOut(s, m, d); return; }
     if (hmg) {
       var a = (s.rand() - 0.5) * 2 * T.HMG_SPREAD, c = Math.cos(a), sn = Math.sin(a);
       d = { dx: d.dx * c - d.dy * sn, dy: d.dx * sn + d.dy * c };
@@ -303,6 +314,35 @@ var Sim = (function () {
       p.ammo--;
       if (p.ammo <= 0) { p.weapon = 'side'; p.ammo = 0; ev(s, { t: 'weapon_empty' }); }
     }
+  }
+
+  // a puff of the torch's flame: out of the nozzle, slowing and rising as it goes, a little spread; it catches everyone it
+  // passes through (stepBullets: b.flame, b.got)
+  function flameOut(s, m, d) {
+    var p = s.p, a = (s.rand() - 0.5) * 2 * T.FLAME_SPREAD, c = Math.cos(a), sn = Math.sin(a);
+    var dx = d.dx * c - d.dy * sn, dy = d.dx * sn + d.dy * c, free = 0;
+    for (var ci = 0; ci < s.props.length; ci++) {
+      var cv = s.props[ci];
+      if (cv.k === 'cover' && p.x >= cv.x0 - 6 && p.x <= cv.x1 + 6) free = cv.id;      // (from behind his own bags, as a shot)
+    }
+    s.bullets.push({ x: m.x - p.face * 4, y: m.y, vx: dx * T.FLAME_V + p.vx * 0.5, vy: dy * T.FLAME_V, life: T.FLAME_LIFE, own: true, flame: true, age: 0, free: free, hide: 1, got: [] });
+    p.fireCd = T.FLAME_CD;
+    p.fireT = 0;
+    s.stats.shots++;
+    ev(s, { t: 'shot', w: 'flame', x: m.x, y: m.y, dx: dx, dy: dy, aim: p.aim, face: p.face });
+    p.ammo--;
+    if (p.ammo <= 0) { p.weapon = 'side'; p.ammo = 0; ev(s, { t: 'weapon_empty', w: 'flame' }); }
+  }
+  // the torch in his hands and somebody of theirs within its reach, the way it points (what auto-fire waits for with it)
+  function flameNear(s) {
+    var m = muzzle(s.p), cosA = Math.cos(35 * Math.PI / 180);
+    for (var i = 0; i < s.enemies.length; i++) {
+      var e = s.enemies[i];
+      if (!e.alive || !e.hostile || e.emerge > 0 || !onScreen(s, e.x, 0)) continue;
+      var ex = e.x - m.x, ey = (e.y - e.h * 0.5) - m.y, d = Math.sqrt(ex * ex + ey * ey);
+      if (d < 10 || (d < T.FLAME_REACH && (ex * m.dx + ey * m.dy) / d >= cosA)) return true;
+    }
+    return false;
   }
 
   // a sack with a Dhanab beside it (one who could be fought: on the screen, not still coming in)
@@ -489,9 +529,10 @@ var Sim = (function () {
     // firing: held, tapped, or left to the gun when auto-fire is on (not in the middle of a sneeze). While children are
     // out (Ibb's school: s.calm) his gun points at the ground: nothing is fired, cut or thrown
     var sneezing = p.sneezeT > 0, lowered = !!s.calm;
-    var want = fire && !sneezing && !lowered, blade = (fire || inp.auto) && !walking && !sneezing && !lowered ? knifeTarget(s) : null;
+    var torch = p.weapon === 'flame';          // (Dhamar's gas torch: no knife with it, and auto-fire only within its reach)
+    var want = fire && !sneezing && !lowered, blade = (fire || inp.auto) && !walking && !sneezing && !lowered && !torch ? knifeTarget(s) : null;
     p.knifeT++;
-    if (!want && inp.auto && !walking && !sneezing && !lowered) want = !!blade || !!assist(s, muzzle(p), true) || (s.bars.length > 0 && barAhead(s));
+    if (!want && inp.auto && !walking && !sneezing && !lowered) want = torch ? flameNear(s) : (!!blade || !!assist(s, muzzle(p), true) || (s.bars.length > 0 && barAhead(s)));
     if (want && p.fireCd <= 0) { if (blade) knife(s, blade); else shoot(s); }
     else if (firePressed && !blade && !sneezing && !lowered && p.weapon === 'side' && p.fireCd <= T.SIDE_CD - T.SIDE_TAP - 1) shoot(s);
 
@@ -515,6 +556,9 @@ var Sim = (function () {
     e.hostile = false;
     var G = groupOf(s, e);
     G.hostile--;
+    // (what he had on him he leaves where he stood: Dhamar's drafted cook, his kitchen gas torch)
+    if (e.gives && e.x >= s.cam - 20) s.pickups.push({ id: s.nextId++, k: e.gives, x: e.x, y: e.y - 20, vx: 0, vy: -150, air: true, t: 0, gone: false });
+    e.gives = null;
     lastMan(s, G);
   }
 
@@ -537,7 +581,8 @@ var Sim = (function () {
     if (!e.alive) return;
     var K = KIND[e.k];
     e.alive = false; e.st = 'dead'; e.deadT = 0; e.stT = 0; e.how = how;
-    e.vx = (dirx >= 0 ? 1 : -1) * (how === 'blast' ? 110 : 64); e.vy = how === 'blast' ? -230 : -150; e.air = true; e.plat = -2;
+    if (how === 'flame') { e.scorch = 1; e.face = dirx >= 0 ? 1 : -1; e.vx = 0; e.vy = 0; e.moving = 1; }      // (blackened, and off he runs: scorchRun)
+    else { e.vx = (dirx >= 0 ? 1 : -1) * (how === 'blast' ? 110 : 64); e.vy = how === 'blast' ? -230 : -150; e.air = true; e.plat = -2; }
     var pts = K.score * (how === 'knife' ? 2 : 1);
     s.score += pts;
     s.stats.kills++;
@@ -552,6 +597,24 @@ var Sim = (function () {
       s.bombs.push({ id: s.nextId++, kind: 'dyn', own: false, x: e.x, y: e.y - 20, vx: e.vx * 0.3, vy: -60, air: true, fuse: 26, bounced: 0, t: 0, loose: true });
     }
     standDown(s, e);
+  }
+
+  // a man the torch caught: blackened, his hair smoking, he runs for it, away from Yazeed along whatever he stands on and
+  // off its edge if it ends; he is no one's problem from the moment it caught him, and gone once he is out of the picture
+  function scorchRun(s, e) {
+    var L = s.L, v = T.SCORCH_RUN;
+    if (e.air) {
+      var y0 = e.y;
+      e.vy = Math.min(T.MAX_FALL, e.vy + T.GRAV * DT);
+      e.x += e.face * v * 0.6 * DT; e.y += e.vy * DT;
+      var ld = e.vy >= 0 ? landing(L, e.x, y0, e.y, -9) : null;
+      if (ld) { e.y = ld.y; e.plat = ld.plat; e.air = false; e.vy = 0; }
+    } else {
+      e.x += e.face * v * DT; e.walkD += v * DT;
+      if (!follow(L, e)) { e.air = true; e.vy = 0; e.plat = -2; }
+    }
+    if (onScreen(s, e.x, 24) && e.y < L.height + 20) { if (e.deadT > 40) e.deadT = 40; }
+    else { e.deadT = 999; e.st = 'gone'; }
   }
 
   function breakDoor(s, e, dirx) {
@@ -687,6 +750,7 @@ var Sim = (function () {
     if (e.ext && e.alive && X[e.ext] && X[e.ext].man) { X[e.ext].man(s, e); return; }
     if (!e.alive) {
       e.deadT++;
+      if (e.scorch) { scorchRun(s, e); return; }
       if (e.air) {
         var y0 = e.y;
         e.vy = Math.min(T.MAX_FALL, e.vy + T.GRAV * DT);
@@ -1085,6 +1149,7 @@ var Sim = (function () {
       if (b.gone) continue;
       b.age = (b.age || 0) + 1;
       if (b.g) b.vy += b.g * DT;                         // (a bean falls as it flies)
+      if (b.flame) { b.vx *= T.FLAME_DRAG; b.vy = b.vy * T.FLAME_DRAG - T.FLAME_RISE * DT; }      // (the torch's flame slows and rises)
       for (k = 0; k < 2 && !b.gone; k++) {
         b.x += b.vx * DT * 0.5; b.y += b.vy * DT * 0.5;
         if (b.own) {
@@ -1092,6 +1157,7 @@ var Sim = (function () {
           for (j = 0; j < s.enemies.length && !b.gone; j++) {
             var e = s.enemies[j];
             if (!e.alive || !e.hostile || e.st === 'shock' || e.hidden || !onScreen(s, e.x, 0)) continue;        // (hidden: right down out of sight, Taiz's missile man locking on)
+            if (b.flame) { if (flameHits(s, b, e)) b.gone = true; continue; }        // (Dhamar's torch: through everyone it touches)
             if (!inBox(b.x, b.y, e.x - e.hw - 1, e.y - (ducked(e) ? 18 : e.h), e.x + e.hw + 1, e.y)) continue;
             if (guarded(s, e)) { b.gone = true; ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y }); continue; }     // still coming in: it glances off
             var dt = doorTop(e);
@@ -1175,6 +1241,27 @@ var Sim = (function () {
       }
       if (--b.life <= 0 || b.x < s.cam - 6 || b.x > s.cam + s.viewW + 6 || b.y < s.camY - 30 || (L.fly && b.y > s.camY + s.viewH + 30)) b.gone = true;
     }
+  }
+
+  // a puff of flame and a man: it catches him once (a puff grows as it goes, and so does what it touches); a door held up
+  // in front of him takes it, as it takes a shot, and stops it there (true: the puff is spent)
+  function flameHits(s, b, e) {
+    if (b.got.indexOf(e.id) >= 0) return false;
+    var r = 2 + b.age * 0.22;
+    if (!inBox(b.x, b.y, e.x - e.hw - r, e.y - (ducked(e) ? 18 : e.h) - r, e.x + e.hw + r, e.y + 1)) return false;
+    if (guarded(s, e)) { ev(s, { t: 'hit', kind: 'guard', x: b.x, y: b.y }); return true; }
+    b.got.push(e.id);
+    if (b.got.length === 1) s.stats.hits++;
+    var dt = doorTop(e);
+    if (dt && b.vx !== 0 && (b.vx > 0 ? 1 : -1) === -e.face && b.y > e.y - dt - r) {
+      s.doorHits++; if (!s.doorAt) s.doorAt = s.tick;
+      ev(s, { t: 'hit', kind: 'door', x: b.x, y: b.y, left: e.door - 1, flame: true });
+      if (--e.door <= 0) { e.door = 1; breakDoor(s, e, b.vx); }
+      return true;
+    }
+    ev(s, { t: 'hit', kind: 'flame', x: b.x, y: b.y });
+    hurtEnemy(s, e, 1, b.vx, 'flame');
+    return false;
   }
 
   function stepProps(s) {
@@ -1264,6 +1351,7 @@ var Sim = (function () {
         q.gone = true;
         if (q.k === 'gren') { p.grenades = Math.min(99, p.grenades + 5); }
         if (q.k === 'hmg') { p.weapon = 'hmg'; p.ammo = T.HMG_AMMO; }
+        if (q.k === 'flame') { p.weapon = 'flame'; p.ammo = T.FLAME_AMMO; }
         var worth = q.k === 'bean' || q.k === 'chilli' ? 50 : 100;      // (the roast coffee the Big Roaster leaves behind, the Tailor's dummies' chillies: points, nothing more)
         s.score += worth;
         ev(s, { t: 'pickup', k: q.k, x: q.x, y: q.y, pts: worth });
@@ -1453,7 +1541,7 @@ var Sim = (function () {
     return {
       time: s.time, score: s.score, timeBonus: timeBonus, cleanBonus: clean ? 2000 : 0, total: s.score + timeBonus + (clean ? 2000 : 0),
       kills: st.kills, captures: st.captures, freed: st.freed, detainees: st.detainees, plates: st.plates, deaths: st.deaths, continues: st.continues,
-      knifed: st.knifed, ranOver: st.ranOver, flips: st.flips, bossT: st.bossT,
+      knifed: st.knifed, ranOver: st.ranOver, flips: st.flips, bossT: st.bossT, wages: st.wages || 0,      // (wages: Dhamar's notes returned)
       accuracy: st.shots ? st.hits / st.shots : 0, shots: st.shots,
       liberator: st.detainees > 0 && st.freed >= st.detainees,
       ace: st.continues === 0,     // Ace: the mission done without a continue (Khaled, 19 Oct)

@@ -345,6 +345,7 @@ var Render = (function () {
       if (took) continue;
       switch (e.t) {
         case 'shot':
+          if (e.w === 'flame') break;                     // (the gas torch: its flame is its own flash, and it throws no brass)
           var ang = e.aim === 'up' ? -Math.PI / 2 : (e.aim === 'down' ? Math.PI / 2 : (e.aim === 'diag' ? -Math.PI / 4 : (e.aim === 'ddiag' ? Math.PI / 4 : 0)));
           part('muzzle', e.x, e.y, { life: 3, flip: e.face < 0, name: e.w === 'hmg' ? 'fx_muzzle' : 'fx_muzzle_s', ang: ang });
           if (e.w === 'hmg' || Math.random() < 0.6) part('casing', p.x - e.face * 2, p.y - (p.crouch ? 12 : 24), { life: 34, vx: -e.face * (40 + Math.random() * 40) + (s.mode === 'drive' ? s.car.vx * 0.5 : 0), vy: -110 - Math.random() * 50, g: 620 });
@@ -356,6 +357,7 @@ var Render = (function () {
         case 'hit':
           if (e.kind === 'guard') { part('spark', e.x, e.y, { life: 4, name: 'fx_spark2' }); part('ember', e.x, e.y, { life: 8, vx: (Math.random() - 0.5) * 140, vy: -70 - Math.random() * 50, g: 500 }); break; }
           if (e.kind === 'bean') { part('ember', e.x, e.y - 1, { life: 9, vx: (Math.random() - 0.5) * 60, vy: -50, g: 400 }); break; }
+          if (e.kind === 'flame') { if (Math.random() < 0.4) part('ember', e.x, e.y, { life: 10, vx: (Math.random() - 0.5) * 50, vy: -40 - Math.random() * 40, g: 120 }); break; }
           if (e.kind === 'sand' || e.kind === 'bags' || e.kind === 'cloth') part('puff', e.x, e.y - 2, { life: 9 });
           else part('spark', e.x, e.y, { life: 5, name: e.kind === 'body' ? 'fx_spark' : 'fx_spark2' });
           if (e.kind === 'door' || e.kind === 'metal') part('ember', e.x, e.y, { life: 10, vx: (Math.random() - 0.5) * 160, vy: -80 - Math.random() * 60, g: 500 });
@@ -400,7 +402,7 @@ var Render = (function () {
           pop(e.x, e.y - 50, T('FREED {0}', [500]), 's_lav');
           posts.push({ x: e.x, y: e.y });
           break;
-        case 'pickup': pop(e.x, e.y - 26, e.k === 'hmg' ? T('HEAVY MG') : (e.k === 'bean' || e.k === 'chilli' ? '+' + e.pts : (e.k === 'rockets' ? T('ROCKETS +5') : T('GRENADES +5')))); break;
+        case 'pickup': pop(e.x, e.y - 26, e.k === 'hmg' ? T('HEAVY MG') : (e.k === 'flame' ? T('FLAMETHROWER') : (e.k === 'bean' || e.k === 'chilli' ? '+' + e.pts : (e.k === 'rockets' ? T('ROCKETS +5') : T('GRENADES +5'))))); break;
         // ---- Mocha
         case 'emerge': part('puff', e.x - 8, e.y - 2, { life: 9 }); part('puff', e.x + 8, e.y - 2, { life: 9, flip: true }); break;
         case 'fling': part('puff', e.x, e.y, { life: 7 }); break;
@@ -499,6 +501,54 @@ var Render = (function () {
           for (var bk in bosses) if (bosses[bk].misc && bosses[bk].misc(e, s, K)) break;
       }
     }
+  }
+  // ---- Dhamar's gas torch (the drafted cook's: a kitchen gas bottle, its hose and burner), drawn in pixels: lying on the
+  // ground as a pickup, or on Yazeed's back; and its flame, a puff at a time (sim.js: b.flame), white at the heart, then
+  // yellow, orange, red, and a wisp of dark smoke as it dies
+  function torchPic(x, y, face, lying) {
+    x = Math.round(x); y = Math.round(y);
+    var w = 6, h = lying ? 11 : 12, x0 = x - 3, y0 = y - h;
+    cx.fillStyle = '#1a1210'; cx.fillRect(x0 - 1, y0 + 1, w + 2, h); cx.fillRect(x0, y0, w, h + 1);           // its outline
+    cx.fillStyle = '#b8281c'; cx.fillRect(x0, y0 + 2, w, h - 3);                                            // the red bottle
+    cx.fillStyle = '#e8584a'; cx.fillRect(x0 + 1, y0 + 3, 1, h - 6);                                        // the light down its side
+    cx.fillStyle = '#7a1a12'; cx.fillRect(x0 + w - 2, y0 + 3, 1, h - 5);
+    cx.fillStyle = '#c8c8cc'; cx.fillRect(x0 + 1, y0, w - 2, 2);                                            // the valve
+    cx.fillStyle = '#6a6a70'; cx.fillRect(x0 + 2, y0 - 1, 2, 1);
+    cx.fillStyle = '#e8e2d0'; cx.fillRect(x0, y0 + h - 4, w, 1);                                            // its band
+    if (lying) {
+      // the burner beside it on the hose
+      cx.fillStyle = '#1a1210'; cx.fillRect(x0 + w, y0 + 2, 6, 1); cx.fillRect(x0 + w + 5, y0 + 1, 4, 3);
+      cx.fillStyle = '#d0a040'; cx.fillRect(x0 + w + 6, y0 + 2, 3, 1);
+      if ((tick >> 4) % 2) text('s_org', 'F', x, y0 - 10);
+    }
+  }
+  function hose(x0, y0, x1, y1) {
+    cx.fillStyle = '#1a1210';
+    var n = Math.max(2, Math.round(Math.abs(x1 - x0) + Math.abs(y1 - y0)) >> 1);
+    for (var k = 0; k <= n; k++) {
+      var u = k / n, sag = Math.sin(u * Math.PI) * 3;
+      cx.fillRect(Math.round(x0 + (x1 - x0) * u), Math.round(y0 + (y1 - y0) * u + sag), 1, 1);
+    }
+  }
+  var FLAME_COL = ['#fffbe8', '#ffe066', '#ffb02a', '#f0641a', '#c8321a', '#6a4a40'];
+  // a round blob of a given radius, a row at a time (pixels, no smoothing)
+  function blob(x, y, r, col) {
+    cx.fillStyle = col;
+    for (var dy = -r; dy <= r; dy++) {
+      var w = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy + r * 0.6)));
+      cx.fillRect(x - w, y + dy, 2 * w + 1, 1);
+    }
+  }
+  function flamePuff(b) {
+    var a = b.age || 0, u = Math.min(1, a / Sim.T.FLAME_LIFE), r = Math.round(1 + a * 0.24), k = Math.min(FLAME_COL.length - 2, Math.floor(u * 5));
+    var x = Math.round(b.x), y = Math.round(b.y), lick = ((b.got && b.got.length) + a + (x >> 2)) % 3;
+    if (u > 0.8) cx.globalAlpha = 0.55;
+    blob(x, y, r, FLAME_COL[k + 1]);                                                   // the flame's edge
+    if (r > 1) blob(x + (b.vx > 0 ? 1 : -1), y + 1, r - 1, FLAME_COL[k]);              // its body, hotter, a little ahead and below
+    if (u < 0.45) { cx.fillStyle = FLAME_COL[0]; cx.fillRect(x - 1 + (b.vx > 0 ? 1 : -1), y, 2, 2); }      // the white heart
+    if (r > 2 && lick === 0) { cx.fillStyle = FLAME_COL[k + 1]; cx.fillRect(x - 1, y - r - 2, 2, 2); }    // a tongue licking up
+    if (u > 0.6) { cx.fillStyle = 'rgba(70,56,50,0.5)'; cx.fillRect(x - r, y - r - 2, 2 * r, 2); }      // smoke off the top as it dies
+    cx.globalAlpha = 1;
   }
   // a cloud of spice: a heap of billows about its middle, turning slowly, as thick as the cloud is
   var SPICE_COL = { red: '#c8301a', yel: '#e4aa20', org: '#d8701e' };
@@ -876,6 +926,13 @@ var Render = (function () {
         if (e.st === 'surr' && !e.captured && (tick >> 4) % 2) text('s_lav', T('WALK IN'), e.x, e.y - 62, 'c');
         continue;
       }
+      if (!e.alive && e.scorch) {
+        // (caught by the gas torch: blackened, his hair smoking, running for it; Dhamar's sheet has him, render_dhamar.js)
+        var sch = false;
+        for (var sck in bosses) if (bosses[sck].scorched && bosses[sck].scorched(s, e, K)) { sch = true; break; }
+        if (!sch) { spr(e.k === 'cook' ? 'cook_up_pass' : (e.k === 'rifle' ? 'rifle_' + e.look + '_up_run' : e.k + '_up_run'), e.x, e.y, e.face < 0); cx.globalAlpha = 1; }
+        continue;
+      }
       if (!e.alive && hand) {
         if (e.deadT < 70 && (e.deadT < 40 || (e.deadT >> 1) % 2)) spr(name, e.x, e.y, flip);
         continue;
@@ -923,7 +980,9 @@ var Render = (function () {
     if (tint) SRC = tint(s, null);
     for (i = 0; i < s.pickups.length; i++) {
       var q = s.pickups[i];
-      if (!q.gone) spr(q.k === 'hmg' ? 'pick_hmg' : (q.k === 'bean' ? 'pick_bean' : (q.k === 'chilli' ? 'pick_chilli' : 'pick_gren')), q.x, q.y - (q.air ? 0 : ((tick >> 3) % 2)));
+      if (q.gone) continue;
+      if (q.k === 'flame') { torchPic(q.x, q.y - (q.air ? 0 : ((tick >> 3) % 2)), 1, true); continue; }
+      spr(q.k === 'hmg' ? 'pick_hmg' : (q.k === 'bean' ? 'pick_bean' : (q.k === 'chilli' ? 'pick_chilli' : 'pick_gren')), q.x, q.y - (q.air ? 0 : ((tick >> 3) % 2)));
     }
     SRC = null;
     // a boss on the ground (the Big Roaster) stands behind Yazeed, not over him
@@ -948,6 +1007,12 @@ var Render = (function () {
         if (!own) {
           var yfr = playerFrame(p), yx = p.x - (p.fireT < 2 ? p.face : 0) + snz * p.face, yy = p.y - (p.crouch && Math.abs(p.vx) > 1 && Math.floor(p.runD / 5) % 2 ? 1 : 0) + snz;
           spr(yfr, yx, yy, p.face < 0);
+          if (p.weapon === 'flame') {
+            // (Dhamar's gas torch: its bottle strapped over his pack, the hose round to the nozzle in his hand)
+            var tm = Sim.muzzle(p);
+            torchPic(yx - p.face * 9, yy - (p.crouch ? 7 : 13), p.face, false);
+            hose(yx - p.face * 8, yy - (p.crouch ? 18 : 25), tm.x - p.face * 4, tm.y + 2);
+          }
           // (and what a mission lays over him: Ibb's bare foot, one sandal short through Jibla)
           for (var yok in bosses) if (bosses[yok].yazeedOver) bosses[yok].yazeedOver(s, p, yfr, yx, yy, p.face < 0, K);
         }
@@ -991,6 +1056,7 @@ var Render = (function () {
       if (bl.gone || (bl.own && bl.age < (bl.hide || 2))) continue;       // a shot leaves from the middle of him: it shows once it is past the muzzle
       if (bl.heavy || bl.big) { sprRot('fx_heavy', bl.x, bl.y, Math.atan2(bl.vy, bl.vx), false); continue; }
       if (bl.bean) { spr(bl.hot ? 'fx_bean_hot' : 'fx_bean', bl.x, bl.y, bl.vx > 0); continue; }
+      if (bl.flame) { flamePuff(bl); continue; }
       if (bl.art) { sprRot(bl.art, bl.x, bl.y, bl.spin ? bl.age * 0.45 * bl.spin : Math.atan2(bl.vy, bl.vx), false); continue; }      // (the Tailor's shears, turning over, and his pins)
       var nm = bl.own ? (bl.hmg ? 'fx_tracer_h' : 'fx_tracer') : 'fx_tracer_e';
       // (his shots fly on off the edge of the picture)
@@ -1156,7 +1222,7 @@ var Render = (function () {
     if (ax + aw + 2 + bw2 + 2 > clockL) ax = Math.max(104, clockL - 2 - bw2 - 2 - aw);
     var bx0 = ax + aw + 2;
     tab(ax, 6, aw, armsL); tab(bx0, 6, bw2, bombL);
-    if (p.weapon === 'hmg' && s.mode !== 'drive') text('m_org', String(p.ammo), ax + (aw >> 1), 17, 'c');
+    if ((p.weapon === 'hmg' || p.weapon === 'flame') && s.mode !== 'drive') text('m_org', String(p.ammo), ax + (aw >> 1), 17, 'c');
     else { text('m_org', 'o', ax + (aw >> 1) - 5, 17); text('m_org', 'o', ax + (aw >> 1), 17); }
     text('m_org', String(p.grenades), bx0 + (bw2 >> 1), 17, 'c');
     text('tall', clock(s.time), mid - Math.floor(textW('tall', clock(s.time)) / 2), 5);
