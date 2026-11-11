@@ -258,12 +258,44 @@ def portrait(s=4, laugh=False):
     return im
 
 
+def bust(laugh=False, scale=4):
+    """The portrait since 11 Nov 03:2x (Khaled: "The game size design is great, but the portrait is not so good"): his
+    game-size design itself, close up, as a screen or a poster would show him: the sprite's head and jacket behind his
+    table, the press microphones in front of his mouth, 48 x 32 game pixels shown at `scale`."""
+    import sys
+    sys.path.insert(0, HERE)
+    import committee_sprites as C
+    W, H = 48, 32
+    im = Image.new('RGBA', (W, H), WALL)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, W, 1], fill=WALL_L)
+    d.rectangle([0, 20, W, 20], fill=WALL_D)
+    d.rectangle([8, 3, 34, 20], fill=(196, 176, 140), outline=WALL_D)
+    for x in range(11, 34, 3):
+        d.line([(x, 4), (x, 19)], fill=(186, 166, 130))
+    fr, fx, fy = C.committee_laugh(2) if laugh else C.committee('half')
+    im.alpha_composite(fr, (23 - fx, 45 - fy))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 26, W, 26], fill=WOOD_L)
+    d.rectangle([0, 27, W, H], fill=WOOD)
+    d.rectangle([0, 27, W, 27], fill=WOOD_D)
+    for (mx, my, c, cl) in ((34, 19, (184, 48, 28), (240, 112, 60)), (38, 22, (212, 156, 28), (255, 226, 100)),
+                            (42, 18, (48, 88, 140), (108, 156, 200))):
+        d.line([(mx + 1, my + 3), (mx + 1, 26)], fill=(28, 26, 24))
+        d.rectangle([mx - 1, my - 1, mx + 3, my + 3], fill=OL)
+        d.rectangle([mx, my, mx + 2, my + 2], fill=c)
+        d.point((mx, my), fill=cl)
+    d.rectangle([2, 24, 6, 25], fill=WOOD_D)
+    d.rectangle([4, 22, 5, 23], fill=WOOD_L)
+    return im.resize((W * scale, H * scale), Image.NEAREST)
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    a, b = portrait(4), portrait(4, laugh=True)
+    a, b = bust(False), bust(True)
     both = Image.new('RGBA', (a.width * 2 + 8, a.height), (24, 22, 20, 255))
     both.alpha_composite(a, (0, 0))
     both.alpha_composite(b, (a.width + 8, 0))
     both.save(os.path.join(OUT, 'committee_portrait.png'))
-    portrait(2).save(os.path.join(OUT, 'committee_portrait_s2.png'))
+    bust(False, 2).save(os.path.join(OUT, 'committee_portrait_s2.png'))
     print('wrote', OUT)

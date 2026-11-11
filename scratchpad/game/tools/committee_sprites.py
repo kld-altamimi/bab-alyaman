@@ -317,12 +317,9 @@ def _base(p, jacket='full', dy=0):
 
 
 def _loudhailer(L, p, dx=0, dy=0):
-    """The loudhailer held to his mouth (its mouthpiece on his lips, the bell pointing ahead), the far hand round its
-    handle; drawn after the head so it sits in front of the beard. dx, dy: the head's own offset (it stays on his mouth
-    when he throws his head back to laugh)."""
-    B = CB
-    L += [(MARSHAL['megaphone'], B.megaphone[0] + dx, B.megaphone[1] + dy, p),
-          (COM['far_arm'], B.far_arm[0] + (dx if dx > -2 else -1), B.far_arm[1] + dy, p)]
+    """Nothing since 11 Nov 03:19: Khaled took the press microphones on his table (as in the wages clip) over the
+    loudhailer ("the microphones is a good idea"); his laugh goes out through them and the checkpoints' speakers."""
+    return
 
 
 def _notes(L, p, k):
@@ -418,6 +415,13 @@ GAVEL = R([
     'XWWXY.',
     'XWWX.Y',
 ])
+MICS = R([               # the press microphones on his table, as in the clip: three foam heads, no badge, no text
+    '.LL..EE..SS.',
+    'LMLLEFFESTSS',
+    '.LL..EE..SS.',
+    '.x...x...x..',
+    '.x...x...x..',
+])
 SHEET = R([              # the sign-in sheet: one name on it (a line), the rest blank
     'JJJJJJJ',
     'J#I#JJJ',
@@ -428,7 +432,7 @@ SHEET = R([              # the sign-in sheet: one name on it (a line), the rest 
 
 def table():
     p = com_pal()
-    return compose([(TABLE, 0, 3, p), (GAVEL, 3, 0, p), (SHEET, 18, -1, p)], foot=(14, 13))
+    return compose([(TABLE, 0, 3, p), (GAVEL, 1, 0, p), (MICS, 8, -2, p), (SHEET, 21, -1, p)], foot=(14, 13))
 
 
 FRAMES = [('stand', lambda: committee('half')), ('vote', committee_vote), ('laugh1', lambda: committee_laugh(1)),
